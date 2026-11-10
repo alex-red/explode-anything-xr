@@ -7,9 +7,11 @@
  * the camera frames; frames are not sent anywhere. The library (pinned) and its model are fetched
  * from public CDNs on the first Start.
  *
- * Each tracked hand writes a target-ray pose and a pinch value into IWER's `XRHandInput`. IWER
- * turns the pinch into real WebXR `selectstart` / `select` / `selectend` events, so the app sees
- * the same input path as the emulator walkthrough and, in shape, a headset. What this does NOT
+ * Each tracked hand works as a screen pointer (see webcam-hands-map.ts): the emulated hand sits on
+ * your line of sight where your hand is in the camera frame, and a pinch clicks what is behind it.
+ * The pose and an on/off pinch go into IWER's `XRHandInput`; IWER turns the pinch into real WebXR
+ * `selectstart` / `select` / `selectend` events, so the app sees the same input path as the
+ * emulator walkthrough and, in shape, a headset. What this does NOT
  * reproduce: Quest's tracking quality, latency and depth, or per-finger joints (IWER shows its own
  * hand poses). Treat anything learned here as emulator-only.
  *
@@ -19,14 +21,22 @@
  *
  * Keys while running: H swaps left/right, K recalibrates reach (hold your hands at a comfortable
  * distance, press K).
+ *
+ * Remembered per browser (localStorage): the camera, the swap, each hand's reach calibration, and
+ * whether it was running, so a reload (including an HMR reload) picks up where you left off.
  */
 import {
-  HandSmoother,
+  ClickStabilizer,
   PalmCalibration,
-  handTarget,
+  PinchDetector,
+  PointerFilter,
+  palmPointer,
   palmSize,
+  pinchGapM,
+  pinchRatio,
+  pointerPose,
+  reachFromPalm,
   sideOf,
-  yawOf,
   type HeadPose,
   type Landmark,
   type Side,
@@ -38,7 +48,9 @@ const MEDIAPIPE_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${M
 const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 /** After this long without seeing a hand, its pinch is released so a select cannot stick. */
 const LOST_MS = 250;
-const CAMERA_KEY = 'explode.dev.webcamDeviceId';
+/** Last-used settings for this viewer (localStorage); a convenience, so every access may fail. */
+const SETTINGS_KEY = 'explode.dev.webcam';
+const OLD_CAMERA_KEY = 'explode.dev.webcamDeviceId';
 
 // Minimal shapes of what we use from IWER (window.IWER_DEVICE, set by @iwsdk/vite-plugin-dev).
 interface IwerVec {
@@ -89,10 +101,35 @@ interface VisionModule {
 }
 
 interface HandState {
-  smoother: HandSmoother;
+  filter: PointerFilter;
+  detector: PinchDetector;
+  click: ClickStabilizer;
   calibration: PalmCalibration;
   lastSeen: number;
-  pinch: number;
+  /** The pinch switch (debounced), and what was last sent to IWER. */
+  pinched: boolean;
+  sent: boolean;
+  /** Last fingertip gap in metres (world landmarks), for the readout. */
+  gap: number | null;
+}
+
+const newHand = (): HandState => ({
+  filter: new PointerFilter(),
+  detector: new PinchDetector(),
+  click: new ClickStabilizer(),
+  calibration: new PalmCalibration(),
+  lastSeen: 0,
+  pinched: false,
+  sent: false,
+  gap: null,
+});
+
+function resetTracking(h: HandState): void {
+  h.filter.reset();
+  h.detector.reset();
+  h.click.reset();
+  h.pinched = false;
+  h.sent = false;
 }
 
 const CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
@@ -100,22 +137,37 @@ const CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
   [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
 ];
 
-const storage = {
-  get(): string | null {
-    try {
-      return localStorage.getItem(CAMERA_KEY);
-    } catch {
-      return null;
-    }
-  },
-  set(v: string): void {
-    try {
-      localStorage.setItem(CAMERA_KEY, v);
-    } catch {
-      /* per-viewer convenience only */
-    }
-  },
-};
+interface WebcamSettings {
+  /** Camera last used. */
+  deviceId?: string;
+  /** Left/right swapped (H). */
+  swap?: boolean;
+  /** Calibrated palm size per hand, for reach (K re-measures). */
+  refPalm?: Partial<Record<Side, number>>;
+  /** Running when last left; restarts on load. */
+  running?: boolean;
+}
+
+function loadSettings(): WebcamSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    const s = parsed && typeof parsed === 'object' ? (parsed as WebcamSettings) : {};
+    s.deviceId ??= localStorage.getItem(OLD_CAMERA_KEY) ?? undefined;
+    return s;
+  } catch {
+    return {};
+  }
+}
+
+function storeSettings(s: WebcamSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    localStorage.removeItem(OLD_CAMERA_KEY);
+  } catch {
+    /* per-viewer convenience only */
+  }
+}
 
 let landmarkerPromise: Promise<HandLandmarker> | null = null;
 function loadLandmarker(): Promise<HandLandmarker> {
@@ -143,6 +195,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, css: string): HTMLEle
 
 /** Mount the dev panel. Safe to call once per page. */
 export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } = {}): void {
+  let settings = loadSettings();
+  const save = (patch: WebcamSettings) => {
+    settings = { ...settings, ...patch };
+    storeSettings(settings);
+  };
   // ---- panel
   const box = el(
     'div',
@@ -181,7 +238,7 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       return;
     }
     const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
-    const keep = select.value || storage.get();
+    const keep = select.value || settings.deviceId;
     select.replaceChildren(
       ...cams.map((c, i) => {
         const o = document.createElement('option');
@@ -203,17 +260,14 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
   navigator.mediaDevices?.addEventListener?.('devicechange', () => void listCameras());
 
   // ---- tracking state
-  const hands: Record<Side, HandState> = {
-    left: { smoother: new HandSmoother(), calibration: new PalmCalibration(), lastSeen: 0, pinch: 0 },
-    right: { smoother: new HandSmoother(), calibration: new PalmCalibration(), lastSeen: 0, pinch: 0 },
-  };
-  let swap = !!opts.swap;
+  const hands: Record<Side, HandState> = { left: newHand(), right: newHand() };
+  let swap = opts.swap ?? settings.swap ?? false;
   let stream: MediaStream | null = null;
   let raf = 0;
   let running = false;
   let starting = false;
   let previousControlMode: IwerDevice['controlMode'] = 'manual';
-  const head: HeadPose = { position: [0, 0, 0], yaw: 0 };
+  const head: HeadPose = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] };
   const ctx = canvas.getContext('2d');
 
   const device = (): IwerDevice | undefined => (window as unknown as { IWER_DEVICE?: IwerDevice }).IWER_DEVICE;
@@ -221,8 +275,13 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
   window.addEventListener('keydown', (e) => {
     if (!running) return;
     const k = e.key.toLowerCase();
-    if (k === 'h') swap = !swap;
-    else if (k === 'k') for (const s of ['left', 'right'] as const) hands[s].calibration.reset();
+    if (k === 'h') {
+      swap = !swap;
+      save({ swap });
+    } else if (k === 'k') {
+      for (const s of ['left', 'right'] as const) hands[s].calibration.reset();
+      save({ refPalm: {} }); // re-measured and saved over the next few frames
+    }
   });
 
   async function start(): Promise<void> {
@@ -257,7 +316,7 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       await listCameras(); // labels are available now
       if (used) {
         select.value = used;
-        storage.set(used);
+        save({ deviceId: used });
       }
       video.srcObject = stream;
       stage.style.display = 'block';
@@ -270,15 +329,17 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       dev.controlMode = 'programmatic';
       dev.primaryInputMode = 'hand';
       for (const s of ['left', 'right'] as const) {
-        hands[s].smoother.reset();
+        resetTracking(hands[s]);
         hands[s].calibration.reset();
+        const ref = settings.refPalm?.[s];
+        if (ref) hands[s].calibration.seed(ref);
         hands[s].lastSeen = 0;
-        hands[s].pinch = 0;
       }
       running = true;
+      save({ running: true });
       toggle.textContent = 'Stop';
       toggle.style.background = '#7a2e2e';
-      say('Running. Enter XR, then raise your hands. H swap, K recalibrate.');
+      say('Running. Enter XR, then raise a hand: it is the pointer. Pinch to click.');
       loop(landmarker, dev);
     } catch (err) {
       stopStream();
@@ -297,14 +358,16 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
     stage.style.display = 'none';
   }
 
-  function stop(): void {
+  /** `remember: false` keeps the "running" setting, for a restart on camera change. */
+  function stop(remember = true): void {
     if (!running) return;
     running = false;
+    if (remember) save({ running: false });
     cancelAnimationFrame(raf);
     stopStream();
     const dev = device();
     if (dev) {
-      for (const s of ['left', 'right'] as const) if (hands[s].pinch > 0) dev.hands[s]?.updatePinchValue(0);
+      for (const s of ['left', 'right'] as const) if (hands[s].sent) dev.hands[s]?.updatePinchValue(0);
       dev.controlMode = previousControlMode;
     }
     toggle.textContent = 'Start';
@@ -314,9 +377,9 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
 
   toggle.addEventListener('click', () => void (running ? stop() : start()));
   select.addEventListener('change', () => {
-    storage.set(select.value);
+    save({ deviceId: select.value });
     if (running) {
-      stop();
+      stop(false);
       void start();
     }
   });
@@ -335,8 +398,10 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       head.position[0] = dev.position.x;
       head.position[1] = dev.position.y;
       head.position[2] = dev.position.z;
-      const q = dev.quaternion;
-      head.yaw = yawOf([q.x, q.y, q.z, q.w]);
+      head.quaternion[0] = dev.quaternion.x;
+      head.quaternion[1] = dev.quaternion.y;
+      head.quaternion[2] = dev.quaternion.z;
+      head.quaternion[3] = dev.quaternion.w;
 
       if (ctx && (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight)) {
         canvas.width = video.videoWidth;
@@ -353,16 +418,35 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
         const state = hands[side];
         const hand = dev.hands[side];
         if (!hand) return;
+        const wasSettled = state.calibration.settled;
         const ref = state.calibration.push(palmSize(lm, aspect));
-        const t = state.smoother.push(handTarget(lm, result.worldLandmarks?.[i], aspect, side, head, ref));
-        hand.position.set(t.position[0], t.position[1], t.position[2]);
-        hand.quaternion.set(t.quaternion[0], t.quaternion[1], t.quaternion[2], t.quaternion[3]);
-        hand.updatePinchValue(t.pinch);
-        state.pinch = t.pinch;
+        if (!wasSettled && state.calibration.settled) save({ refPalm: { ...settings.refPalm, [side]: ref } });
+
+        const world = result.worldLandmarks?.[i];
+        state.gap = pinchGapM(world);
+        const wasPinched = state.pinched;
+        state.pinched = state.detector.push(pinchRatio(lm, world, aspect));
+        const raw = palmPointer(lm);
+        const smooth = state.filter.push(raw.u, raw.v);
+        const other = hands[side === 'left' ? 'right' : 'left'];
+        const out = state.click.push(now, smooth.u, smooth.v, state.pinched, other.pinched);
+        const pose = pointerPose(out.u, out.v, reachFromPalm(palmSize(lm, aspect), ref), head);
+        hand.position.set(pose.position[0], pose.position[1], pose.position[2]);
+        hand.quaternion.set(pose.quaternion[0], pose.quaternion[1], pose.quaternion[2], pose.quaternion[3]);
+        if (out.pinch !== state.sent) hand.updatePinchValue(out.pinch ? 1 : 0);
+        state.sent = out.pinch;
+        // Log each press and release so a session can be read back from the console.
+        if (state.pinched !== wasPinched) {
+          const r = (n: number) => Math.round(n * 1000) / 1000;
+          console.log(
+            `[explode:webcam] ${side} ${state.pinched ? 'pinch' : 'release'} gap=${state.gap === null ? '?' : r(state.gap)} ` +
+              `pointer=${r(out.u)},${r(out.v)} pos=${pose.position.map(r).join(',')} quat=${pose.quaternion.map(r).join(',')}`,
+          );
+        }
         state.lastSeen = now;
 
         if (ctx) {
-          ctx.strokeStyle = t.pinch >= 0.9 ? '#3ccfcf' : side === 'right' ? '#f2c14e' : '#dfe7f1';
+          ctx.strokeStyle = state.pinched ? '#3ccfcf' : side === 'right' ? '#f2c14e' : '#dfe7f1';
           ctx.lineWidth = 3;
           ctx.beginPath();
           for (const [a, b] of CONNECTIONS) {
@@ -377,21 +461,28 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
         const state = hands[side];
         if (seen.has(side) || state.lastSeen === 0) continue;
         if (now - state.lastSeen > LOST_MS) {
-          if (state.pinch > 0) dev.hands[side]?.updatePinchValue(0);
-          state.pinch = 0;
-          state.smoother.reset();
+          if (state.sent) dev.hands[side]?.updatePinchValue(0);
+          resetTracking(state);
+          state.lastSeen = 0;
         }
       }
 
-      const show = (s: Side) => (seen.has(s) ? (hands[s].pinch >= 0.9 ? 'pinch' : 'open') : '—');
-      say(`L: ${show('left')}   R: ${show('right')}${swap ? '   (swapped)' : ''}   ·   H swap, K recalibrate`);
+      // Gap in cm and the pinch switch.
+      const show = (s: Side) => {
+        if (!seen.has(s)) return '—';
+        const h = hands[s];
+        const gap = h.gap === null ? '' : `${(h.gap * 100).toFixed(1)} cm `;
+        return `${gap}${h.pinched ? 'PINCH' : 'open'}`;
+      };
+      say(`L: ${show('left')}   R: ${show('right')}${swap ? '   (swapped)' : ''}   ·   pinch to click · H swap · K recalibrate`);
     };
     raf = requestAnimationFrame(tick);
   }
 
   void listCameras().then(() => {
-    if (device()) say(opts.autostart ? 'Starting…' : 'Pick a camera and press Start.');
+    const auto = opts.autostart || settings.running === true;
+    if (device()) say(auto ? 'Starting…' : 'Pick a camera and press Start.');
     else say('IWER is not active on this page (open the dev server on localhost).');
-    if (opts.autostart) void start();
+    if (auto) void start();
   });
 }

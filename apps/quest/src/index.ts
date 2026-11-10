@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   if (import.meta.env.DEV) {
     const webcam = new URLSearchParams(location.search).get('webcam');
     import('./dev/webcam-hands.ts')
-      .then((m) => m.mountWebcamHands({ autostart: webcam !== null, swap: webcam === 'swap' }))
+      .then((m) => m.mountWebcamHands({ autostart: webcam !== null, swap: webcam === 'swap' ? true : undefined }))
       .catch((err: unknown) => console.error('[explode:webcam]', err));
   }
 

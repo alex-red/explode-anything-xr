@@ -28,18 +28,30 @@ node and its `PanelSystem` registration from the application entry point.
 ## Webcam hands (dev only)
 
 In dev, a **Webcam hands** panel sits at the bottom right. Pick a camera, press **Start**, allow
-the camera, then enter XR. The camera you pick is remembered. `?webcam` in the URL starts it on
-load. While it runs, IWER is in programmatic control mode, the same mode the CLI walkthrough
-uses. Otherwise the IWER dev UI would overwrite the hands every frame. Its mouse and keyboard
-controls come back on **Stop**. Code:
+the camera, then enter XR. Your camera, left/right swap and reach calibration are remembered in
+this browser. If the webcam was running when the page reloaded, it starts again. `?webcam` in
+the URL also starts it on load. While it runs, IWER is in programmatic control mode, the same
+mode the CLI walkthrough uses. Otherwise the IWER dev UI would overwrite the hands every frame.
+Its mouse and keyboard controls come back on **Stop**. Code:
 `src/dev/webcam-hands.ts` (bridge) and `src/dev/webcam-hands-map.ts` (pure mapping, tested in
 `test/webcam-hands-map.test.ts`).
 
-- Your palm position in the frame moves the hand left/right and up/down. How big your hand looks
-  sets the reach, measured against its size when tracking starts.
-- Pinching thumb and index finger is a WebXR select, using IWER's own thresholds. Two hands
-  pinched and pulled apart do the explode.
-- The ray runs from an estimated shoulder through your hand.
+- Your hand is a screen pointer. Where your palm is in the camera frame picks a direction from
+  your eyes. The emulated hand sits on that line of sight and its ray carries straight on, so a
+  pinch clicks whatever is behind the hand on screen. The middle of the frame points a little
+  below straight ahead.
+- Pinching thumb and index finger is a WebXR select. The pinch is an on/off switch: it presses
+  when the fingertip gap is under about 2.5 cm and releases over about 3.2 cm, each held for two
+  frames. The panel shows each hand's gap.
+- A click is held steady. On pinch, the pointer goes back to where it was just before your
+  fingers started closing and freezes until you let go. The app presses a button on release, and
+  only if the ray is still on it.
+- Holding a pinch for more than 0.6 s, or pinching with both hands, unfreezes the pointer. Two
+  hands pinched and pulled apart do the explode.
+- How big your hand looks sets how far along the line of sight the hand sits (30-60 cm), measured
+  against its size when tracking starts.
+- Each press and release is logged to the console as `[explode:webcam]`, with the gap, the pointer
+  position and the hand pose.
 - **H** swaps left and right (`?webcam=swap` starts swapped), and **K** recalibrates reach:
   hold your hands at a comfortable distance and press K.
 - MediaPipe Hand Landmarker 0.10.14 and its model load from jsdelivr and Google Storage. Camera
