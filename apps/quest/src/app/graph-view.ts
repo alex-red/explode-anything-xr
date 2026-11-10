@@ -241,6 +241,16 @@ export class GraphView {
     this.rootEntity.dispose();
   }
 
+  /**
+   * The detached edge this node is offering a socket for, if any. The ring is a thin torus
+   * around the part, so a ray aimed at the socket almost always lands on the part inside it;
+   * the app treats that as a press on the socket.
+   */
+  socketEdgeFor(nodeId: string): string | null {
+    for (const sk of this.sockets) if (sk.targetId === nodeId && sk.mesh.visible) return sk.edgeId;
+    return null;
+  }
+
   /** Socket rings share one material; dispose only their own geometry. */
   private disposeSockets(): void {
     for (const sk of this.sockets) {

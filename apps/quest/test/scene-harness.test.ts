@@ -205,7 +205,11 @@ describe('scene harness: drivetrain tutorial', () => {
     h.press(h.view().sockets.find((s) => s.targetId === 'part:battery')!.mesh); // wrong socket
     expect(h.state().misplug_count).toBe(1);
     expect(h.caption()).toMatch(/doesn't accept/);
-    h.press(h.view().sockets.find((s) => s.targetId === 'part:motor')!.mesh);
+    // A ray aimed at a socket lands on the part inside the ring; that must count as the socket.
+    h.press(h.view().nodes.get('part:gearbox')!.mesh);
+    expect(h.state().misplug_count).toBe(2);
+    expect(h.state().selected_id).toBeNull();
+    h.press(h.view().nodes.get('part:motor')!.mesh);
     expect(h.state().broken_edge_ids).toEqual([]);
 
     h.press(h.button(/^Collapse$/));

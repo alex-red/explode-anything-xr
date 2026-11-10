@@ -177,6 +177,11 @@ export class ExplodeApp {
       this.dispatch({ type: 'predict', target_id: id });
       return;
     }
+    const socketEdge = this.view?.socketEdgeFor(id);
+    if (socketEdge) {
+      this.dispatch({ type: 'plug', edge_id: socketEdge, target_id: id });
+      return;
+    }
     this.dispatch({ type: 'select', target_id: this.store.state.selected_id === id ? null : id });
   }
 
