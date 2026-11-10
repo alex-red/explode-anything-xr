@@ -41,6 +41,8 @@ export class SpatialUI {
   private readonly evidenceClose: TextPanel;
   private readonly controls = new Group();
   private readonly evidenceGroup = new Group();
+  /** True when something a panel shows may have changed; render() is skipped otherwise. */
+  dirty = true;
 
   constructor(world: World, parent: Entity, defs: ButtonDef[], onCloseEvidence: () => void) {
     const groupEntity = world.createTransformEntity(this.group, { parent });
@@ -59,8 +61,12 @@ export class SpatialUI {
       entry.entity = makeInteractive(world, panel.mesh, controlsEntity, {
         press: () => {
           if (def.enabled()) def.onPress();
+          this.dirty = true;
         },
-        hover: (on) => (entry.hovered = on),
+        hover: (on) => {
+          entry.hovered = on;
+          this.dirty = true;
+        },
       });
       this.buttons.push(entry);
     });
@@ -85,6 +91,7 @@ export class SpatialUI {
   }
 
   render(model: CaptionModel, evidence: Evidence | null): void {
+    this.dirty = false;
     for (const b of this.buttons) {
       const enabled = b.def.enabled();
       const primary = enabled && (b.def.primary?.() ?? false);

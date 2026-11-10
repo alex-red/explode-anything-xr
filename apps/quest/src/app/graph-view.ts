@@ -98,6 +98,8 @@ export class GraphView {
   private affected = new Set<string>();
   private isolated: Set<string> | null = null;
   private labelIds = new Set<string>();
+  private pathEdges = new Set<string>();
+  private broken = new Set<string>();
   private segs: Array<[Vector3, Vector3]> = [];
 
   constructor(
@@ -186,7 +188,7 @@ export class GraphView {
     }
 
     this.updateLabels(s, f, highlighted, affected);
-    this.updateEdges(s, f, isolated, activePath);
+    this.updateEdges(s, f, isolated);
     this.updateParticles(s, f, activePath);
     this.updateSockets(s, f);
   }
@@ -197,6 +199,8 @@ export class GraphView {
     this.highlighted = new Set(s.highlighted_ids);
     this.affected = new Set(this.revealConsequences ? s.consequences.flatMap((c) => c.affected_ids) : []);
     this.isolated = s.isolated_ids ? new Set(s.isolated_ids) : null;
+    this.pathEdges = new Set(path?.edge_ids ?? []);
+    this.broken = new Set(s.broken_edge_ids);
     this.labelIds = new Set(
       [...this.nodes.values()]
         .map((v) => ({ id: v.node.id, score: labelScore(v.node, s, this.highlighted, this.affected, this.isMechanical) }))
@@ -320,9 +324,8 @@ export class GraphView {
     return this.store.ctx.nodes.get(edge.source_id)?.kind !== 'cluster';
   }
 
-  private updateEdges(s: SceneState, f: number, isolated: Set<string> | null, path: FlowPath | undefined): void {
-    const pathEdges = new Set(path?.edge_ids ?? []);
-    const broken = new Set(s.broken_edge_ids);
+  private updateEdges(s: SceneState, f: number, isolated: Set<string> | null): void {
+    const { pathEdges, broken } = this;
     for (const ev of this.edges.values()) {
       const { edge, mesh } = ev;
       const a = this.nodes.get(edge.source_id)!.mesh.position;
@@ -366,8 +369,8 @@ export class GraphView {
       }
       const t = ((this.time * 0.35 + i / this.particles.length) % 1) * segs.length;
       const k = Math.min(Math.floor(t), segs.length - 1);
-      const [a, b] = segs[k]!;
-      p.position.lerpVectors(a, b, t - k);
+      const seg = segs[k]!;
+      p.position.lerpVectors(seg[0], seg[1], t - k);
       p.visible = true;
     }
   }

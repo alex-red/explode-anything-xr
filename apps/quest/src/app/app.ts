@@ -57,7 +57,10 @@ export class ExplodeApp {
       (f) => this.dispatch({ type: 'set_explode', factor: f }),
     );
 
-    this.store.subscribe((_, event) => this.onEvent(event));
+    this.store.subscribe((_, event) => {
+      this.ui.dirty = true;
+      this.onEvent(event);
+    });
     const last = Store.lastActiveSystem();
     this.loadSystem(last && [software.graph.system_id, mechanical.graph.system_id].includes(last) ? last : mechanical.graph.system_id);
 
@@ -86,15 +89,19 @@ export class ExplodeApp {
       this.view.revealConsequences = !this.predicting();
       this.view.update(clamped, camera);
     }
-    // UI text only needs ~10 Hz; repainting every frame would allocate and re-upload textures.
+    // Panels repaint at most at ~10 Hz, and only when something they show may have changed
+    // (plus a 1 Hz safety refresh), so idle frames build no view models and upload no textures.
     this.uiClock += clamped;
-    if (this.uiClock >= 0.1) {
+    this.uiRefresh += clamped;
+    if (this.uiClock >= 0.1 && (this.ui.dirty || this.uiRefresh >= 1)) {
       this.uiClock = 0;
+      this.uiRefresh = 0;
       this.ui.render(this.captionModel(), this.openEvidence());
     }
   }
 
   private uiClock = 1;
+  private uiRefresh = 0;
 
   // ---------------------------------------------------------------- systems
 
@@ -170,6 +177,7 @@ export class ExplodeApp {
     const stepKey = this.stepKey();
     const answer = await this.tutor.ask(this.store, trigger, this.liveAllowed);
     this.tutorAnswer = { ...answer, stepKey };
+    this.ui.dirty = true;
     for (const action of answer.plan.actions) this.dispatch({ type: 'apply_action', origin: 'tutor', action });
   }
 
