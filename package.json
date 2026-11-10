@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w apps/quest",
     "content:generate": "node tools/content/src/generate.ts",
     "content:check": "node tools/content/src/check.ts",
+    "emulator:walkthrough": "node apps/quest/scripts/walkthrough.ts",
     "release:manifest": "node tools/release/src/cli.ts manifest",
     "release:verify": "node tools/release/src/cli.ts verify"
   },

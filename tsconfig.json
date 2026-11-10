@@ -6,6 +6,7 @@
     "tools/*/src/**/*.ts",
     "tools/*/test/**/*.ts",
     "services/*/src/**/*.ts",
-    "services/*/test/**/*.ts"
+    "services/*/test/**/*.ts",
+    "apps/*/scripts/**/*.ts"
   ]
 }
