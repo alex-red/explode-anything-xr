@@ -1,6 +1,8 @@
 import { Vector3, type World } from '@iwsdk/core';
 import { setInteractionsEnabled } from './interactions.ts';
 
+const PAIR_WINDOW_MS = 500;
+
 /**
  * Two-hand pinch-and-pull explode (ADR-0012). Both hands pinch (WebXR select, which works for
  * hands and controllers); pulling apart opens the system, pushing together closes it.
@@ -8,6 +10,7 @@ import { setInteractionsEnabled } from './interactions.ts';
  */
 export class TwoHandPull {
   private selecting = { left: false, right: false };
+  private startedAt = { left: 0, right: 0 };
   private active = false;
   private startDist = 0;
   private startFactor = 0;
@@ -32,7 +35,9 @@ export class TwoHandPull {
 
   update(): void {
     if (!this.session) return;
-    const both = this.selecting.left && this.selecting.right;
+    // Both pinches must start close together; a held pinch plus a later one is two separate presses.
+    const both =
+      this.selecting.left && this.selecting.right && (this.active || Math.abs(this.startedAt.left - this.startedAt.right) <= PAIR_WINDOW_MS);
     this.world.player.gripSpaces.left.getWorldPosition(this.l);
     this.world.player.gripSpaces.right.getWorldPosition(this.r);
     const dist = this.l.distanceTo(this.r);
@@ -64,7 +69,9 @@ export class TwoHandPull {
     this.session = session;
     const set = (on: boolean) => (e: XRInputSourceEvent) => {
       const h = e.inputSource.handedness;
-      if (h === 'left' || h === 'right') this.selecting[h] = on;
+      if (h !== 'left' && h !== 'right') return;
+      this.selecting[h] = on;
+      if (on) this.startedAt[h] = performance.now();
     };
     session.addEventListener('selectstart', set(true));
     session.addEventListener('selectend', set(false));

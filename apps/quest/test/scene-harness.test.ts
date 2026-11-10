@@ -9,7 +9,7 @@ import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
 import { startApp, type ExplodeApp } from '../src/app/app.ts';
-import { firePress, isInteractive } from '../src/app/interactions.ts';
+import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
@@ -240,6 +240,79 @@ describe('scene harness: drivetrain tutorial', () => {
     h.frames(10);
     expect(h.state().explode_factor).toBe(1); // snapped and committed
     expect(h.caption()).toMatch(/Trace/); // lesson advanced
+  });
+});
+
+describe('scene harness: pinch presses', () => {
+  function withSession(h: ReturnType<typeof setup>) {
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    const fire = (type: string, handedness: string) => session.dispatchEvent({ type, inputSource: { handedness } } as never);
+    return { session, fire };
+  }
+
+  it('delivers a press on release, not when the pinch starts', () => {
+    const h = setup();
+    const explode = h.button(/^Explode$/)!;
+    clock += 300;
+    pressStart(explode);
+    h.frames(5);
+    expect(h.state().explode_factor).toBe(0);
+    pressEnd(explode);
+    h.frames(5);
+    expect(h.state().explode_factor).toBe(1);
+  });
+
+  it('the first hand of a two-hand pull never selects, presses a button, or predicts', () => {
+    const h = setup();
+    const { fire } = withSession(h);
+    h.world.player.gripSpaces.left.position.set(-0.05, 1, 0);
+    h.world.player.gripSpaces.right.position.set(0.05, 1, 0);
+    h.press(h.button(/^Explode$/));
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get('edge:powers:part:inverter->part:motor')!.plug!.mesh);
+    expect(h.caption()).toMatch(/Which part stops first/); // predict step: any node press would commit
+    const logBefore = h.store().log.length;
+
+    clock += 300;
+    const battery = h.view().nodes.get('part:battery')!.mesh;
+    const next = h.button(/^Next/)!;
+    fire('selectstart', 'left');
+    pressStart(battery); // left ray happened to be on a part
+    fire('selectstart', 'right');
+    pressStart(next); // right ray happened to be on a button
+    h.frames(3); // pull engages
+    fire('selectend', 'left');
+    pressEnd(battery);
+    h.frames(3);
+    fire('selectend', 'right');
+    pressEnd(next);
+    h.frames(3);
+
+    expect(h.state().prediction).toBeNull();
+    expect(h.state().selected_id).toBeNull();
+    expect(h.store().log.length).toBe(logBefore);
+
+    // A normal single-hand pinch still works afterwards.
+    h.press(h.view().nodes.get('part:motor')!.mesh);
+    expect(h.state().prediction).toEqual({ target_id: 'part:motor', correct: true });
+  });
+
+  it('pinches that start far apart in time stay separate presses', () => {
+    const h = setup();
+    const { fire } = withSession(h);
+    fire('selectstart', 'left');
+    clock += 900;
+    fire('selectstart', 'right');
+    const explode = h.button(/^Explode$/)!;
+    pressStart(explode);
+    h.frames(3);
+    fire('selectend', 'right');
+    pressEnd(explode);
+    h.frames(3);
+    expect(h.state().explode_factor).toBe(1);
   });
 });
 
