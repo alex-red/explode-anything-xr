@@ -407,6 +407,47 @@ describe('scene harness: handling the model with the hands', () => {
     expectFinite(h.scene);
   });
 
+  it('one hand: pinch and drag on empty space turns and tilts the model without moving it', () => {
+    const h = setup();
+    const { fire, right, root } = withHands(h);
+    right.position.set(0.1, 1.2, -0.3);
+    h.frames(2);
+    clock += 300;
+    fire('selectstart', 'right'); // the ray is on nothing: no press starts
+    h.frames(2);
+    right.position.set(0.14, 1.2, -0.3);
+    h.frames(2);
+    right.position.set(0.24, 1.26, -0.3); // 10 cm right, 6 cm up
+    h.frames(30);
+    fire('selectend', 'right');
+    h.frames(30);
+    expect(root.rotation.y).toBeGreaterThan(0.4);
+    expect(root.rotation.x).toBeLessThan(-0.15);
+    expect(root.position.length()).toBeLessThan(1e-6);
+    expectFinite(h.scene);
+
+    h.press(h.button(/^Recenter$/));
+    h.frames(60);
+    expect(root.rotation.y).toBeCloseTo(0, 3);
+    expect(root.rotation.x).toBeCloseTo(0, 3);
+  });
+
+  it('the Gestures button shows a short guide that names every gesture, and hides it again', () => {
+    const h = setup();
+    const guide = () => h.panels().find((p) => /HAND GESTURES/.test(p.text));
+    expect(guide()).toBeUndefined(); // not even drawn until asked for
+    h.press(h.button(/^Gestures$/));
+    const g = guide()!;
+    expect(g.mesh.visible).toBe(true);
+    for (const phrase of ['select a part', 'move the model', 'turn and tilt', 'explode, then zoom in', 'zoom out, then collapse', 'twist', 'Recenter']) {
+      expect(g.text).toContain(phrase);
+    }
+    expect(isInteractive(g.mesh)).toBe(false); // a card, not a control: it never blocks a ray press
+    h.press(h.button(/^Hide gestures$/));
+    expect(g.mesh.visible).toBe(false);
+    expect(h.button(/^Gestures$/)).toBeDefined();
+  });
+
   it('a pinch that starts on a toolbar button never drags the model, and still presses on release', () => {
     const h = setup();
     const { fire, right, root } = withHands(h);

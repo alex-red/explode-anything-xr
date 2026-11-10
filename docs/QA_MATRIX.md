@@ -51,10 +51,12 @@ Run: `bun run test`, `bun run typecheck`, `bun run content:check`.
 - [ ] Hand ray hover and select on nodes and buttons; controller ray also works
 - [ ] Two-hand pull explodes; button explodes; collapse works
 - [ ] Pulling past fully exploded zooms in; pushing together zooms out, then collapses
-- [ ] One-hand pinch-and-drag moves the model and does not select the part it started on; a quick pinch still selects
+- [ ] One-hand pinch-and-drag from a part moves the model and does not select the part; a quick pinch still selects
+- [ ] One-hand pinch-and-drag from empty space turns and tilts the model; the tilt stops before it flips
+- [ ] The Gestures button shows the guide card and hides it; the card is readable and blocks nothing
 - [ ] Two-hand twist turns the model; a straight pull does not
 - [ ] After any drag, the next pinch with the same hand registers (IWSDK stuck-pointer work-around)
-- [ ] Recenter resets move, zoom and turn
+- [ ] Recenter resets move, zoom, turn and tilt
 - [ ] Trace lights the path; flow animates
 - [ ] Unplug → downstream dims; badge matches truth (Observed / Hypothesis / Teaching model)
 - [ ] Wrong socket rejected with feedback; right socket restores

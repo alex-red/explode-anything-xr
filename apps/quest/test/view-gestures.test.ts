@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GESTURE_CONFIG as CFG, ViewGestures, newHandInput, type HandInput } from '../src/app/view-gestures.ts';
+import { DEFAULT_GESTURE_CONFIG as CFG, ViewGestures, newHandInput, type HandInput, type PinchTarget } from '../src/app/view-gestures.ts';
 
 /** Drives a ViewGestures with two reusable hand inputs and a clock. */
 function rig(factor = 0) {
   const g = new ViewGestures();
   const left = newHandInput();
   const right = newHandInput();
-  const s = { factor, blocked: false, now: 0 };
+  const s = { factor, on: 'part' as PinchTarget, now: 0 };
   const place = (h: HandInput, x: number, y: number, z: number) => {
     h.x = x;
     h.y = y;
@@ -18,7 +18,7 @@ function rig(factor = 0) {
   };
   const step = (ms = 16) => {
     s.now += ms;
-    g.update(s.now, left, right, s.factor, s.blocked);
+    g.update(s.now, left, right, s.factor, s.on);
     if (g.commit !== null) s.factor = g.commit; // what the store would do
   };
   /** Both hands pinch at ±half on x, at height y and depth z. */
@@ -54,7 +54,7 @@ describe('view gestures: one hand', () => {
     expect(r.g.pose.x).toBe(0);
   });
 
-  it('pinch and drag moves the model with the hand, without a jump at the start', () => {
+  it('pinch and drag from a part moves the model with the hand, without a jump at the start', () => {
     const r = rig();
     r.place(r.right, 0.1, 0, 0.3);
     r.pinch(r.right, true);
@@ -74,9 +74,70 @@ describe('view gestures: one hand', () => {
     expect(r.g.pose.x).toBeCloseTo(0.1 * CFG.panGain); // stays where it was put
   });
 
+  it('pinch and drag from empty space turns the model: sideways spins it, up and down tilts it', () => {
+    const r = rig();
+    r.s.on = 'space';
+    r.place(r.right, 0.1, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0.14, 0, 0.3); // the drag starts here
+    r.step();
+    expect(r.g.mode).toBe('turn');
+    expect(r.g.pose.yaw).toBeCloseTo(0); // no jump
+    r.place(r.right, 0.24, 0.05, 0.3); // 10 cm right, 5 cm up
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain); // the near side goes right
+    expect(r.g.pose.pitch).toBeCloseTo(-0.05 * CFG.tiltGain); // the top tips away
+    expect(r.g.pose.x).toBe(0); // turning does not move it
+    expect(r.g.pose.y).toBe(0);
+    r.pinch(r.right, false);
+    r.step();
+    expect(r.g.mode).toBe('idle');
+    expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain); // stays turned
+  });
+
+  it('tilt stops before the model flips over', () => {
+    const r = rig();
+    r.s.on = 'space';
+    r.place(r.right, 0, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0, 0.05, 0.3);
+    r.step();
+    r.place(r.right, 0, 3, 0.3);
+    r.step();
+    expect(r.g.pose.pitch).toBe(-CFG.maxTilt);
+    r.place(r.right, 0, -3, 0.3);
+    r.step();
+    expect(r.g.pose.pitch).toBe(CFG.maxTilt);
+    r.g.tiltBy(9);
+    expect(r.g.pose.pitch).toBe(CFG.maxTilt);
+  });
+
+  it('a second hand joining a one-hand turn carries on as a two-hand gesture, keeping the tilt', () => {
+    const r = rig(1);
+    r.s.on = 'space';
+    r.place(r.right, 0.1, 0, 0);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0.2, 0.1, 0);
+    r.step();
+    r.place(r.right, 0.25, 0.15, 0);
+    r.step();
+    const { yaw, pitch } = r.g.pose;
+    expect(pitch).not.toBe(0);
+    r.place(r.left, -0.1, 0, 0);
+    r.pinch(r.left, true);
+    r.step();
+    expect(r.g.mode).toBe('two');
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo(yaw);
+    expect(r.g.pose.pitch).toBe(pitch);
+  });
+
   it('never drags while a pinch is pending on a toolbar button', () => {
     const r = rig();
-    r.s.blocked = true;
+    r.s.on = 'ui';
     r.place(r.right, 0.1, 0, 0.3);
     r.pinch(r.right, true);
     r.step();
@@ -276,8 +337,9 @@ describe('view gestures: reset and equivalents', () => {
     r.g.panBy(0.2, 0.1, -0.1);
     r.g.zoomBy(1.5);
     r.g.turnBy(1);
+    r.g.tiltBy(0.5);
     r.g.reset();
-    expect(r.g.pose).toEqual({ x: 0, y: 0, z: 0, yaw: 0, zoom: 1 });
+    expect(r.g.pose).toEqual({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, zoom: 1 });
   });
 
   it('the keyboard equivalents respect the same limits', () => {

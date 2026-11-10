@@ -28,6 +28,8 @@ const PPM = 2800;
 const BTN_W = 0.108;
 const BTN_H = 0.034;
 const GAP = 0.006;
+const GUIDE_W = 0.38;
+const GUIDE_H = 0.148;
 const EVIDENCE_W = 0.36;
 const EVIDENCE_H = 0.3;
 // Text sizes are px at PPM. At the 0.7 m anchor distance 1° of visual angle is about 12 mm,
@@ -49,6 +51,8 @@ export class SpatialUI {
   private readonly evidenceClose: TextPanel;
   private readonly controls = new Group();
   private readonly evidenceGroup = new Group();
+  private readonly guide: TextPanel;
+  private guideDrawn = false;
   /** True when something a panel shows may have changed; render() is skipped otherwise. */
   dirty = true;
 
@@ -80,6 +84,14 @@ export class SpatialUI {
       this.buttons.push(entry);
     });
 
+    // Gesture guide: a wide card below the model, tipped up toward the eyes, hidden until asked
+    // for (the Gestures button). It sits just under the lowest parts and left of the sandbox tray.
+    this.guide = new TextPanel({ width: GUIDE_W, height: GUIDE_H, pxPerMeter: PPM, padding: 24, radius: 24 });
+    this.guide.mesh.position.set(-0.02, -0.27, 0.17);
+    this.guide.mesh.rotation.x = -0.45;
+    this.guide.mesh.visible = false;
+    world.createTransformEntity(this.guide.mesh, { parent: groupEntity });
+
     // Captions: above the system.
     this.caption = new TextPanel({ width: 0.52, height: 0.19, pxPerMeter: PPM, padding: 36, radius: 30 });
     this.caption.mesh.position.set(0, 0.335, -0.02); // clear of the tallest exploded layout and its labels
@@ -97,6 +109,20 @@ export class SpatialUI {
     this.evidenceClose.mesh.position.set(EVIDENCE_W / 2 - 0.045, -EVIDENCE_H / 2 - 0.022, 0.002);
     makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence, ui: true });
     this.evidenceGroup.visible = false;
+  }
+
+  get guideVisible(): boolean {
+    return this.guide.mesh.visible;
+  }
+
+  /** Show or hide the gesture guide. It is drawn the first time it is shown and never changes. */
+  toggleGuide(): void {
+    if (!this.guideDrawn) {
+      this.guideDrawn = true;
+      this.guide.draw(GUIDE_LINES);
+    }
+    this.guide.mesh.visible = !this.guide.mesh.visible;
+    this.dirty = true;
   }
 
   /** World position of every toolbar button by id (debug and the emulator walkthrough). */
@@ -138,6 +164,23 @@ export class SpatialUI {
     if (evidence) this.evidence.draw(evidenceLines(evidence));
   }
 }
+
+/**
+ * The gesture guide: what the hands do, in the fewest words (ADR-0021). One line per gesture.
+ */
+const GUIDE: ReadonlyArray<readonly [gesture: string, effect: string]> = [
+  ['Pinch', 'select a part, press a button'],
+  ['Drag a part', 'move the model'],
+  ['Drag empty space', 'turn and tilt it'],
+  ['Both hands, pull apart', 'explode, then zoom in'],
+  ['Both hands, push together', 'zoom out, then collapse'],
+  ['Both hands, twist', 'turn it'],
+  ['Recenter', 'put everything back'],
+];
+const GUIDE_LINES: TextLine[] = [
+  { text: 'HAND GESTURES', size: CODE, color: CSS.muted, bold: true, gap: 8 },
+  ...GUIDE.map(([gesture, effect]): TextLine => ({ text: `${gesture}  →  ${effect}`, size: SMALL })),
+];
 
 function evidenceLines(ev: Evidence): TextLine[] {
   const badge = TRUTH_BADGE[ev.truth_status];

@@ -180,6 +180,7 @@ export class ExplodeApp {
     root.position.z += (pose.z - root.position.z) * a;
     const turn = Math.atan2(Math.sin(pose.yaw - root.rotation.y), Math.cos(pose.yaw - root.rotation.y)); // the short way round
     root.rotation.y += turn * a;
+    root.rotation.x += (pose.pitch - root.rotation.x) * a; // default XYZ order: spin about the model's vertical, then tilt
     root.scale.setScalar(root.scale.x + (pose.zoom - root.scale.x) * a);
   }
 
@@ -265,6 +266,9 @@ export class ExplodeApp {
     else if (k === '-') this.hands.gestures.zoomBy(0.8);
     else if (k === '[') this.hands.gestures.turnBy(Math.PI / 12);
     else if (k === ']') this.hands.gestures.turnBy(-Math.PI / 12);
+    else if (k === 'pageup') this.hands.gestures.tiltBy(-Math.PI / 12);
+    else if (k === 'pagedown') this.hands.gestures.tiltBy(Math.PI / 12);
+    else if (k === 'g') this.ui.toggleGuide();
     else if (k === 'arrowleft') this.hands.gestures.panBy(-0.05, 0, 0);
     else if (k === 'arrowright') this.hands.gestures.panBy(0.05, 0, 0);
     else if (k === 'arrowup') this.hands.gestures.panBy(0, 0.05, 0);
@@ -352,6 +356,7 @@ export class ExplodeApp {
       { id: 'undo', label: () => 'Undo', enabled: () => this.store.log.length > 0, onPress: () => this.store.undo() },
       { id: 'reset', label: () => 'Reset', enabled: () => true, onPress: () => this.store.restart() },
       { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => (this.needsRecenter = true) },
+      { id: 'guide', label: () => (this.ui.guideVisible ? 'Hide gestures' : 'Gestures'), enabled: () => true, onPress: () => this.ui.toggleGuide() },
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
@@ -399,8 +404,8 @@ export class ExplodeApp {
     else if (s.lesson?.status === 'complete')
       caption = this.onMechanical
         ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
-        : 'Lesson complete. Explore freely: pinch and drag to move it, pull with both hands to zoom, twist to turn. Recenter puts it back.';
-    else caption = 'Free exploration. Pinch and drag to move it; with both hands, pull to zoom and twist to turn.';
+        : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, pull with both hands to zoom. Gestures lists them all.';
+    else caption = 'Free exploration. Drag a part to move it, drag empty space to turn it, pull with both hands to zoom.';
     const tutor = this.tutorAnswer && this.tutorAnswer.stepKey === this.stepKey() ? this.tutorAnswer : null;
     const graph = this.store.ctx.bundle.graph;
     return {

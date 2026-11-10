@@ -17,7 +17,9 @@
  *
  * While running, IWER is put in `programmatic` control mode (as the CLI walkthrough does): in its
  * default `manual` mode the IWER DevUI copies its own hand handles into the device every frame and
- * would overwrite the webcam. The DevUI's mouse/keyboard controls are hidden until Stop.
+ * would overwrite the webcam. The DevUI's mouse/keyboard controls are hidden until Stop. The mode
+ * is re-asserted every frame, because IWER's remote layer (the CLI) drops it when idle; and Stop
+ * leaves it alone while that layer holds the device, or CLI commands would be overwritten.
  *
  * Keys while running: H swaps left/right, K recalibrates reach (hold your hands at a comfortable
  * distance, press K).
@@ -77,6 +79,8 @@ interface IwerDevice {
   hands: { left?: IwerHand; right?: IwerHand };
   primaryInputMode: 'controller' | 'hand';
   controlMode: 'manual' | 'programmatic';
+  /** IWER's remote-control layer (the CLI). It tracks its own capture and only sets the mode when it thinks it must. */
+  remote?: { isCaptured?: boolean };
 }
 
 // Minimal shapes of what we use from @mediapipe/tasks-vision.
@@ -266,7 +270,6 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
   let raf = 0;
   let running = false;
   let starting = false;
-  let previousControlMode: IwerDevice['controlMode'] = 'manual';
   const head: HeadPose = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] };
   const ctx = canvas.getContext('2d');
 
@@ -325,7 +328,6 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       say('Loading the hand model (first time only)…');
       const landmarker = await loadLandmarker();
 
-      previousControlMode = dev.controlMode;
       dev.controlMode = 'programmatic';
       dev.primaryInputMode = 'hand';
       for (const s of ['left', 'right'] as const) {
@@ -368,7 +370,9 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
     const dev = device();
     if (dev) {
       for (const s of ['left', 'right'] as const) if (hands[s].sent) dev.hands[s]?.updatePinchValue(0);
-      dev.controlMode = previousControlMode;
+      // Hand control back to the DevUI, unless the CLI's remote layer holds the device: it believes
+      // the mode is already programmatic and would not set it again, and it releases by itself.
+      if (!dev.remote?.isCaptured) dev.controlMode = 'manual';
     }
     toggle.textContent = 'Start';
     toggle.style.background = '#1c6e70';
@@ -392,6 +396,8 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
       if (video.readyState < 2 || video.currentTime === lastVideoTime) return;
       lastVideoTime = video.currentTime;
       const now = performance.now();
+      // The remote layer drops to manual when the CLI has been idle; the DevUI would then overwrite the hands.
+      if (dev.controlMode !== 'programmatic') dev.controlMode = 'programmatic';
       const result = landmarker.detectForVideo(video, now);
       const aspect = video.videoWidth / Math.max(1, video.videoHeight);
 

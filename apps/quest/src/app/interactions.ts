@@ -19,6 +19,12 @@ export function uiPressPending(): boolean {
   return false;
 }
 
+/** True while a pinch that started on a part of the model (anything pressable that is not a control) is held. */
+export function partPressPending(): boolean {
+  for (const obj of pending) if (!handlers.get(obj)?.ui) return true;
+  return false;
+}
+
 /** Globally suspend ray presses while a hand gesture moves the model; pinches already started are dropped. */
 export function setInteractionsEnabled(on: boolean): void {
   enabled = on;

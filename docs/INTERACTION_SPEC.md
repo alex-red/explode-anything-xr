@@ -46,7 +46,9 @@ The authoritative steps are the lesson definitions in `apps/quest/src/content/*.
 | Both hands pinch and push together | Zoom out, then collapse. A collapsed model is always full size | Never collapses while an edge is in the tray |
 | Both hands pinch and twist | Turn the model about its vertical axis | Counts only with the hands at least 12 cm apart and past 10°. Keyboard `[` / `]` |
 | Both hands pinch and move together | Carry the model | Held within reach of its authored place. Arrow keys |
-| **One hand pinches and drags** | Move the model. Only the model moves; panels stay put | A pinch that travels under 3 cm is still a click; a drag drops that click. Never starts from a toolbar or panel control. **Recenter** resets move, zoom and turn |
+| **One hand pinches a part and drags** | Move the model. Only the model moves; panels stay put | A pinch that travels under 3 cm is still a click; a drag drops that click. Arrow keys |
+| **One hand pinches empty space and drags** | Turn the model: sideways spins it, up and down tilts it (to 60°) | Never starts from a toolbar or panel control. Keyboard `[` / `]` and PageUp / PageDown. **Recenter** resets move, zoom, turn and tilt |
+| **Gestures** button | Shows or hides a one-card guide to all of the above, below the model | Hidden by default. Keyboard `G` |
 | Select an edge plug → **Unplug** | Detach into the sandbox tray | Only `is_mutable_in_sandbox` edges |
 | Select a socket while a plug is detached | Repair attempt | A wrong socket shows feedback, plus the expected socket after the 2nd miss |
 | **Undo** / **Reset** | Drop the last undoable event / restart the lesson | Always visible on the toolbar |

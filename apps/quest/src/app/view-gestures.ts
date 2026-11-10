@@ -3,7 +3,8 @@
  * `hand-gestures.ts` feeds it each hand's pinch state and position (in the anchor's space: x to
  * the viewer's right, y up, z toward the viewer) and applies the pose it produces.
  *
- * - One hand, pinch and drag: move the model. A pinch that does not travel stays a click.
+ * - One hand, pinch and drag: starting on a part moves the model; starting on empty space turns
+ *   it (left/right spins it, up/down tilts it). A pinch that does not travel stays a click.
  * - Two hands, pinch: one continuous "spread" from the change in hand distance. 0..1 is the
  *   explode factor (25 cm of travel, as before); past fully exploded the same pull zooms in.
  *   Pushing together zooms out first, then collapses.
@@ -19,6 +20,8 @@ export interface ViewPose {
   z: number;
   /** Radians about +Y. */
   yaw: number;
+  /** Tilt: radians about the viewer's left-right axis, applied after the yaw. */
+  pitch: number;
   /** Uniform scale; 1 is the authored size. */
   zoom: number;
 }
@@ -30,6 +33,11 @@ export interface GestureConfig {
   dragStart: number;
   /** Model travel per metre of hand travel. The model is farther away than the hand. */
   panGain: number;
+  /** One-hand turn: radians of spin, and of tilt, per metre of hand travel. */
+  turnGain: number;
+  tiltGain: number;
+  /** Tilt stops here either way, so the model cannot be flipped over (rad). */
+  maxTilt: number;
   /** Hand-distance change for a full explode, and for the same step of zoom beyond it (m). */
   spreadTravel: number;
   /** Zoom gained per unit of spread past fully exploded. */
@@ -52,6 +60,10 @@ export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
   pairWindowMs: 500,
   dragStart: 0.03,
   panGain: 1.5,
+  // 30 cm of sideways travel is about a quarter turn; tilt is gentler.
+  turnGain: 5.5,
+  tiltGain: 3.5,
+  maxTilt: (60 * Math.PI) / 180,
   spreadTravel: 0.25,
   zoomRate: 1.5,
   maxZoom: 2, // at 2x the exploded software graph already fills the view
@@ -68,7 +80,10 @@ export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
   maxZ: 0.35,
 };
 
-export type GestureMode = 'idle' | 'pan' | 'two';
+export type GestureMode = 'idle' | 'pan' | 'turn' | 'two';
+
+/** What a pinch started on: a toolbar or panel control, a part of the model, or nothing. */
+export type PinchTarget = 'ui' | 'part' | 'space';
 
 /** One hand's input for a frame. The caller owns and reuses these. */
 export interface HandInput {
@@ -89,7 +104,7 @@ type Side = 'left' | 'right';
 
 export class ViewGestures {
   /** Where the model should be. The caller eases the real transform toward it. */
-  readonly pose: ViewPose = { x: 0, y: 0, z: 0, yaw: 0, zoom: 1 };
+  readonly pose: ViewPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, zoom: 1 };
   mode: GestureMode = 'idle';
   /** While a two-hand gesture is live: the explode factor to preview. Otherwise null. */
   preview: number | null = null;
@@ -112,6 +127,7 @@ export class ViewGestures {
   private py0 = 0;
   private pz0 = 0;
   private yaw0 = 0;
+  private pitch0 = 0;
   private dist0 = 0;
   private angle0 = 0;
   private twist = 0;
@@ -126,9 +142,9 @@ export class ViewGestures {
 
   /** Back to the authored placement. */
   reset(): void {
-    this.pose.x = this.pose.y = this.pose.z = this.pose.yaw = 0;
+    this.pose.x = this.pose.y = this.pose.z = this.pose.yaw = this.pose.pitch = 0;
     this.pose.zoom = 1;
-    if (this.mode === 'pan') this.mode = 'idle'; // a live two-hand gesture re-bases itself below
+    if (this.mode === 'pan' || this.mode === 'turn') this.mode = 'idle'; // a live two-hand gesture re-bases itself below
     if (this.mode === 'two') this.rebase = true;
   }
 
@@ -149,12 +165,17 @@ export class ViewGestures {
     this.pose.yaw = wrapAngle(this.pose.yaw + radians);
   }
 
+  tiltBy(radians: number): void {
+    this.pose.pitch = clamp(this.pose.pitch + radians, -this.cfg.maxTilt, this.cfg.maxTilt);
+  }
+
   /**
    * Advance one frame.
    * @param factor the committed explode factor (0..1)
-   * @param dragBlocked a pinch is pending on a toolbar button, so a one-hand drag must not start
+   * @param startedOn what the current pinch started on: a control never drags, a part moves the
+   *   model, empty space turns it
    */
-  update(now: number, left: HandInput, right: HandInput, factor: number, dragBlocked: boolean): void {
+  update(now: number, left: HandInput, right: HandInput, factor: number, startedOn: PinchTarget): void {
     this.commit = null;
     this.trackOrigin('left', left);
     this.trackOrigin('right', right);
@@ -164,11 +185,16 @@ export class ViewGestures {
       if (!both) this.endTwo();
       else this.updateTwo(left, right);
     }
-    if (this.mode === 'pan') {
+    if (this.mode === 'pan' || this.mode === 'turn') {
       const h = this.panHand === 'left' ? left : right;
       if (both) this.startTwo(left, right, factor); // the other hand joined: carry on with two
       else if (!h.pinching) this.mode = 'idle';
-      else {
+      else if (this.mode === 'turn') {
+        // Like turning a globe from the front: dragging right spins the near side to the right,
+        // dragging up tips the top away.
+        this.pose.yaw = wrapAngle(this.yaw0 + (h.x - this.gx) * this.cfg.turnGain);
+        this.pose.pitch = clamp(this.pitch0 - (h.y - this.gy) * this.cfg.tiltGain, -this.cfg.maxTilt, this.cfg.maxTilt);
+      } else {
         this.pose.x = clamp(this.px0 + (h.x - this.gx) * this.cfg.panGain, this.cfg.minX, this.cfg.maxX);
         this.pose.y = clamp(this.py0 + (h.y - this.gy) * this.cfg.panGain, this.cfg.minY, this.cfg.maxY);
         this.pose.z = clamp(this.pz0 + (h.z - this.gz) * this.cfg.panGain, this.cfg.minZ, this.cfg.maxZ);
@@ -177,9 +203,9 @@ export class ViewGestures {
     if (this.mode === 'idle') {
       // Both pinches must start close together; a held pinch plus a later one is two separate presses.
       if (both && Math.abs(left.startedAt - right.startedAt) <= this.cfg.pairWindowMs) this.startTwo(left, right, factor);
-      else if (!dragBlocked) {
-        if (this.dragged('left', left)) this.startPan('left', left);
-        else if (this.dragged('right', right)) this.startPan('right', right);
+      else if (startedOn !== 'ui') {
+        if (this.dragged('left', left)) this.startDrag('left', left, startedOn);
+        else if (this.dragged('right', right)) this.startDrag('right', right, startedOn);
       }
       // Zoom only exists on a fully opened model: closing it (by button too) returns to full size.
       // (A factor committed this very update has not reached the store yet, so it wins.)
@@ -212,8 +238,10 @@ export class ViewGestures {
     return h.pinching && o.set && !o.spent && Math.hypot(h.x - o.x, h.y - o.y, h.z - o.z) > this.cfg.dragStart;
   }
 
-  private startPan(side: Side, h: HandInput): void {
-    this.mode = 'pan';
+  private startDrag(side: Side, h: HandInput, startedOn: PinchTarget): void {
+    this.mode = startedOn === 'part' ? 'pan' : 'turn';
+    this.yaw0 = this.pose.yaw;
+    this.pitch0 = this.pose.pitch;
     this.panHand = side;
     // Grab from where the hand is now, not where the pinch began, so the model does not jump.
     this.gx = h.x;

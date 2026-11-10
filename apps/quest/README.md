@@ -32,7 +32,9 @@ the camera, then enter XR. Your camera, left/right swap and reach calibration ar
 this browser. If the webcam was running when the page reloaded, it starts again. `?webcam` in
 the URL also starts it on load. While it runs, IWER is in programmatic control mode, the same
 mode the CLI walkthrough uses. Otherwise the IWER dev UI would overwrite the hands every frame.
-Its mouse and keyboard controls come back on **Stop**. Code:
+Its mouse and keyboard controls come back on **Stop**. The bridge re-asserts that mode every
+frame, because IWER's remote layer (the CLI) drops it when idle, and Stop leaves the mode alone
+while the CLI holds the device. Code:
 `src/dev/webcam-hands.ts` (bridge) and `src/dev/webcam-hands-map.ts` (pure mapping, tested in
 `test/webcam-hands-map.test.ts`).
 
@@ -46,8 +48,9 @@ Its mouse and keyboard controls come back on **Stop**. Code:
 - A click is held steady. On pinch, the pointer goes back to where it was just before your
   fingers started closing and freezes until you let go. The app presses a button on release, and
   only if the ray is still on it.
-- Holding a pinch for more than 0.6 s, or pinching with both hands, unfreezes the pointer. Two
-  hands pinched and pulled apart do the explode.
+- Holding a pinch for more than 0.6 s, or pinching with both hands, unfreezes the pointer. Then a
+  held pinch drags: from a part it moves the model, from empty space it turns it. Two hands
+  pinched and pulled apart explode and then zoom.
 - How big your hand looks sets how far along the line of sight the hand sits (30-60 cm), measured
   against its size when tracking starts.
 - Each press and release is logged to the console as `[explode:webcam]`, with the gap, the pointer

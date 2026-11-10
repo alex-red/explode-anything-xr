@@ -1,7 +1,7 @@
 import { Vector3, type Object3D, type World } from '@iwsdk/core';
-import { noteRelease, setInteractionsEnabled, setXrActive, uiPressPending } from './interactions.ts';
+import { noteRelease, partPressPending, setInteractionsEnabled, setXrActive, uiPressPending } from './interactions.ts';
 import { unstickRayPointer } from './pointer-unstick.ts';
-import { ViewGestures, newHandInput, type ViewPose } from './view-gestures.ts';
+import { ViewGestures, newHandInput, type PinchTarget, type ViewPose } from './view-gestures.ts';
 
 /**
  * Hand (and controller) gestures for handling the model (ADR-0012, ADR-0021): feeds each hand's
@@ -11,7 +11,8 @@ import { ViewGestures, newHandInput, type ViewPose } from './view-gestures.ts';
  *
  * - Both hands pinch and pull: explode, then zoom (`onPreview` live, `onCommit` on release).
  * - Both hands twist or move: turn or carry the model.
- * - One hand pinches and drags: move the model. A pinch that does not travel is still a click.
+ * - One hand pinches and drags: from a part it moves the model, from empty space it turns it.
+ *   A pinch that does not travel is still a click.
  *
  * While a gesture is live, ray presses are suspended, so a hand that is moving the model never
  * also selects a part or presses a button.
@@ -22,6 +23,8 @@ export class HandGestures {
   private readonly right = newHandInput();
   private session: XRSession | null = null;
   private suspended = false;
+  /** What the pinch now held started on; a slide-off must not turn a move into a turn. */
+  private startedOn: PinchTarget = 'space';
   /** Select (pinch or trigger) only, without squeeze: what IWSDK's ray pointer follows. */
   private readonly selecting = { left: false, right: false };
   private readonly v = new Vector3();
@@ -62,7 +65,10 @@ export class HandGestures {
       unstickRayPointer(pointers.right, this.selecting.right, now);
     }
     const hadPreview = g.preview !== null;
-    g.update(performance.now(), this.left, this.right, this.getFactor(), uiPressPending());
+    if (!this.left.pinching && !this.right.pinching) this.startedOn = 'space';
+    else if (uiPressPending()) this.startedOn = 'ui';
+    else if (this.startedOn === 'space' && partPressPending()) this.startedOn = 'part';
+    g.update(performance.now(), this.left, this.right, this.getFactor(), this.startedOn);
     const live = g.mode !== 'idle';
     if (live !== this.suspended) {
       this.suspended = live;
