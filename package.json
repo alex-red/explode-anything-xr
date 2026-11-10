@@ -14,6 +14,7 @@
     "content:generate": "node tools/content/src/generate.ts",
     "content:check": "node tools/content/src/check.ts",
     "emulator:walkthrough": "node apps/quest/scripts/walkthrough.ts",
+    "release:pages": "npx -y gh-pages@6 -d apps/quest/dist --dotfiles -m \"Deploy $(git rev-parse --short HEAD)\"",
     "release:manifest": "node tools/release/src/cli.ts manifest",
     "release:verify": "node tools/release/src/cli.ts verify"
   },
