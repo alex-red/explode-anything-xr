@@ -25,7 +25,7 @@
 
 ## B. Hosting and the first screen
 
-- [ ] Cloudflare Pages projects exist: `explode-dev` and `explode` (production)
+- [x] GitHub Pages site is live: <https://alex-red.github.io/explode-anything-xr/>
 - [ ] The dev URL opens in Quest Browser over HTTPS and enters passthrough AR with one press
 - [ ] Landing page reads well in the Quest Browser window: what it is, the Enter button, "seated, hands only", the three disclosures
 - [ ] A browser without mixed-reality support gets a clear message, not a dead button
@@ -36,11 +36,11 @@
 
 - [ ] Release candidate built from a tagged commit with a clean working tree
 - [ ] `npm run release:manifest` run on that build; `release/manifest.json` committed
-- [ ] Deployed to production **once**; `npm run release:verify <production url>` prints `ok`
+- [ ] Published with `npm run release:pages` one last time; `npm run release:verify -- <url>` prints `ok`
 - [ ] The emulator walkthrough passes on the release-candidate commit, and the production URL loads in a desktop browser
 - [ ] If a Quest owner is available: cold open of the production URL passes the tester sheet
 - [ ] If the live tutor ships: proxy `ALLOWED_ORIGINS` is the production origin, the daily cap is set, `KILL_SWITCH` is documented
-- [ ] No deploys to production after this point. `release:verify` again before submitting, then weekly until winners are announced
+- [ ] `release:pages` is not run after this point. `release:verify` again before submitting, then weekly until winners are announced
 
 ## D. Devpost entry
 

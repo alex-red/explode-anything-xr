@@ -84,7 +84,10 @@ The app works fully offline with the scripted guide. To try the live tutor, depl
 
 The entry is a hosted link, not an APK. See [`docs/FINAL_PLAN.md`](docs/FINAL_PLAN.md) §7 and [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md).
 
+Live site: <https://alex-red.github.io/explode-anything-xr/>
+
 ```sh
+npm run release:pages                    # publish the local build to GitHub Pages
 npm run release:manifest                 # after building: hash the build into release/manifest.json
 npm run release:verify -- <production url>   # compare the deployed files with that manifest
 ```

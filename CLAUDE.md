@@ -12,7 +12,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
   - `inferred` and `authored_model` are never promoted.
   - `checkBundleIntegrity` must return `[]`.
 - The tutor (LLM or scripted) may only use `TUTOR_ACTION_TYPES`. It cannot break or repair edges, and it cannot pass or advance lessons; only the lesson engine does that.
-- Don't commit, push or deploy unless asked. Never deploy to the production host after the release candidate: the entry is frozen.
+- Don't commit, push or deploy unless asked. The site is GitHub Pages (`npm run release:pages` publishes the local build to the `gh-pages` branch of `alex-red/explode-anything-xr`); never publish after the release candidate: the entry is frozen.
 
 ## Layout
 
@@ -39,6 +39,7 @@ npm run typecheck -w @explode/quest          # app typecheck (run before any dev
 npm run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
 npm run content:check                        # re-validate committed bundles + hashes
 npm run emulator:walkthrough                 # both lessons in the IWER emulator (needs the dev server; `-- --start` runs one)
+npm run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
 npm run release:manifest                     # hash a finished build into release/manifest.json (does not build)
 npm run release:verify -- <url>              # compare a deployed site with that manifest
 ```

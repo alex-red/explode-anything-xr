@@ -13,10 +13,11 @@
 |---|---|---|
 | Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 103 tests pass; both typechecks clean; `content:check` ok |
 | Quest app | Runs in the emulator. Both lessons completed with emulated controller rays; buttons pressed with emulated hand rays; two-hand pull works both ways. No console errors or warnings | Emulator run, Nov 9 |
-| Production build | Builds: 17 files, 7.3 MB, relative paths. **Not yet loaded in a browser** | `vite build`, Nov 9 |
+| Production build | Builds: 15 files, 7.3 MB, relative paths | `vite build` |
 | Rules | A WebXR (IWSDK) entry is submitted as a hosted link, not an APK | Rules text |
-| Git | 22 logical commits on `main`; nothing pushed | `git log` |
-| Hosting, proxy deploy | Not started | — |
+| Git | Public repository `alex-red/explode-anything-xr`; `main` is pushed | `git log` |
+| Hosting | Live on GitHub Pages at <https://alex-red.github.io/explode-anything-xr/>. The built app loads there with no console errors, responds to the desktop keys, and matches the local build byte for byte. Its session path has not been exercised | `release:verify`, desktop browser |
+| Proxy deploy | Not started | — |
 | Real hardware | Never run on one, and no headset is planned | — |
 
 ## 2. What the rules mean for us
@@ -86,9 +87,9 @@ The plan is organised by phase, not by day. A phase ends when its exit gate is m
 | Phase | H | A | Exit gate |
 |---|---|---|---|
 | **1. Harden for unseen hardware** | Read the four rules items (§2), the video rule first. **H1:** find one or two Quest 3/3S owners willing to open a link. Walk both lessons in the emulator window and note anything confusing or ugly | All of B2–B6 are done; the agent side of G1 is met | **G1:** the app's own draw calls are within budget in the worst scene, and the walkthrough passes |
-| **2. Host and check the built app** | Pick the host and log in. Send the dev link and tester sheet to your Quest owners | First deploy to the **dev** URL. Landing-card overlap. B8 tester sheet | **G2:** the built app loads from the dev URL and both lessons can be completed from it (by emulator extension if one works, otherwise by a Quest owner) |
+| **2. Host and check the built app** | Send the link and tester sheet to your Quest owners | (First deploy is done, and the landing card can be hidden on desktop.) B8 tester sheet | **G2:** the built app loads from the dev URL and both lessons can be completed from it (by emulator extension if one works, otherwise by a Quest owner) |
 | **3. Comprehension and polish** | **Comprehension playtest:** 1–2 people use the desktop preview with the mouse, no coaching; it tests the lesson, not the gestures. Decide K6 | Top fixes from your notes, the playtest and any tester report. Proxy deploy if K6 is yes. Regression tests for every fix | **G3: feature freeze.** Nothing new starts after this |
-| **4. Capture and release candidate** | Capture in the emulator, labelled "emulator capture"; cut the video; 3–5 labelled screenshots; Devpost text | Docs match what shipped. Tag, build, `release:manifest`, deploy to **production** once, `release:verify`. Proofread Devpost text against the truth contract | **G4:** release candidate frozen and the video public |
+| **4. Capture and release candidate** | Capture in the emulator, labelled "emulator capture"; cut the video; 3–5 labelled screenshots; Devpost text | Docs match what shipped. Tag, build, `release:manifest`, `release:pages` one last time, `release:verify`. Proofread Devpost text against the truth contract | **G4:** release candidate frozen and the video public |
 | **5. Submit** | Dry run; every link opened logged out; submit the evening before the deadline. After that, verify only | `release:verify` | Submitted |
 
 Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 3 should not start before G1.
@@ -125,9 +126,10 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 
 ## 7. Hosting and freeze
 
-- **Host:** Cloudflare Pages, two projects: `explode-dev` for every iteration and `explode` for production. The tutor Worker lives in the same account. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
+- **Host:** GitHub Pages, from the `gh-pages` branch of the public repository `alex-red/explode-anything-xr`. The link is <https://alex-red.github.io/explode-anything-xr/>.
+- **One site, two roles.** A repository has a single Pages site, so the same URL is the dev site until the freeze and the submitted link after it. `npm run release:pages` publishes the current local build to `gh-pages`.
 - **Checking the built app without a headset:** the emulator is injected only by the dev server, so a production build on a desktop browser shows the "open this on a Quest" state plus the mouse preview. To exercise the session path of the hosted build, use a WebXR emulator browser extension on the dev URL. Which extension works with this SDK is unverified; if none does, the hosted session path stays untested until a Quest owner opens it.
-- **Freeze (phase 4):** tag the commit; build; `release:manifest`; deploy to production once; `release:verify`; never deploy to that project again. Verify again before submitting and weekly until winners are announced.
+- **Freeze (phase 4):** tag the commit; build; `release:manifest` and commit the manifest; `release:pages` one last time; `release:verify`; never run `release:pages` again. Verify again before submitting and weekly until winners are announced.
 
 ## 8. Kill switches
 
