@@ -12,7 +12,9 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w apps/quest",
     "content:generate": "node tools/content/src/generate.ts",
-    "content:check": "node tools/content/src/check.ts"
+    "content:check": "node tools/content/src/check.ts",
+    "release:manifest": "node tools/release/src/cli.ts manifest",
+    "release:verify": "node tools/release/src/cli.ts verify"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
