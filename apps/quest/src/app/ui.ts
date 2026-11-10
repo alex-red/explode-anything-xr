@@ -132,7 +132,8 @@ function evidenceLines(ev: Evidence): TextLine[] {
   ];
   switch (ev.kind) {
     case 'source_range':
-      lines.push({ text: `${ev.source.path}:${ev.source.start_line}-${ev.source.end_line} @ ${ev.source.revision.slice(0, 12)}`, size: 28, color: CSS.action, mono: true, gap: 10 });
+      // The revision is a content hash of the sample's source tree, not a git commit; say so.
+      lines.push({ text: `${ev.source.path}:${ev.source.start_line}-${ev.source.end_line} @ tree ${ev.source.revision.slice(0, 12)}`, size: 28, color: CSS.action, mono: true, gap: 10 });
       for (const l of ev.source.excerpt.split('\n').slice(0, 12)) lines.push({ text: l || ' ', size: 28, mono: true });
       break;
     case 'test_run':

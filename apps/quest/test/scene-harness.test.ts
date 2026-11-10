@@ -333,7 +333,7 @@ describe('scene harness: software hero lesson', () => {
     h.press(h.button(/^Evidence$/));
     const evidenceText = h.panels().find((p) => p.text.startsWith('EVIDENCE'))?.text ?? '';
     expect(evidenceText).toMatch(/IN SOURCE/);
-    expect(evidenceText).toMatch(/src\/.*\.ts:\d+-\d+ @/);
+    expect(evidenceText).toMatch(/src\/.*\.ts:\d+-\d+ @ tree [0-9a-f]{12}/);
 
     expect(h.caption()).toMatch(/which step fails first/i);
     h.press(h.view().nodes.get('fn:src/sessions/store.ts#sessionstore.create')!.mesh);

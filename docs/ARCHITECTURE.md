@@ -8,7 +8,7 @@
 
 ```
 BUILD TIME (Mac, Node 24)                            RUNTIME (Quest Browser PWA, offline-first)
-content/repo-demo/fixture @ git rev ─┐               ┌─ renderer (IWSDK 1.0.1 / three.js)
+content/repo-demo/fixture @ tree hash┐               ┌─ renderer (IWSDK 1.0.1 / three.js)
   tools/indexer (ts-morph) → graph   │               │    nodes, tube edges, CanvasTexture labels/panels
   node --test + NODE_V8_COVERAGE     ├─▶ ContentBundle├─ input: ray+select, two-hand pinch-pull, buttons
      → test_run evidence (observed)  │   (*.bundle.json│
