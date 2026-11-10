@@ -233,6 +233,7 @@ export class ExplodeApp {
     else if (k === 'd') this.debug.enabled = !this.debug.enabled;
     else if (k === 'p') this.logTargets();
     else if (k === '0') this.forgetProgress();
+    else if (k === 's') this.switchSystem();
   }
 
   /**
@@ -240,7 +241,11 @@ export class ExplodeApp {
    * (scripts/walkthrough.ts) aims its rays from this, so it follows any layout change.
    */
   private logTargets(): void {
-    const targets = { step: this.stepKey(), buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    const info = this.world.renderer.info;
+    // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
+    // own content; inside the emulator it also counts the emulated room and controllers.
+    const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
+    const targets = { step: this.stepKey(), perf, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 
