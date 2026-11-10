@@ -4,6 +4,8 @@ import {
   DirectionalLight,
   Group,
   HemisphereLight,
+  InstancedMesh,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -12,8 +14,10 @@ import {
   TorusGeometry,
   BoxGeometry,
   Vector3,
+  type BufferGeometry,
   type Camera,
   type Entity,
+  type Material,
   type World,
 } from '@iwsdk/core';
 import type { FlowPath, GraphEdge, GraphNode, SceneState } from '@explode/contracts';
@@ -31,7 +35,16 @@ export interface GraphHandlers {
 
 interface NodeView {
   node: GraphNode;
-  mesh: Mesh<any, MeshStandardMaterial>;
+  /**
+   * The object rays hit and everything else positions against. For a mechanical part it is the
+   * visible mesh. For a software node it is an invisible hit volume; the visible shape is one
+   * instance in a shared batch (`batch`/`slot`).
+   */
+  mesh: Mesh<BufferGeometry, Material>;
+  /** Own material of a mechanical part; null for software nodes. */
+  material: MeshStandardMaterial | null;
+  batch: InstancedMesh | null;
+  slot: number;
   entity: Entity;
   collapsed: Vector3;
   exploded: Vector3;
@@ -46,14 +59,30 @@ interface NodeView {
 
 interface EdgeView {
   edge: GraphEdge;
-  mesh: Mesh<CylinderGeometry, MeshBasicMaterial>;
-  plug: { mesh: Mesh<BoxGeometry, MeshStandardMaterial>; entity: Entity; label: TextPanel; detached: boolean | null } | null;
+  /** Index of this edge's tube in the shared edge batch. */
+  slot: number;
+  /** `mesh` is an invisible hit volume; the small visible plug and its label are its children. */
+  plug: { mesh: Mesh<BufferGeometry, Material>; body: Mesh<BoxGeometry, MeshStandardMaterial>; entity: Entity; label: TextPanel; detached: boolean | null } | null;
 }
 
 const UP = new Vector3(0, 1, 0);
 const TRAY = new Vector3(0.3, -0.17, 0.1);
-const MAX_LABELS = 30;
+// Each label is its own texture and draw call, so the cap is part of the render budget.
+const MAX_LABELS = 18;
 const PARTICLES = 8;
+// Rays from a real hand wobble, so anything pressable is at least 4 cm across to the ray,
+// whatever size it is drawn.
+const MIN_HIT_RADIUS = 0.02;
+const PLUG_HIT_RADIUS = 0.025;
+const IDENTITY = new Quaternion();
+const WHITE = new Color(0xffffff);
+const EDGE_COLOR = new Color(COLOR.edge).multiplyScalar(0.6);
+const EDGE_DIM = new Color(COLOR.dim);
+const EDGE_PATH = new Color(COLOR.path);
+const EDGE_BROKEN = new Color(COLOR.fault);
+const NODE_PATH = new Color(COLOR.path);
+const NODE_FAULT = new Color(COLOR.fault);
+const NODE_DIM = new Color(COLOR.dim);
 
 /**
  * Renders one ContentBundle as a manipulable spatial object.
@@ -72,19 +101,26 @@ export class GraphView {
   private edges = new Map<string, EdgeView>();
   private sockets: Array<{ mesh: Mesh<TorusGeometry, MeshBasicMaterial>; entity: Entity; edgeId: string; targetId: string }> = [];
   private socketKey = '';
-  private particles: Mesh<SphereGeometry, MeshBasicMaterial>[] = [];
+  // Software nodes, edges and flow particles are drawn as instanced batches: one draw call per
+  // batch instead of one per node or edge (docs/FINAL_PLAN.md B2).
+  private nodeBatches = new Map<string, InstancedMesh>();
+  private edgeBatch: InstancedMesh | null = null;
+  private particles: InstancedMesh;
   private tray: Group;
   private trayLabel: TextPanel;
   private readonly isMechanical: boolean;
   private readonly edgeGeo = new CylinderGeometry(1, 1, 1, 6, 1, true);
+  private readonly plugHitGeo = new SphereGeometry(PLUG_HIT_RADIUS, 10, 8);
   private readonly mats = {
-    edge: new MeshBasicMaterial({ color: COLOR.edge, transparent: true, opacity: 0.55 }),
-    edgePath: new MeshBasicMaterial({ color: COLOR.path }),
-    edgeBroken: new MeshBasicMaterial({ color: COLOR.fault }),
-    edgeDim: new MeshBasicMaterial({ color: COLOR.dim, transparent: true, opacity: 0.25 }),
+    edge: new MeshBasicMaterial({ color: 0xffffff }), // tinted per instance
     particle: new MeshBasicMaterial({ color: COLOR.path }),
     socket: new MeshBasicMaterial({ color: COLOR.action, transparent: true, opacity: 0.9 }),
+    /** Never drawn (no draw call), still hit by rays. */
+    hit: new MeshBasicMaterial({ visible: false }),
   };
+  private tmpM = new Matrix4();
+  private tmpS = new Vector3();
+  private tmpColor = new Color();
   private tmpA = new Vector3();
   private tmpB = new Vector3();
   private tmpC = new Vector3();
@@ -117,16 +153,13 @@ export class GraphView {
     sun.position.set(0.4, 1, 0.6);
     this.root.add(hemi, sun);
 
+    if (!this.isMechanical) this.buildNodeBatches(bundle.graph.nodes);
     for (const node of bundle.graph.nodes) this.buildNode(node);
     for (const edge of bundle.graph.edges) this.buildEdge(edge);
-
-    const pGeo = new SphereGeometry(0.006, 8, 6);
-    for (let i = 0; i < PARTICLES; i++) {
-      const p = new Mesh(pGeo, this.mats.particle);
-      p.visible = false;
-      this.root.add(p);
-      this.particles.push(p);
+    if (this.edges.size > 0) {
+      this.edgeBatch = this.addBatch(this.edgeGeo, this.mats.edge, this.edges.size);
     }
+    this.particles = this.addBatch(new SphereGeometry(0.006, 8, 6), this.mats.particle, PARTICLES);
 
     this.tray = new Group();
     const plate = new Mesh(new BoxGeometry(0.16, 0.006, 0.09), new MeshStandardMaterial({ color: 0x22303f, roughness: 0.8 }));
@@ -161,22 +194,33 @@ export class GraphView {
       const selected = s.selected_id === v.node.id;
       let scale = v.radius * (selected ? 1.3 : v.hovered ? 1.15 : 1) * (dimmed ? 0.6 : 1);
       if (!this.isMechanical && v.node.kind === 'cluster') scale *= 0.25 + 0.75 * (1 - f); // clusters shrink as the system opens
-      if (this.isMechanical) v.mesh.scale.setScalar(selected ? 1.12 : v.hovered ? 1.06 : 1);
-      else v.mesh.scale.setScalar(scale);
-
-      const m = v.mesh.material;
-      if (affected.has(v.node.id)) {
-        m.color.setHex(COLOR.fault);
-        m.emissive.setHex(COLOR.fault).multiplyScalar(0.25 + 0.2 * Math.sin(this.time * 4));
-      } else if (highlighted.has(v.node.id)) {
-        m.color.setHex(COLOR.path);
-        m.emissive.setHex(COLOR.path).multiplyScalar(0.35);
-      } else if (dimmed) {
-        m.color.setHex(COLOR.dim);
-        m.emissive.setHex(0x000000);
-      } else {
-        m.color.copy(v.baseColor);
-        m.emissive.setHex(selected ? 0x445566 : 0x000000);
+      const m = v.material;
+      if (m) {
+        // Mechanical part: its own mesh and material.
+        v.mesh.scale.setScalar(selected ? 1.12 : v.hovered ? 1.06 : 1);
+        if (affected.has(v.node.id)) {
+          m.color.setHex(COLOR.fault);
+          m.emissive.setHex(COLOR.fault).multiplyScalar(0.25 + 0.2 * Math.sin(this.time * 4));
+        } else if (highlighted.has(v.node.id)) {
+          m.color.setHex(COLOR.path);
+          m.emissive.setHex(COLOR.path).multiplyScalar(0.35);
+        } else if (dimmed) {
+          m.color.setHex(COLOR.dim);
+          m.emissive.setHex(0x000000);
+        } else {
+          m.color.copy(v.baseColor);
+          m.emissive.setHex(selected ? 0x445566 : 0x000000);
+        }
+      } else if (v.batch) {
+        // Software node: the hit volume stays generous, the drawn instance carries the state.
+        v.mesh.scale.setScalar(v.node.kind === 'cluster' ? scale : Math.max(v.radius * 1.3, MIN_HIT_RADIUS));
+        const c = this.tmpColor;
+        if (affected.has(v.node.id)) c.copy(NODE_FAULT).multiplyScalar(0.8 + 0.2 * Math.sin(this.time * 4));
+        else if (highlighted.has(v.node.id)) c.copy(NODE_PATH);
+        else if (dimmed) c.copy(NODE_DIM);
+        else c.copy(v.baseColor).lerp(WHITE, selected ? 0.45 : v.hovered ? 0.2 : 0);
+        v.batch.setMatrixAt(v.slot, this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(scale)));
+        v.batch.setColorAt(v.slot, c);
       }
 
       if (v.spinAxis) {
@@ -185,6 +229,11 @@ export class GraphView {
         v.spinSpeed += (want - v.spinSpeed) * Math.min(1, dt * 2);
         v.mesh.rotation[v.spinAxis] += v.spinSpeed * dt;
       }
+    }
+
+    for (const batch of this.nodeBatches.values()) {
+      batch.instanceMatrix.needsUpdate = true;
+      if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
     }
 
     this.updateLabels(s, f, highlighted, affected);
@@ -226,16 +275,28 @@ export class GraphView {
   dispose(): void {
     for (const v of this.nodes.values()) {
       v.label?.dispose();
-      // Software node geometry is shared across views (shapes.ts); keep it, dispose the material.
-      if (!this.isMechanical) v.mesh.material.dispose();
+      // Software hit volumes use shared geometry (shapes.ts) and the shared hit material.
       v.entity.dispose({ disposeResources: this.isMechanical });
     }
     for (const e of this.edges.values()) {
       if (e.plug) {
         e.plug.label.dispose();
-        e.plug.entity.dispose();
+        e.plug.body.geometry.dispose();
+        e.plug.body.material.dispose();
+        e.plug.entity.dispose({ disposeResources: false });
       }
     }
+    // Batches: node geometry is shared across views, so only materials and instance buffers go.
+    for (const batch of this.nodeBatches.values()) {
+      (batch.material as Material).dispose();
+      batch.dispose();
+    }
+    this.edgeBatch?.dispose();
+    this.edgeGeo.dispose();
+    this.particles.geometry.dispose();
+    this.particles.dispose();
+    this.plugHitGeo.dispose();
+    for (const m of Object.values(this.mats)) m.dispose();
     this.disposeSockets();
     this.trayLabel.dispose();
     this.rootEntity.dispose();
@@ -282,15 +343,10 @@ export class GraphView {
     const part = bundle.assets?.parts[node.id];
     if (this.isMechanical && !part) return; // cluster-only nodes in mechanical systems are not rendered
     const baseColor = new Color(part ? part.color : colorForKind(node.kind));
-    const material = new MeshStandardMaterial({
-      color: baseColor,
-      roughness: part ? 0.45 : 0.35,
-      metalness: part ? 0.35 : 0.1,
-      flatShading: !part,
-      transparent: !part && node.kind === 'cluster',
-      opacity: !part && node.kind === 'cluster' ? 0.35 : 1,
-    });
-    const mesh = new Mesh(part ? partGeometry(part) : softwareGeometry(node), material);
+    const material = part ? new MeshStandardMaterial({ color: baseColor, roughness: 0.45, metalness: 0.35 }) : null;
+    const mesh: Mesh<BufferGeometry, Material> = material && part ? new Mesh(partGeometry(part), material) : new Mesh(softwareGeometry(node), this.mats.hit);
+    const batch = part ? null : (this.nodeBatches.get(batchKey(node.kind)) ?? null);
+    const slot = batch ? batch.userData.next++ : -1;
     const collapsed = new Vector3(...placement.collapsed);
     const exploded = new Vector3(...placement.exploded);
     mesh.position.copy(collapsed);
@@ -304,6 +360,9 @@ export class GraphView {
     this.nodes.set(node.id, {
       node,
       mesh,
+      material,
+      batch,
+      slot,
       entity,
       collapsed,
       exploded,
@@ -319,20 +378,50 @@ export class GraphView {
 
   private buildEdge(edge: GraphEdge): void {
     if (!this.nodes.has(edge.source_id) || !this.nodes.has(edge.target_id)) return;
-    const mesh = new Mesh(this.edgeGeo, this.mats.edge);
-    mesh.visible = false;
-    this.root.add(mesh);
     let plug: EdgeView['plug'] = null;
     if (edge.is_mutable_in_sandbox) {
-      const pm = new Mesh(new BoxGeometry(0.022, 0.014, 0.014), new MeshStandardMaterial({ color: COLOR.action, emissive: COLOR.action, emissiveIntensity: 0.4 }));
-      const entity = makeInteractive(this.world, pm, this.rootEntity, { press: () => this.handlers.onPlugPressed(edge.id) });
+      // The visible plug is about 2 cm; the ray target around it is a 5 cm sphere.
+      const hit = new Mesh(this.plugHitGeo, this.mats.hit);
+      const body = new Mesh(new BoxGeometry(0.022, 0.014, 0.014), new MeshStandardMaterial({ color: COLOR.action, emissive: COLOR.action, emissiveIntensity: 0.4 }));
+      hit.add(body);
+      const entity = makeInteractive(this.world, hit, this.rootEntity, { press: () => this.handlers.onPlugPressed(edge.id) });
       const label = new TextPanel({ width: 0.1, height: 0.022, pxPerMeter: 2400, background: 'rgba(12,18,30,0.8)', border: null, padding: 6, radius: 10, align: 'center' });
       label.draw([{ text: 'unplug', size: 34, color: '#3ccfcf', bold: true }]);
       label.mesh.position.set(0, 0.02, 0);
-      pm.add(label.mesh);
-      plug = { mesh: pm, entity, label, detached: null };
+      hit.add(label.mesh);
+      plug = { mesh: hit, body, entity, label, detached: null };
     }
-    this.edges.set(edge.id, { edge, mesh, plug });
+    this.edges.set(edge.id, { edge, slot: this.edges.size, plug });
+  }
+
+  /** One instanced batch per software node shape (cluster, module, everything else). */
+  private buildNodeBatches(nodes: readonly GraphNode[]): void {
+    const counts = new Map<string, { count: number; sample: GraphNode }>();
+    for (const n of nodes) {
+      const entry = counts.get(batchKey(n.kind));
+      if (entry) entry.count++;
+      else counts.set(batchKey(n.kind), { count: 1, sample: n });
+    }
+    for (const [key, { count, sample }] of counts) {
+      const cluster = key === 'cluster';
+      const material = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.1, flatShading: true, transparent: cluster, opacity: cluster ? 0.35 : 1 });
+      const batch = this.addBatch(softwareGeometry(sample), material, count);
+      batch.userData.next = 0;
+      this.nodeBatches.set(key, batch);
+    }
+  }
+
+  /** An instanced mesh with every instance hidden (zero scale) and tinted white to start. */
+  private addBatch(geometry: BufferGeometry, material: Material, count: number): InstancedMesh {
+    const batch = new InstancedMesh(geometry, material, count);
+    batch.frustumCulled = false; // instances move every frame; the bounds would be stale
+    this.tmpM.makeScale(0, 0, 0);
+    for (let i = 0; i < count; i++) {
+      batch.setMatrixAt(i, this.tmpM);
+      batch.setColorAt(i, WHITE);
+    }
+    this.root.add(batch);
+    return batch;
   }
 
   private edgeVisible(edge: GraphEdge, s: SceneState, f: number): boolean {
@@ -345,20 +434,26 @@ export class GraphView {
 
   private updateEdges(s: SceneState, f: number, isolated: Set<string> | null): void {
     const { pathEdges, broken } = this;
+    const batch = this.edgeBatch;
+    if (!batch) return;
+    let anyVisible = false;
     for (const ev of this.edges.values()) {
-      const { edge, mesh } = ev;
+      const { edge } = ev;
       const a = this.nodes.get(edge.source_id)!.mesh.position;
       const b = this.nodes.get(edge.target_id)!.mesh.position;
       const isBroken = broken.has(edge.id);
       const visible = this.edgeVisible(edge, s, f) || (pathEdges.has(edge.id) && f > 0.2);
-      mesh.visible = visible;
       if (visible) {
+        anyVisible = true;
         const onPath = pathEdges.has(edge.id);
         const dim = isolated !== null && !(isolated.has(edge.source_id) && isolated.has(edge.target_id));
         const end = isBroken ? this.tmpC.lerpVectors(a, b, 0.4) : b;
-        placeCylinder(mesh, a, end, onPath || isBroken ? 0.0028 : 0.0014, this.tmpA, this.tmpQ);
-        mesh.material = isBroken ? this.mats.edgeBroken : onPath ? this.mats.edgePath : dim ? this.mats.edgeDim : this.mats.edge;
+        tubeMatrix(this.tmpM, a, end, onPath || isBroken ? 0.0028 : 0.0014, this.tmpA, this.tmpB, this.tmpS, this.tmpQ);
+        batch.setColorAt(ev.slot, isBroken ? EDGE_BROKEN : onPath ? EDGE_PATH : dim ? EDGE_DIM : EDGE_COLOR);
+      } else {
+        this.tmpM.makeScale(0, 0, 0); // hidden
       }
+      batch.setMatrixAt(ev.slot, this.tmpM);
       if (ev.plug) {
         const pm = ev.plug.mesh;
         if (isBroken) {
@@ -374,24 +469,28 @@ export class GraphView {
         }
       }
     }
+    batch.visible = anyVisible; // no draw call while every edge is hidden
+    batch.instanceMatrix.needsUpdate = true;
+    if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
     this.tray.visible = broken.size > 0 || f > 0.6;
   }
 
   private updateParticles(s: SceneState, f: number, path: FlowPath | undefined): void {
     const show = !!path && s.flow_animating && f > 0.3;
     const segs = show ? this.segs : [];
-    for (let i = 0; i < this.particles.length; i++) {
-      const p = this.particles[i]!;
+    for (let i = 0; i < PARTICLES; i++) {
       if (segs.length === 0) {
-        p.visible = false;
-        continue;
+        this.tmpM.makeScale(0, 0, 0);
+      } else {
+        const t = ((this.time * 0.35 + i / PARTICLES) % 1) * segs.length;
+        const k = Math.min(Math.floor(t), segs.length - 1);
+        const seg = segs[k]!;
+        this.tmpM.makeTranslation(this.tmpA.lerpVectors(seg[0], seg[1], t - k));
       }
-      const t = ((this.time * 0.35 + i / this.particles.length) % 1) * segs.length;
-      const k = Math.min(Math.floor(t), segs.length - 1);
-      const seg = segs[k]!;
-      p.position.lerpVectors(seg[0], seg[1], t - k);
-      p.visible = true;
+      this.particles.setMatrixAt(i, this.tmpM);
     }
+    this.particles.visible = segs.length > 0;
+    this.particles.instanceMatrix.needsUpdate = true;
   }
 
   private updateSockets(s: SceneState, f: number): void {
@@ -477,12 +576,19 @@ function colorForKind(kind: GraphNode['kind']): number {
   }
 }
 
-function placeCylinder(mesh: Mesh, a: Vector3, b: Vector3, radius: number, tmp: Vector3, q: Quaternion): void {
-  const dir = tmp.subVectors(b, a);
+/** Software node shapes share three batches: clusters, modules, and everything else. */
+function batchKey(kind: GraphNode['kind']): string {
+  return kind === 'cluster' || kind === 'module' ? kind : 'leaf';
+}
+
+/** Matrix for a unit cylinder stretched from a to b with the given radius. */
+function tubeMatrix(out: Matrix4, a: Vector3, b: Vector3, radius: number, dir: Vector3, mid: Vector3, scale: Vector3, q: Quaternion): Matrix4 {
+  dir.subVectors(b, a);
   const len = dir.length();
-  mesh.position.copy(a).addScaledVector(dir, 0.5);
-  if (len > 1e-6) mesh.quaternion.copy(q.setFromUnitVectors(UP, dir.multiplyScalar(1 / len)));
-  mesh.scale.set(radius, Math.max(len, 1e-4), radius);
+  mid.copy(a).addScaledVector(dir, 0.5);
+  if (len > 1e-6) q.setFromUnitVectors(UP, dir.multiplyScalar(1 / len));
+  else q.identity();
+  return out.compose(mid, q, scale.set(radius, Math.max(len, 1e-4), radius));
 }
 
 function easeInOut(t: number): number {

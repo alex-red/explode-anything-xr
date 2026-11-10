@@ -4,7 +4,7 @@
  * Presses go through the same handler registry InteractionSystem uses for XR rays and mouse.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventDispatcher, Group, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal } from '@iwsdk/core';
+import { EventDispatcher, Group, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
 import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
@@ -466,6 +466,40 @@ describe('scene harness: software hero lesson', () => {
     expect(maxV).toBeLessThanOrEqual(25);
     expect(labels).toBeGreaterThan(5);
     expect(labels).toBeLessThanOrEqual(30);
+  });
+
+  it('stays inside the draw-call budget and keeps every target at least 4 cm across to a ray', () => {
+    const h = setup();
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    h.press(h.button(/^Trace/));
+    h.press(h.button(/^Evidence$/));
+    h.press(h.view().nodes.get('fn:src/sessions/store.ts#sessionstore.create')!.mesh); // predict
+    const BREAK = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
+    h.press(h.view().edges.get(BREAK)!.plug!.mesh);
+    h.press(h.button(/^Next/)); // repair step: sockets shown, evidence open, path traced
+    h.frames(30);
+    expect(h.view().sockets).toHaveLength(3);
+
+    // Every object the renderer would issue a draw call for: visible, with a visible material.
+    let draws = 0;
+    const walk = (o: Object3D) => {
+      if (!o.visible) return;
+      const m = o as Mesh & { isMesh?: boolean; material?: { visible?: boolean } };
+      if (m.isMesh && m.material?.visible !== false) draws++;
+      o.children.forEach(walk);
+    };
+    walk(h.scene);
+    expect(draws).toBeGreaterThan(20);
+    expect(draws, 'draw calls in the worst software scene').toBeLessThanOrEqual(120);
+
+    for (const v of (h.view().nodes as Map<string, { node: { kind: string }; mesh: Mesh }>).values()) {
+      if (v.node.kind !== 'cluster') expect(v.mesh.scale.x * 2, `ray target for ${v.node.kind}`).toBeGreaterThanOrEqual(0.04);
+    }
+    const plug = h.view().edges.get(BREAK)!.plug!.mesh as Mesh<SphereGeometry>;
+    expect(plug.geometry.parameters.radius * 2).toBeGreaterThanOrEqual(0.04);
   });
 
   it('restores the same step after a killed session, and pauses when blurred', () => {
