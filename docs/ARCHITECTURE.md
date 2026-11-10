@@ -48,10 +48,10 @@ Root scripts:
 
 | Script | What it does |
 |---|---|
-| `npm test` | Vitest over the packages, tools and services |
-| `npm run typecheck` | Typecheck |
-| `npm run content:generate` | Regenerate the bundles |
-| `npm run content:check` | Validate the bundles |
+| `bun run test` | Vitest over the packages, tools and services |
+| `bun run typecheck` | Typecheck |
+| `bun run content:generate` | Regenerate the bundles |
+| `bun run content:check` | Validate the bundles |
 
 Packages export TypeScript source directly. Vite transforms it, and Node 24 runs it with type stripping. The syntax is therefore erasable-only: no enums, namespaces or parameter properties.
 
@@ -156,7 +156,7 @@ The engine lives in `packages/lesson-engine/src/`.
 
 ## 7. Build-time content pipeline
 
-`npm run content:generate` (tools/content) writes `apps/quest/src/content/{drivetrain,repo-demo}.bundle.json`. The app imports both statically, so they are bundled and precached.
+`bun run content:generate` (tools/content) writes `apps/quest/src/content/{drivetrain,repo-demo}.bundle.json`. The app imports both statically, so they are bundled and precached.
 
 **Repo pipeline:**
 

@@ -1,0 +1,5 @@
+[install]
+# npm-style hoisted node_modules. The app relies on it: one deduped `three` (super-three via
+# overrides), workspace packages symlinked from the root, and the root .bin/iwsdk that
+# apps/quest/scripts/walkthrough.ts calls. Bun's isolated linker would change all three.
+linker = "hoisted"

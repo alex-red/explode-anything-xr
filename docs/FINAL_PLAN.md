@@ -105,10 +105,10 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 | A3 | Landing page as the first screen |
 | A4 | Tree-hash label on evidence; no-hands caption hint |
 | A5 | Service worker no longer registered |
-| A6 | Freeze check: `npm run release:manifest`, `npm run release:verify -- <url>` |
+| A6 | Freeze check: `bun run release:manifest`, `bun run release:verify -- <url>` |
 | A7 | Docs aligned with link-based submission |
 | A8 | Debug readout (`?debug`, or D on desktop); accepted events logged as `[explode] …` |
-| B1 | Emulator walkthrough: `npm run emulator:walkthrough` (add `-- --start` to let it start and stop a headless dev server). Steps are derived from the lesson definitions; it passes in controller and hand mode, 36 ray presses, about 100 s |
+| B1 | Emulator walkthrough: `bun run emulator:walkthrough` (add `-- --start` to let it start and stop a headless dev server). Steps are derived from the lesson definitions; it passes in controller and hand mode, 36 ray presses, about 100 s |
 | B7 | `AGENTS.md` files and the unused `sw.js` no longer ship; unused SDK grab and UI-kit features turned off. The 6.8 MB script is the SDK itself and did not shrink |
 | B2 | Draw-call budget met: software nodes, edges and flow particles are instanced batches, and labels are capped at 18. Measured outside a session (the app's own content): the worst software scene went from 230 draw calls to 79; the tutorial from 73 to 60. A test holds the worst scene at ≤120 |
 | B3 | Larger text: evidence code at 32 px (about 0.9° at 0.7 m) and at most 8 lines, small caption lines at 34 px; the evidence panel is wider and further right, and the caption sits above the tallest layout |
@@ -127,7 +127,7 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 ## 7. Hosting and freeze
 
 - **Host:** GitHub Pages, from the `gh-pages` branch of the public repository `alex-red/explode-anything-xr`. The link is <https://alex-red.github.io/explode-anything-xr/>.
-- **One site, two roles.** A repository has a single Pages site, so the same URL is the dev site until the freeze and the submitted link after it. `npm run release:pages` publishes the current local build to `gh-pages`.
+- **One site, two roles.** A repository has a single Pages site, so the same URL is the dev site until the freeze and the submitted link after it. `bun run release:pages` publishes the current local build to `gh-pages`.
 - **Checking the built app without a headset:** the emulator is injected only by the dev server, so a production build on a desktop browser shows the "open this on a Quest" state plus the mouse preview. To exercise the session path of the hosted build, use a WebXR emulator browser extension on the dev URL. Which extension works with this SDK is unverified; if none does, the hosted session path stays untested until a Quest owner opens it.
 - **Freeze (phase 4):** tag the commit; build; `release:manifest` and commit the manifest; `release:pages` one last time; `release:verify`; never run `release:pages` again. Verify again before submitting and weekly until winners are announced.
 
@@ -155,7 +155,7 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 
 ## 10. How things are verified now
 
-- **Every change:** `npm test`, both typechecks, `content:check`.
+- **Every change:** `bun run test`, both typechecks, `content:check`.
 - **Every deploy:** the B1 walkthrough in the emulator, then load the hosted URL in a desktop browser.
 - **By you, in the emulator window:** does each step read clearly, does the layout look right, is anything overlapping.
 - **By a Quest owner, if H1 succeeds:** the tester sheet (B8).

@@ -22,7 +22,7 @@
 | AT-10 | Gestures | Explode works in ≥9 of 10 novice attempts; no accidental explode or system menu in 5 min of free use; the first pinch of a two-hand pull never selects, presses or predicts | Unit + playtest |
 | AT-11 | Reach and field of view | Layout check: every placement inside the 60°×50° cone at the anchor distance; on device at two seated heights, every target within ~0.65 m | Unit + device |
 | AT-12 | Readability | 3 testers read labels and code excerpts seated (on a 3S if available) | Playtest |
-| AT-13 | Freeze | `npm run release:verify <production url>` reports every deployed file identical to `release/manifest.json`; run before submitting and weekly until winners are announced | Script |
+| AT-13 | Freeze | `bun run release:verify <production url>` reports every deployed file identical to `release/manifest.json`; run before submitting and weekly until winners are announced | Script |
 | AT-14 | Video | Public, under the length limit, genuine capture of the real app; emulator footage labeled as such | Manual |
 
 ## 2. Automated suites
@@ -36,10 +36,10 @@
 | Proxy | `services/tutor-proxy/test` | Validation, rate limit, cap, kill switch, upstream timeout/invalid → error signal (AT-08/09) |
 | App logic | `apps/quest/test/app-logic.test.ts` | Event-sourced store: persistence and restore after a killed session (AT-05), per-system logs, undo, throwing storage; tutor client: live, invalid → scripted, network/HTTP errors, Live AI toggle |
 | Scene harness | `apps/quest/test/scene-harness.test.ts` | The real app, view, UI and two-hand-pull code against a stub World and a recording canvas: both lessons completed by in-world presses, presses delivered on pinch release and dropped by a two-hand pull, the no-hands hint, the debug readout, the consequence hidden until prediction, honest truth badges, evidence panel text, two-hand pull preview and commit, layout within the 60°×50° cone and reach (AT-11), ≤30 labels, no clipped text, pause on blur, disposal when switching systems. **Not covered:** WebGL rendering, real hand tracking, frame rate (device only) |
-| Emulator walkthrough | `npm run emulator:walkthrough` (needs the dev server; `-- --start` runs one headless) | The real app in the IWER emulator: session start, both lessons by emulated ray in controller and hand mode, wrong socket rejected, two-hand pull with no stray selection, no console warnings or errors. **Not covered:** frame rate, readability, real hand tracking |
+| Emulator walkthrough | `bun run emulator:walkthrough` (needs the dev server; `-- --start` runs one headless) | The real app in the IWER emulator: session start, both lessons by emulated ray in controller and hand mode, wrong socket rejected, two-hand pull with no stray selection, no console warnings or errors. **Not covered:** frame rate, readability, real hand tracking |
 | Release | `tools/release/test` | File hashing including dot-directories; changed, missing and unreachable files reported; site root checked against `index.html` (AT-13) |
 
-Run: `npm test`, `npm run typecheck`, `npm run content:check`.
+Run: `bun run test`, `bun run typecheck`, `bun run content:check`.
 
 ## 3. Device checklist (every deploy you intend to keep)
 

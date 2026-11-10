@@ -4,7 +4,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 
 ## Hard rules
 
-- **Never start a dev server or run a build (`npm run dev`, `vite`, `iwsdk dev …`, `vite build`, `wrangler dev/deploy`) unless the user explicitly asks.** If a server is already running, you may use it to verify. Tests and typechecks are fine.
+- **Never start a dev server or run a build (`bun run dev`, `vite`, `iwsdk dev …`, `vite build`, `wrangler dev/deploy`) unless the user explicitly asks.** If a server is already running, you may use it to verify. Tests and typechecks are fine.
 - **Truth contract (ADR-0007):**
   - Never fabricate evidence, source lines, test results or ids.
   - `observed` means a run recorded at build time.
@@ -12,7 +12,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
   - `inferred` and `authored_model` are never promoted.
   - `checkBundleIntegrity` must return `[]`.
 - The tutor (LLM or scripted) may only use `TUTOR_ACTION_TYPES`. It cannot break or repair edges, and it cannot pass or advance lessons; only the lesson engine does that.
-- Don't commit, push or deploy unless asked. The site is GitHub Pages (`npm run release:pages` publishes the local build to the `gh-pages` branch of `alex-red/explode-anything-xr`); never publish after the release candidate: the entry is frozen.
+- Don't commit, push or deploy unless asked. The site is GitHub Pages (`bun run release:pages` publishes the local build to the `gh-pages` branch of `alex-red/explode-anything-xr`); never publish after the release candidate: the entry is frozen.
 
 ## Layout
 
@@ -33,16 +33,18 @@ Generated bundles are `apps/quest/src/content/*.bundle.json`. Never hand-edit th
 ## Commands (repo root)
 
 ```sh
-npm test                                     # vitest: all packages, tools, proxy
-npx tsc -p tsconfig.json --noEmit            # node-side typecheck
-npm run typecheck -w @explode/quest          # app typecheck (run before any device test)
-npm run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
-npm run content:check                        # re-validate committed bundles + hashes
-npm run emulator:walkthrough                 # both lessons in the IWER emulator (needs the dev server; `-- --start` runs one)
-npm run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
-npm run release:manifest                     # hash a finished build into release/manifest.json (does not build)
-npm run release:verify -- <url>              # compare a deployed site with that manifest
+bun run test                                 # vitest: all packages, tools, proxy
+bunx tsc -p tsconfig.json --noEmit           # node-side typecheck
+bun run --cwd apps/quest typecheck           # app typecheck (run before any device test)
+bun run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
+bun run content:check                        # re-validate committed bundles + hashes
+bun run emulator:walkthrough                 # both lessons in the IWER emulator (needs the dev server; `-- --start` runs one)
+bun run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
+bun run release:manifest                     # hash a finished build into release/manifest.json (does not build)
+bun run release:verify -- <url>              # compare a deployed site with that manifest
 ```
+
+The package manager is **bun** (`bun install`, `bun run <script>`, `bunx`); `bunfig.toml` keeps npm-style hoisted `node_modules`. Two traps: use `bun run test`, never `bun test` (that is Bun's own test runner, not vitest), and keep the `node` scripts on Node: `content:generate` re-runs the fixture's tests with `process.execPath`, so running it under the Bun runtime would change the evidence.
 
 Node ≥ 24: workspace packages are consumed as `.ts` source through native type stripping. Use explicit `.ts` import extensions and erasable syntax only (no enums or namespaces).
 

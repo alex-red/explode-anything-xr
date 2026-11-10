@@ -2,6 +2,7 @@
   "name": "explode",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.4",
   "workspaces": [
     "packages/*",
     "tools/*",
@@ -10,11 +11,11 @@
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w apps/quest",
+    "typecheck": "tsc -p tsconfig.json --noEmit && bun run --cwd apps/quest typecheck",
     "content:generate": "node tools/content/src/generate.ts",
     "content:check": "node tools/content/src/check.ts",
     "emulator:walkthrough": "node apps/quest/scripts/walkthrough.ts",
-    "release:pages": "npx -y gh-pages@6 -d apps/quest/dist --dotfiles -m \"Deploy $(git rev-parse --short HEAD)\"",
+    "release:pages": "bunx gh-pages@6 -d apps/quest/dist --dotfiles -m \"Deploy $(git rev-parse --short HEAD)\"",
     "release:manifest": "node tools/release/src/cli.ts manifest",
     "release:verify": "node tools/release/src/cli.ts verify"
   },

@@ -30,6 +30,13 @@ async function main(): Promise<void> {
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
   startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'));
+  // Dev only: `?webcam` drives the emulated hands from a webcam (src/dev/webcam-hands.ts).
+  // `import.meta.env.DEV` is false in a build, so this branch and its chunk are dropped.
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('webcam')) {
+    import('./dev/webcam-hands.ts')
+      .then((m) => m.startWebcamHands())
+      .catch((err: unknown) => console.error('[explode:webcam]', err));
+  }
 
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
   const supports = async (mode: string): Promise<boolean> =>

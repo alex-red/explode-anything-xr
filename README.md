@@ -26,13 +26,13 @@ docs/                    review, specs, plan, ADRs, QA, submission checklist
 
 ## Setup
 
-Requires Node ≥ 24.
+Requires Node ≥ 24 (the scripts run on Node) and Bun ≥ 1.4 (package manager and script runner).
 
 ```sh
-npm install --ignore-scripts      # scripts are skipped on purpose (metavr telemetry/onnx downloads)
-npm test                          # unit + integration tests
-npx tsc -p tsconfig.json --noEmit && npm run typecheck -w @explode/quest
-npm run content:generate          # only after changing content/ or the tools
+bun install                       # bun blocks dependency install scripts (metavr telemetry, onnx downloads); do not `bun pm trust` them
+bun run test                      # unit + integration tests
+bunx tsc -p tsconfig.json --noEmit && bun run --cwd apps/quest typecheck
+bun run content:generate          # only after changing content/ or the tools
 ```
 
 ## Manual testing
@@ -40,9 +40,9 @@ npm run content:generate          # only after changing content/ or the tools
 ### 1. Desktop, with the IWER emulator (no headset)
 
 ```sh
-npx playwright install chromium    # once: the IWSDK-managed emulator browser is Playwright Chromium
-cd apps/quest && npm run dev       # IWSDK-managed dev server + emulator browser (port 8081)
-# or: npm run dev:runtime           # plain Vite, then open the URL in your own browser
+bunx playwright install chromium   # once: the IWSDK-managed emulator browser is Playwright Chromium
+cd apps/quest && bun run dev      # IWSDK-managed dev server + emulator browser (port 8473)
+# or: bun run dev:runtime          # plain Vite, then open the URL in your own browser
 ```
 
 - Click **Enter mixed reality** in the emulator to test the immersive path with emulated controllers or hands. Ray-select works as a pinch.
@@ -67,8 +67,8 @@ cd apps/quest && npm run dev       # IWSDK-managed dev server + emulator browser
 
 ### 2. Quest 3 / 3S over USB (fast loop)
 
-1. Enable developer mode and connect USB. Then run `adb reverse tcp:8081 tcp:8081` (localhost counts as a secure context).
-2. Open `https://localhost:8081` in Quest Browser and accept the dev certificate.
+1. Enable developer mode and connect USB. Then run `adb reverse tcp:8473 tcp:8473` (localhost counts as a secure context).
+2. Open `https://localhost:8473` in Quest Browser and accept the dev certificate.
 3. Debug from desktop Chrome at `chrome://inspect`. Watch FPS with the OVR Metrics Tool overlay; the target is a sustained 72.
 4. Go through the device checklist in [`docs/QA_MATRIX.md`](docs/QA_MATRIX.md):
    - two-hand pull;
@@ -87,7 +87,7 @@ The entry is a hosted link, not an APK. See [`docs/FINAL_PLAN.md`](docs/FINAL_PL
 Live site: <https://alex-red.github.io/explode-anything-xr/>
 
 ```sh
-npm run release:pages                    # publish the local build to GitHub Pages
-npm run release:manifest                 # after building: hash the build into release/manifest.json
-npm run release:verify -- <production url>   # compare the deployed files with that manifest
+bun run release:pages                    # publish the local build to GitHub Pages
+bun run release:manifest                 # after building: hash the build into release/manifest.json
+bun run release:verify -- <production url>   # compare the deployed files with that manifest
 ```

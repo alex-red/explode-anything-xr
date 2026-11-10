@@ -35,8 +35,8 @@
 ## C. Build freeze
 
 - [ ] Release candidate built from a tagged commit with a clean working tree
-- [ ] `npm run release:manifest` run on that build; `release/manifest.json` committed
-- [ ] Published with `npm run release:pages` one last time; `npm run release:verify -- <url>` prints `ok`
+- [ ] `bun run release:manifest` run on that build; `release/manifest.json` committed
+- [ ] Published with `bun run release:pages` one last time; `bun run release:verify -- <url>` prints `ok`
 - [ ] The emulator walkthrough passes on the release-candidate commit, and the production URL loads in a desktop browser
 - [ ] If a Quest owner is available: cold open of the production URL passes the tester sheet
 - [ ] If the live tutor ships: proxy `ALLOWED_ORIGINS` is the production origin, the daily cap is set, `KILL_SWITCH` is documented
@@ -58,6 +58,6 @@
 
 - [ ] Devpost shows submitted
 - [ ] Every link opens logged-out: video, production URL
-- [ ] `npm run release:verify <production url>` prints `ok`
+- [ ] `bun run release:verify <production url>` prints `ok`
 - [ ] Production URL opened once more in a desktop browser
 - [ ] Touch nothing after submitting

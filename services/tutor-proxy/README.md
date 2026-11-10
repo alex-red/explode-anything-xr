@@ -80,22 +80,22 @@ The PWA URL is effectively public, so treat this endpoint as public too.
 
 ```sh
 cd services/tutor-proxy
-npx wrangler login
-npx wrangler kv namespace create TUTOR_KV      # paste the id into wrangler.toml
-npx wrangler secret put ANTHROPIC_API_KEY
+bunx wrangler login
+bunx wrangler kv namespace create TUTOR_KV      # paste the id into wrangler.toml
+bunx wrangler secret put ANTHROPIC_API_KEY
 # set ALLOWED_ORIGINS in wrangler.toml to the PWA origin
-npx wrangler deploy
+bunx wrangler deploy
 curl https://<worker>.workers.dev/v1/health
 ```
 
-The worker statically imports `apps/quest/src/content/repo-demo.bundle.json` and `drivetrain.bundle.json`, so run `npm run content:generate` before deploying. Redeploy after any content change, or the client's revision will mismatch (409) and it will use the scripted tutor.
+The worker statically imports `apps/quest/src/content/repo-demo.bundle.json` and `drivetrain.bundle.json`, so run `bun run content:generate` before deploying. Redeploy after any content change, or the client's revision will mismatch (409) and it will use the scripted tutor.
 
 Keep the deployed version frozen from Nov 17 to Dec 11 ([ADR-0002](../../docs/adr/0002-distribution.md)). The kill switch is the only change allowed during judging.
 
 ## Tests
 
 ```sh
-npx vitest run services/tutor-proxy
+bunx vitest run services/tutor-proxy
 ```
 
 Upstream is mocked, so the tests make no network calls.

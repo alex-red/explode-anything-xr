@@ -40,7 +40,7 @@ function dropAgentFiles(): Plugin {
 
 export default defineConfig({
   plugins: [iwsdkDev(), dropAgentFiles()],
-  server: { host: '0.0.0.0', port: 8081, open: false },
+  server: { host: '0.0.0.0', port: 8473, strictPort: true, open: false }, // project-specific port; fail rather than drift
   build: {
     outDir: 'dist',
     sourcemap: process.env.NODE_ENV !== 'production',

@@ -11,11 +11,11 @@ DAILY_TOKEN_CAP = "2000000"
 KILL_SWITCH = "0"
 
 # Rate-limit windows and the daily spend counter. Create with:
-#   npx wrangler kv namespace create TUTOR_KV
+#   bunx wrangler kv namespace create TUTOR_KV
 # then paste the returned id here. Without a binding the worker falls back to per-isolate memory.
 [[kv_namespaces]]
 binding = "TUTOR_KV"
 id = "REPLACE-WITH-KV-NAMESPACE-ID"
 
 # Secret (never put it in this file):
-#   npx wrangler secret put ANTHROPIC_API_KEY
+#   bunx wrangler secret put ANTHROPIC_API_KEY

@@ -230,7 +230,7 @@ async function main(): Promise<void> {
   let started = false;
   const browserReady = () => cli<{ state?: { browserCommandReady?: boolean } }>('dev', 'status', undefined, 20_000).then((r) => r.state?.browserCommandReady === true, () => false);
   if (!(await browserReady())) {
-    if (!start) fail('the dev server is not running. Start it (npm run dev in apps/quest), or pass --start to let this script start it headless.');
+    if (!start) fail('the dev server is not running. Start it (bun run dev in apps/quest), or pass --start to let this script start it headless.');
     console.log('starting the dev server (headless)…');
     await run(CLI, ['dev', 'up', '--headless', '--timeout', '45000'], { cwd: APP, timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
     started = true;
