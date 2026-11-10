@@ -43,14 +43,19 @@ while the CLI holds the device. Code:
   pinch clicks whatever is behind the hand on screen. The middle of the frame points a little
   below straight ahead.
 - Pinching thumb and index finger is a WebXR select. The pinch is an on/off switch: it presses
-  when the fingertip gap is under about 2.5 cm and releases over about 3.2 cm, each held for two
-  frames. The panel shows each hand's gap.
+  when the fingertip gap is under about 2.5 cm for two frames, and releases when it is over about
+  3.5 cm for six frames in a row (about 0.2 s). Releasing is slower on purpose: while pinched
+  hands move, the tracker reads them as open for a frame or two, and a dropped pinch ends a drag
+  or a two-hand gesture. The panel shows each hand's gap.
 - A click is held steady. On pinch, the pointer goes back to where it was just before your
   fingers started closing and freezes until you let go. The app presses a button on release, and
   only if the ray is still on it.
 - Holding a pinch for more than 0.6 s, or pinching with both hands, unfreezes the pointer. Then a
   held pinch drags: from a part it moves the model, from empty space it turns it. Two hands
-  pinched and pulled apart explode and then zoom.
+  pinched and pulled apart explode and then zoom; turned like a steering wheel they roll the
+  model, which is the two-hand rotation a webcam sees best. Pushing both hands toward the camera
+  or pulling them back tilts it; that uses the smoothed palm-size depth estimate, so it is
+  coarser. The forward/back spin needs real depth.
 - How big your hand looks sets how far along the line of sight the hand sits (30-60 cm), measured
   against its size when tracking starts.
 - Each press and release is logged to the console as `[explode:webcam]`, with the gap, the pointer

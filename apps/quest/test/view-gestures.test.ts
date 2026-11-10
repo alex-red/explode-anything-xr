@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GESTURE_CONFIG as CFG, ViewGestures, newHandInput, type HandInput, type PinchTarget } from '../src/app/view-gestures.ts';
+import { DEFAULT_GESTURE_CONFIG as CFG, ViewGestures, newHandInput, pastDeadzone, type HandInput, type PinchTarget } from '../src/app/view-gestures.ts';
 
 /** Drives a ViewGestures with two reusable hand inputs and a clock. */
 function rig(factor = 0) {
@@ -245,12 +245,87 @@ describe('view gestures: two hands', () => {
       r.place(r.left, -0.15 * Math.cos(a), 0, 0.15 * Math.sin(a));
       r.step();
     };
-    turn(8);
+    turn(5);
     expect(r.g.pose.yaw).toBe(0); // inside the deadzone
     turn(36);
-    expect(r.g.pose.yaw).toBeCloseTo(((36 - 10) * Math.PI) / 180);
+    expect(r.g.pose.yaw).toBeCloseTo((36 * Math.PI) / 180); // a deliberate turn follows the hands exactly
     expect(r.g.preview).toBeCloseTo(1); // same distance: no explode or zoom change
     expect(r.g.pose.zoom).toBeCloseTo(1);
+  });
+
+  it('pushing both hands away tips the model back, pulling them closer tips it toward you', () => {
+    const r = rig(1);
+    r.grabBoth(0.15, 0, 0.3);
+    r.spreadTo(0.15, 0, 0.3 - 0.01); // 1 cm: inside the deadzone
+    expect(r.g.pose.pitch).toBe(0);
+    r.spreadTo(0.15, 0, 0.3 - 0.1); // pushed 10 cm away
+    expect(r.g.pose.pitch).toBeCloseTo(-0.1 * CFG.pushTiltGain);
+    expect(r.g.pose.z).toBe(0); // it tilts; it is not carried away
+    expect(r.g.pose.zoom).toBeCloseTo(1);
+    expect(r.g.pose.yaw).toBe(0);
+    expect(r.g.pose.roll).toBe(0);
+    r.spreadTo(0.15, 0, 0.3 + 0.1); // pulled 10 cm closer than where it was grabbed
+    expect(r.g.pose.pitch).toBeCloseTo(0.1 * CFG.pushTiltGain);
+    r.spreadTo(0.15, 0, 0.3 + 2);
+    expect(r.g.pose.pitch).toBe(CFG.maxTilt); // cannot be flipped over
+    r.release();
+    expect(r.g.pose.pitch).toBe(CFG.maxTilt); // stays tilted
+  });
+
+  it('a push carries on from a tilt set with one hand', () => {
+    const r = rig(1);
+    r.g.tiltBy(0.3);
+    r.grabBoth(0.15, 0, 0.3);
+    r.spreadTo(0.15, 0, 0.3 - 0.05);
+    expect(r.g.pose.pitch).toBeCloseTo(0.3 - 0.05 * CFG.pushTiltGain);
+  });
+
+  it('turning the hands like a steering wheel rolls the model about the line of sight, past the deadzone', () => {
+    const r = rig(1);
+    r.grabBoth(0.15, 0, 0.3); // 30 cm apart, level
+    const wheel = (deg: number) => {
+      const a = (deg * Math.PI) / 180;
+      // Counter-clockwise as the viewer sees it: the right hand goes up, the left hand down.
+      r.place(r.right, 0.15 * Math.cos(a), 0.15 * Math.sin(a), 0.3);
+      r.place(r.left, -0.15 * Math.cos(a), -0.15 * Math.sin(a), 0.3);
+      r.step();
+    };
+    wheel(5);
+    expect(r.g.pose.roll).toBe(0); // inside the deadzone
+    wheel(40);
+    expect(r.g.pose.roll).toBeCloseTo((40 * Math.PI) / 180); // follows the hands exactly
+    expect(r.g.pose.yaw).toBe(0); // a wheel turn is not a spin
+    expect(r.g.pose.zoom).toBeCloseTo(1); // same distance apart
+    expect(r.g.pose.x).toBeCloseTo(0);
+    wheel(-40);
+    expect(r.g.pose.roll).toBeCloseTo((-40 * Math.PI) / 180);
+    r.release();
+    expect(r.g.pose.roll).toBeCloseTo((-40 * Math.PI) / 180); // stays rolled
+  });
+
+  it('a wheel turn past vertical does not fake a spin, even with depth noise', () => {
+    const r = rig(1);
+    r.grabBoth(0.15, 0, 0.3);
+    for (let deg = 10; deg <= 170; deg += 10) {
+      const a = (deg * Math.PI) / 180;
+      const noise = deg % 20 === 0 ? 0.02 : -0.02; // a webcam's depth estimate wobbling
+      r.place(r.right, 0.15 * Math.cos(a), 0.15 * Math.sin(a), 0.3 + noise);
+      r.place(r.left, -0.15 * Math.cos(a), -0.15 * Math.sin(a), 0.3 - noise);
+      r.step();
+    }
+    expect(r.g.pose.roll).toBeCloseTo((170 * Math.PI) / 180);
+    expect(Math.abs(r.g.pose.yaw)).toBeLessThan(0.2);
+  });
+
+  it('a spin (one hand forward, one back) is not a wheel turn', () => {
+    const r = rig(1);
+    r.grabBoth(0.15, 0, 0);
+    const a = (40 * Math.PI) / 180;
+    r.place(r.right, 0.15 * Math.cos(a), 0, -0.15 * Math.sin(a));
+    r.place(r.left, -0.15 * Math.cos(a), 0, 0.15 * Math.sin(a));
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo((40 * Math.PI) / 180);
+    expect(r.g.pose.roll).toBe(0);
   });
 
   it('a straight pull only explodes and zooms: the model stays put, however far the hands are from it', () => {
@@ -262,6 +337,7 @@ describe('view gestures: two hands', () => {
     expect(r.g.pose.y).toBeCloseTo(0);
     expect(r.g.pose.z).toBeCloseTo(0);
     expect(r.g.pose.yaw).toBe(0);
+    expect(r.g.pose.roll).toBe(0);
   });
 
   it('ignores the bearing of hands that are close together', () => {
@@ -331,6 +407,24 @@ describe('view gestures: two hands', () => {
   });
 });
 
+describe('soft deadzone', () => {
+  const dz = CFG.twistDeadzone;
+  it('ignores small angles, passes large ones through exactly, and never jumps', () => {
+    expect(pastDeadzone(dz * 0.5, dz)).toBe(0);
+    expect(pastDeadzone(-dz * 0.5, dz)).toBe(-0);
+    expect(pastDeadzone(dz * 2, dz)).toBeCloseTo(dz * 2);
+    expect(pastDeadzone(-dz * 3, dz)).toBeCloseTo(-dz * 3);
+    let last = 0;
+    for (let a = 0; a <= dz * 2.5; a += dz / 50) {
+      const out = pastDeadzone(a, dz);
+      expect(out).toBeGreaterThanOrEqual(last); // monotonic
+      expect(out - last).toBeLessThan(dz / 12); // no step
+      expect(out).toBeLessThanOrEqual(a + 1e-12); // never ahead of the hands
+      last = out;
+    }
+  });
+});
+
 describe('view gestures: reset and equivalents', () => {
   it('reset returns to the authored placement', () => {
     const r = rig(1);
@@ -338,8 +432,9 @@ describe('view gestures: reset and equivalents', () => {
     r.g.zoomBy(1.5);
     r.g.turnBy(1);
     r.g.tiltBy(0.5);
+    r.g.rollBy(0.7);
     r.g.reset();
-    expect(r.g.pose).toEqual({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, zoom: 1 });
+    expect(r.g.pose).toEqual({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, zoom: 1 });
   });
 
   it('the keyboard equivalents respect the same limits', () => {

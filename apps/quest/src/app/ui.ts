@@ -29,7 +29,7 @@ const BTN_W = 0.108;
 const BTN_H = 0.034;
 const GAP = 0.006;
 const GUIDE_W = 0.38;
-const GUIDE_H = 0.148;
+const GUIDE_H = 0.166;
 const EVIDENCE_W = 0.36;
 const EVIDENCE_H = 0.3;
 // Text sizes are px at PPM. At the 0.7 m anchor distance 1° of visual angle is about 12 mm,
@@ -137,7 +137,7 @@ export class SpatialUI {
     for (const b of this.buttons) {
       const enabled = b.def.enabled();
       const primary = enabled && (b.def.primary?.() ?? false);
-      const bg = !enabled ? CSS.buttonDisabled : primary ? CSS.buttonPrimary : b.hovered ? 'rgba(64,86,118,0.98)' : CSS.buttonBg;
+      const bg = !enabled ? CSS.buttonDisabled : primary ? CSS.buttonPrimary : b.hovered ? CSS.buttonHover : CSS.buttonBg;
       b.panel.draw([{ text: b.def.label(), size: 38, bold: true, color: enabled ? CSS.text : '#6d7886' }], bg);
       b.panel.mesh.scale.setScalar(b.hovered && enabled ? 1.05 : 1);
     }
@@ -174,7 +174,8 @@ const GUIDE: ReadonlyArray<readonly [gesture: string, effect: string]> = [
   ['Drag empty space', 'turn and tilt it'],
   ['Both hands, pull apart', 'explode, then zoom in'],
   ['Both hands, push together', 'zoom out, then collapse'],
-  ['Both hands, twist', 'turn it'],
+  ['Both hands, push away or pull closer', 'tilt it'],
+  ['Both hands, turn like a wheel', 'roll it'],
   ['Recenter', 'put everything back'],
 ];
 const GUIDE_LINES: TextLine[] = [

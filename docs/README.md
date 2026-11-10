@@ -40,3 +40,4 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [0019](adr/0019-assets.md) | Assets: procedural only |
 | [0020](adr/0020-testing.md) | Testing: Vitest, IWER end-to-end, device checklist |
 | [0021](adr/0021-view-manipulation.md) | Handling the model: move, zoom and turn on top of the two-hand pull |
+| [0022](adr/0022-hologram-look.md) | A hologram look from shaders and additive glow, no post-processing |

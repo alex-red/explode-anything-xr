@@ -138,9 +138,9 @@ describe('webcam hand mapping', () => {
       expect(pinchRatio(hand(0.5, 0.5, 0.2, 0.5), undefined, ASPECT)).toBeCloseTo(0.5);
     });
 
-    it('presses under about 2.5 cm and releases over about 3.2 cm on a 9.5 cm palm', () => {
+    it('presses under about 2.5 cm and releases over about 3.5 cm on a 9.5 cm palm', () => {
       expect(CFG.pinchPress * 0.095).toBeCloseTo(0.0247, 3);
-      expect(CFG.pinchRelease * 0.095).toBeCloseTo(0.0323, 3);
+      expect(CFG.pinchRelease * 0.095).toBeCloseTo(0.0352, 3);
     });
 
     it('is a debounced switch with separate press and release levels', () => {
@@ -150,10 +150,11 @@ describe('webcam hand mapping', () => {
       expect(d.push(0.2)).toBe(false);
       expect(d.push(0.2)).toBe(true); // two in a row
       expect(d.push(0.3)).toBe(true); // between the levels: holds
-      expect(d.push(0.4)).toBe(true);
-      expect(d.push(0.3)).toBe(true); // a single open sample does not release
-      expect(d.push(0.4)).toBe(true);
-      expect(d.push(0.4)).toBe(false);
+      // A moving pinched hand reads open for a few frames at a time: that must not let go.
+      for (const r of [0.4, 0.42, 0.4, 0.3, 0.45, 0.4, 0.41, 0.4, 0.39, 0.2]) expect(d.push(r)).toBe(true);
+      // Really open: released after six samples in a row.
+      for (let i = 0; i < CFG.releaseDebounce - 1; i++) expect(d.push(0.5)).toBe(true);
+      expect(d.push(0.5)).toBe(false);
       d.push(0.2);
       d.reset();
       expect(d.push(0.2)).toBe(false);

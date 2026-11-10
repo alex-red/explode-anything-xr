@@ -54,9 +54,11 @@ Run: `bun run test`, `bun run typecheck`, `bun run content:check`.
 - [ ] One-hand pinch-and-drag from a part moves the model and does not select the part; a quick pinch still selects
 - [ ] One-hand pinch-and-drag from empty space turns and tilts the model; the tilt stops before it flips
 - [ ] The Gestures button shows the guide card and hides it; the card is readable and blocks nothing
-- [ ] Two-hand twist turns the model; a straight pull does not
+- [ ] Two hands pushed away or pulled closer tilt the model about the horizontal axis; holding still does not
+- [ ] Two hands turning like a steering wheel roll the model and it follows the hands; one hand forward and one back spins it; a straight pull does neither
 - [ ] After any drag, the next pinch with the same hand registers (IWSDK stuck-pointer work-around)
-- [ ] Recenter resets move, zoom, turn and tilt
+- [ ] Recenter resets move, zoom, spin, tilt and roll
+- [ ] Hologram look: frame rate holds with the halos, stage and beam on; glow composites cleanly over passthrough; scanlines do not shimmer; captions and evidence stay readable over a bright room
 - [ ] Trace lights the path; flow animates
 - [ ] Unplug → downstream dims; badge matches truth (Observed / Hypothesis / Teaching model)
 - [ ] Wrong socket rejected with feedback; right socket restores

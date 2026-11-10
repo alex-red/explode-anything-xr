@@ -1,4 +1,5 @@
-import { BackSide, Mesh, MeshBasicMaterial, SphereGeometry, Vector3, type Camera, type World } from '@iwsdk/core';
+import { Mesh, SphereGeometry, Vector3, type Camera, type ShaderMaterial, type World } from '@iwsdk/core';
+import { backdropMaterial } from './holo.ts';
 
 export type BackdropMode = 'passthrough' | 'dim' | 'virtual';
 const ORDER: BackdropMode[] = ['passthrough', 'dim', 'virtual'];
@@ -9,14 +10,11 @@ export class Backdrop {
   mode: BackdropMode = 'passthrough';
   /** False in a session that cannot show the real room (a VR session): the backdrop is then fixed. */
   passthroughAvailable = true;
-  private readonly mesh: Mesh<SphereGeometry, MeshBasicMaterial>;
+  private readonly mesh: Mesh<SphereGeometry, ShaderMaterial>;
   private readonly pos = new Vector3();
 
   constructor(world: World) {
-    this.mesh = new Mesh(
-      new SphereGeometry(4, 24, 16),
-      new MeshBasicMaterial({ color: 0x0a1120, side: BackSide, transparent: true, opacity: 0, depthWrite: false }),
-    );
+    this.mesh = new Mesh(new SphereGeometry(4, 32, 24), backdropMaterial());
     this.mesh.renderOrder = -10;
     this.mesh.visible = false;
     world.createTransformEntity(this.mesh);
@@ -29,7 +27,7 @@ export class Backdrop {
 
   set(mode: BackdropMode): BackdropMode {
     this.mode = mode;
-    this.mesh.material.opacity = OPACITY[mode];
+    this.mesh.material.uniforms.uOpacity!.value = OPACITY[mode];
     this.mesh.visible = mode !== 'passthrough';
     return mode;
   }

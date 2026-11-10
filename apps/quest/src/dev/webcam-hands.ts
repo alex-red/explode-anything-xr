@@ -29,6 +29,7 @@
  */
 import {
   ClickStabilizer,
+  DEFAULT_WEBCAM_HAND_CONFIG as CFG,
   PalmCalibration,
   PinchDetector,
   PointerFilter,
@@ -115,6 +116,8 @@ interface HandState {
   sent: boolean;
   /** Last fingertip gap in metres (world landmarks), for the readout. */
   gap: number | null;
+  /** Smoothed distance from the eyes (m); 0 until the first sample. */
+  reach: number;
 }
 
 const newHand = (): HandState => ({
@@ -126,6 +129,7 @@ const newHand = (): HandState => ({
   pinched: false,
   sent: false,
   gap: null,
+  reach: 0,
 });
 
 function resetTracking(h: HandState): void {
@@ -134,6 +138,7 @@ function resetTracking(h: HandState): void {
   h.click.reset();
   h.pinched = false;
   h.sent = false;
+  h.reach = 0;
 }
 
 const CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
@@ -210,7 +215,7 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
     'position:fixed;right:12px;bottom:12px;width:260px;z-index:2147483000;border-radius:10px;overflow:hidden;' +
       'background:rgba(10,17,32,.94);border:1px solid rgba(255,255,255,.25);font:12px system-ui,sans-serif;color:#dfe7f1',
   );
-  for (const type of ['pointerdown', 'pointerup', 'click', 'wheel', 'keydown'] as const) {
+  for (const type of ['pointerdown', 'pointerup', 'click', 'wheel'] as const) {
     box.addEventListener(type, (e) => e.stopPropagation()); // keep clicks off the DevUI / app canvas
   }
   const bar = el('div', 'display:flex;gap:6px;align-items:center;padding:6px 8px');
@@ -379,8 +384,14 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
     say('Stopped. The emulator controls are back.');
   }
 
-  toggle.addEventListener('click', () => void (running ? stop() : start()));
+  toggle.addEventListener('click', () => {
+    toggle.blur(); // give the keyboard back to the app (E, T, arrows…)
+    void (running ? stop() : start());
+  });
+  // Arrow keys change the camera here; they must not also move the model.
+  select.addEventListener('keydown', (e) => e.stopPropagation());
   select.addEventListener('change', () => {
+    select.blur();
     save({ deviceId: select.value });
     if (running) {
       stop(false);
@@ -436,7 +447,10 @@ export function mountWebcamHands(opts: { autostart?: boolean; swap?: boolean } =
         const smooth = state.filter.push(raw.u, raw.v);
         const other = hands[side === 'left' ? 'right' : 'left'];
         const out = state.click.push(now, smooth.u, smooth.v, state.pinched, other.pinched);
-        const pose = pointerPose(out.u, out.v, reachFromPalm(palmSize(lm, aspect), ref), head);
+        // Palm size is a jittery stand-in for depth, and two-hand push/pull tilts the model by it.
+        const reach = reachFromPalm(palmSize(lm, aspect), ref);
+        state.reach = state.reach === 0 ? reach : state.reach + (reach - state.reach) * CFG.reachSmooth;
+        const pose = pointerPose(out.u, out.v, state.reach, head);
         hand.position.set(pose.position[0], pose.position[1], pose.position[2]);
         hand.quaternion.set(pose.quaternion[0], pose.quaternion[1], pose.quaternion[2], pose.quaternion[3]);
         if (out.pinch !== state.sent) hand.updatePinchValue(out.pinch ? 1 : 0);

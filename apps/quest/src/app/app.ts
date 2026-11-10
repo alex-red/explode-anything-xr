@@ -8,6 +8,7 @@ import { GraphView } from './graph-view.ts';
 import { Store } from './store.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
 import { HandGestures } from './hand-gestures.ts';
+import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
@@ -113,6 +114,7 @@ export class ExplodeApp {
     this.debug.update(dt);
     if (this.paused) return; // pause animation while blurred/hidden; state is already persisted
     const clamped = Math.min(dt, 1 / 30);
+    tickHolo(clamped); // one shared clock drives every hologram shader
     if (this.view) {
       this.view.revealConsequences = !this.predicting();
       this.view.update(clamped, camera);
@@ -163,6 +165,8 @@ export class ExplodeApp {
     );
     this.view.displayFactor = this.store.state.explode_factor;
     this.hands.gestures.reset();
+    // ZXY: spin about the model's vertical, then tilt, then roll about the viewer's line of sight.
+    this.view.root.rotation.order = 'ZXY';
     this.applyViewPose(Infinity);
   }
 
@@ -180,7 +184,9 @@ export class ExplodeApp {
     root.position.z += (pose.z - root.position.z) * a;
     const turn = Math.atan2(Math.sin(pose.yaw - root.rotation.y), Math.cos(pose.yaw - root.rotation.y)); // the short way round
     root.rotation.y += turn * a;
-    root.rotation.x += (pose.pitch - root.rotation.x) * a; // default XYZ order: spin about the model's vertical, then tilt
+    root.rotation.x += (pose.pitch - root.rotation.x) * a;
+    const roll = Math.atan2(Math.sin(pose.roll - root.rotation.z), Math.cos(pose.roll - root.rotation.z));
+    root.rotation.z += roll * a;
     root.scale.setScalar(root.scale.x + (pose.zoom - root.scale.x) * a);
   }
 
@@ -266,6 +272,8 @@ export class ExplodeApp {
     else if (k === '-') this.hands.gestures.zoomBy(0.8);
     else if (k === '[') this.hands.gestures.turnBy(Math.PI / 12);
     else if (k === ']') this.hands.gestures.turnBy(-Math.PI / 12);
+    else if (k === ',') this.hands.gestures.rollBy(Math.PI / 12);
+    else if (k === '.') this.hands.gestures.rollBy(-Math.PI / 12);
     else if (k === 'pageup') this.hands.gestures.tiltBy(-Math.PI / 12);
     else if (k === 'pagedown') this.hands.gestures.tiltBy(Math.PI / 12);
     else if (k === 'g') this.ui.toggleGuide();
@@ -404,8 +412,8 @@ export class ExplodeApp {
     else if (s.lesson?.status === 'complete')
       caption = this.onMechanical
         ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
-        : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, pull with both hands to zoom. Gestures lists them all.';
-    else caption = 'Free exploration. Drag a part to move it, drag empty space to turn it, pull with both hands to zoom.';
+        : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate. Gestures lists them all.';
+    else caption = 'Free exploration. Drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate.';
     const tutor = this.tutorAnswer && this.tutorAnswer.stepKey === this.stepKey() ? this.tutorAnswer : null;
     const graph = this.store.ctx.bundle.graph;
     return {

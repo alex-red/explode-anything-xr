@@ -44,8 +44,10 @@ The authoritative steps are the lesson definitions in `apps/quest/src/content/*.
 | Ray + pinch on a toolbar button | Run that command | Buttons ≥ 4 cm, poke-able up close |
 | **Both hands pinch and pull apart** | Explode factor follows the change in hand distance (0→1). Past fully exploded, the same pull zooms in (to 2×) | Engages only when both pinches start within about 500 ms. **Explode/Collapse** buttons do the explode part. Keyboard `E`, and `+` / `-` for zoom, in the emulator |
 | Both hands pinch and push together | Zoom out, then collapse. A collapsed model is always full size | Never collapses while an edge is in the tray |
-| Both hands pinch and twist | Turn the model about its vertical axis | Counts only with the hands at least 12 cm apart and past 10°. Keyboard `[` / `]` |
-| Both hands pinch and move together | Carry the model | Held within reach of its authored place. Arrow keys |
+| Both hands pinch and turn like a steering wheel | Roll the model about the line of sight, following the hands | Small angles (under about 6°) are ignored, so a straight pull does not roll it; needs the hands at least 12 cm apart. Keyboard `,` / `.` |
+| Both hands pinch, one forward and one back | Spin the model about its vertical axis | Same safeguards. Keyboard `[` / `]` |
+| Both hands pinch and push away or pull closer | Tilt the model about the horizontal axis (to 60°): pulling tips the top toward you | The first 2 cm are ignored. Keyboard PageUp / PageDown |
+| Both hands pinch and move together, sideways or up and down | Carry the model | Held within reach of its authored place. Arrow keys |
 | **One hand pinches a part and drags** | Move the model. Only the model moves; panels stay put | A pinch that travels under 3 cm is still a click; a drag drops that click. Arrow keys |
 | **One hand pinches empty space and drags** | Turn the model: sideways spins it, up and down tilts it (to 60°) | Never starts from a toolbar or panel control. Keyboard `[` / `]` and PageUp / PageDown. **Recenter** resets move, zoom, turn and tilt |
 | **Gestures** button | Shows or hides a one-card guide to all of the above, below the model | Hidden by default. Keyboard `G` |
@@ -66,13 +68,13 @@ IWSDK facts that shaped this ([ADR-0001](adr/0001-engine.md)): `GrabSystem.useHa
 
 ## 4. Visual language
 
-- **Over passthrough:** dark translucent cluster bodies with bright edges; no full-screen post-processing or bloom ([ADR-0013](adr/0013-render-budget.md)).
+- **A hologram** ([ADR-0022](adr/0022-hologram-look.md)): dark translucent faceted bodies with bright rims and scanlines, soft additive halos, energy-conduit edges, and a projector stage under the model that it boots up from. Panels are dark glass plates with cut corners and a glowing edge. No full-screen post-processing or bloom ([ADR-0013](adr/0013-render-budget.md)).
 - **State colors**, each paired with a shape or animation and a text badge:
 
   | Color | State | Paired cue |
   |---|---|---|
-  | Neutral grey-blue | Normal | — |
-  | Gold | Traced path | Moving flow pulses |
+  | Hologram blue (violet for routes) | Normal | — |
+  | Gold | Traced path | Moving flow pulses, on the edges and as particles. No other edge has travelling light |
   | Teal | Selected / user action | Outline |
   | Coral | Disconnected / affected | Dimmed and dashed, plus a "✕" badge |
 

@@ -1,6 +1,6 @@
 # ADR-0013: Render budget — sustained 72 Hz, no post-processing
 
-**Status:** Accepted, 2026-10-23. Amended 2026-11-09: batching was applied up front, because no headset is available to measure on.
+**Status:** Accepted, 2026-10-23. Amended 2026-11-09: batching was applied up front, because no headset is available to measure on. The look built inside this budget is [ADR-0022](0022-hologram-look.md).
 
 ## Context
 

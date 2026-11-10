@@ -20,11 +20,17 @@ Pinch is still WebXR `select`. No pose detection and no dwell.
 
   A pinch that travels less than 3 cm stays a click. Past that it becomes a drag, and the click it started is dropped. The target is fixed when the pinch starts, so a ray that slides off a part mid-drag does not turn a move into a turn.
 - **Two hands, pull apart or push together: one continuous spread.** From closed it explodes first, 25 cm of travel for the full range, exactly as before. Past fully exploded the same pull zooms in, to 2× at most. Pushing together zooms out first and then collapses. Zoom only exists on a fully exploded model: collapsing it by any means returns it to full size.
-- **Two hands, twist: turn the model about its vertical axis.** Twist counts only while the hands are at least 12 cm apart and past a 10° deadzone, so a straight pull does not also turn it.
-- **Two hands, move together: carry the model.**
+- **Two hands, rotate: the line between the pinched hands is a handle on the model.**
+  - **Turn it like a steering wheel** and the model rolls about the viewer's line of sight. This is the two-hand rotation a single camera can see, so it is the one that works with webcam hands.
+  - **Push one hand forward and pull the other back** and it spins about its vertical axis.
+  - **Push both hands away or pull them closer** and it tilts about the viewer's left-right axis: pulling tips the top toward you, pushing tips it back, 15 cm for the full 60°. The positions of two hands cannot measure a rotation about the line between them, so this stands in for it. The first 2 cm are ignored.
+  - Each rotation trusts only the hand separation it can measure: the spin uses the separation in the horizontal plane, the wheel turn the separation in the plane facing the viewer, and each needs at least 12 cm of it. So a wheel turn past vertical cannot fake a spin.
+  - A soft deadzone of about 10° ignores small rotations, so a straight pull does not also turn the model; a deliberate turn then follows the hands one-to-one.
+- **Two hands, move together sideways or up and down: carry the model.** Toward and away is the tilt above, so two hands no longer carry the model in depth; a one-hand drag from a part still does.
 - **Zoom and turn happen about the model's own centre**, not about the point between the hands. The hands are in front of the model, so a pivot between them throws the model away as it grows.
 - **Only the model moves.** The caption, toolbar and evidence panel stay on the anchor. The model is held inside a box around its authored place, and never closer than about 0.35 m to the eyes.
-- **Recenter** also resets move, zoom, turn and tilt. Keys in the emulator: `+`/`-` zoom, arrows move, `[`/`]` turn, PageUp/PageDown tilt, `G` guide.
+- **Recenter** also resets move, zoom, spin, tilt and roll. Keys in the emulator: `+`/`-` zoom, arrows move, `[`/`]` spin, PageUp/PageDown tilt, `,`/`.` roll, `G` guide.
+- The model's rotation is spin about its vertical, then tilt, then roll about the line of sight (Euler order ZXY), so each control does the same thing whatever the others are set to.
 - **A gesture guide** is one press away: the **Gestures** button shows a card below the model with one line per gesture, and hides it again. It is not shown by default, so the lessons' own captions stay the only instruction until someone asks.
 - **The hand that lets go last** after a two-hand gesture has to pinch again before it can drag.
 - **A press needs a real release.** In a session, a press whose ray slides off its target while the pinch is still held is dropped. Before, sliding off counted as a press.

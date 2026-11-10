@@ -39,6 +39,7 @@ function fakeCanvas() {
     },
     beginPath: () => undefined,
     moveTo: () => undefined,
+    lineTo: () => undefined,
     arcTo: () => undefined,
     closePath: () => undefined,
     fill: () => undefined,
@@ -439,7 +440,7 @@ describe('scene harness: handling the model with the hands', () => {
     h.press(h.button(/^Gestures$/));
     const g = guide()!;
     expect(g.mesh.visible).toBe(true);
-    for (const phrase of ['select a part', 'move the model', 'turn and tilt', 'explode, then zoom in', 'zoom out, then collapse', 'twist', 'Recenter']) {
+    for (const phrase of ['select a part', 'move the model', 'turn and tilt', 'explode, then zoom in', 'zoom out, then collapse', 'push away or pull closer', 'turn like a wheel', 'Recenter']) {
       expect(g.text).toContain(phrase);
     }
     expect(isInteractive(g.mesh)).toBe(false); // a card, not a control: it never blocks a ray press
@@ -516,6 +517,52 @@ describe('scene harness: handling the model with the hands', () => {
     expect(root.rotation.y).toBeCloseTo(0, 3);
     expect(root.position.length()).toBeLessThan(1e-3);
     expect(root.scale.x).toBeCloseTo(1, 3);
+  });
+
+  it('two hands: pushing them away tilts the model about the horizontal axis', () => {
+    const h = setup();
+    const { fire, left, right, root } = withHands(h);
+    left.position.set(-0.15, 1.2, -0.3);
+    right.position.set(0.15, 1.2, -0.3);
+    h.frames(2);
+    fire('selectstart', 'left');
+    fire('selectstart', 'right');
+    h.frames(2);
+    left.position.set(-0.15, 1.2, -0.4); // both 10 cm further away
+    right.position.set(0.15, 1.2, -0.4);
+    h.frames(40);
+    fire('selectend', 'left');
+    fire('selectend', 'right');
+    h.frames(10);
+    expect(root.rotation.x).toBeLessThan(-0.5); // the top tips away
+    expect(root.position.length()).toBeLessThan(1e-6);
+    expect(Math.abs(root.rotation.y) + Math.abs(root.rotation.z)).toBeLessThan(0.02);
+    expectFinite(h.scene);
+  });
+
+  it('two hands: turning them like a steering wheel rolls the model, and Recenter levels it', () => {
+    const h = setup();
+    const { fire, left, right, root } = withHands(h);
+    left.position.set(-0.15, 1.2, -0.3);
+    right.position.set(0.15, 1.2, -0.3);
+    h.frames(2);
+    fire('selectstart', 'left');
+    fire('selectstart', 'right');
+    h.frames(2);
+    left.position.set(-0.106, 1.094, -0.3); // 45° counter-clockwise as the viewer sees it
+    right.position.set(0.106, 1.306, -0.3);
+    h.frames(40);
+    fire('selectend', 'left');
+    fire('selectend', 'right');
+    h.frames(10);
+    expect(root.rotation.order).toBe('ZXY'); // roll is about the line of sight, applied last
+    expect(root.rotation.z).toBeGreaterThan(0.5);
+    expect(Math.abs(root.rotation.y)).toBeLessThan(0.05);
+    expectFinite(h.scene);
+
+    h.press(h.button(/^Recenter$/));
+    h.frames(60);
+    expect(root.rotation.z).toBeCloseTo(0, 3);
   });
 
   it('the key equivalents move, zoom and turn the model', () => {

@@ -58,13 +58,26 @@ export class TextPanel {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const bg = background === undefined ? (this.opts.background ?? CSS.panelBg) : background;
     if (bg) {
+      // HUD plate: dark glass with two cut corners, a glowing edge, and brackets on the other two.
+      const inset = 4;
+      const w = canvas.width - inset * 2;
+      const h = canvas.height - inset * 2;
+      const cut = Math.min(radius, h * 0.32);
       ctx.fillStyle = bg;
-      roundRect(ctx, 2, 2, canvas.width - 4, canvas.height - 4, radius);
+      hudPlate(ctx, inset, inset, w, h, cut);
       ctx.fill();
       if (this.opts.border !== null) {
-        ctx.strokeStyle = this.opts.border ?? CSS.panelBorder;
-        ctx.lineWidth = 3;
+        const edge = this.opts.border ?? CSS.panelBorder;
+        ctx.strokeStyle = edge;
+        ctx.shadowColor = CSS.panelGlow;
+        ctx.shadowBlur = 9;
+        ctx.lineWidth = 2.5;
         ctx.stroke();
+        ctx.shadowBlur = 0;
+        const arm = Math.min(30, h * 0.28);
+        ctx.lineWidth = 6;
+        bracket(ctx, inset, inset, arm, arm); // top left
+        bracket(ctx, inset + w, inset + h, -arm, -arm); // bottom right
       }
     }
     const maxWidth = canvas.width - pad * 2;
@@ -146,12 +159,23 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, mon
   return out;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+/** A rectangle with its top-right and bottom-left corners cut off at 45°. */
+function hudPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number): void {
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w - cut, y);
+  ctx.lineTo(x + w, y + cut);
+  ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x + cut, y + h);
+  ctx.lineTo(x, y + h - cut);
   ctx.closePath();
+}
+
+/** An L-shaped corner mark at (x, y) with arms along +dx and +dy. */
+function bracket(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x + dx, y);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x, y + dy);
+  ctx.stroke();
 }

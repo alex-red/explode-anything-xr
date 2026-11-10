@@ -4,11 +4,13 @@ import {
   DirectionalLight,
   Group,
   HemisphereLight,
+  InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PlaneGeometry,
   Quaternion,
   SphereGeometry,
   TorusGeometry,
@@ -22,6 +24,7 @@ import {
 } from '@iwsdk/core';
 import type { FlowPath, GraphEdge, GraphNode, SceneState } from '@explode/contracts';
 import { makeInteractive } from './interactions.ts';
+import { conduitMaterial, createStage, haloMaterial, HoloMaterial, setReveal } from './holo.ts';
 import { COLOR } from './palette.ts';
 import { partGeometry, softwareGeometry } from './shapes.ts';
 import type { Store } from './store.ts';
@@ -42,9 +45,11 @@ interface NodeView {
    */
   mesh: Mesh<BufferGeometry, Material>;
   /** Own material of a mechanical part; null for software nodes. */
-  material: MeshStandardMaterial | null;
+  material: HoloMaterial | null;
   batch: InstancedMesh | null;
   slot: number;
+  /** This node's instance in the halo batch. */
+  halo: number;
   entity: Entity;
   collapsed: Vector3;
   exploded: Vector3;
@@ -76,7 +81,21 @@ const MIN_HIT_RADIUS = 0.02;
 const PLUG_HIT_RADIUS = 0.025;
 const IDENTITY = new Quaternion();
 const WHITE = new Color(0xffffff);
-const EDGE_COLOR = new Color(COLOR.edge).multiplyScalar(0.6);
+const EDGE_COLOR = new Color(COLOR.edge).multiplyScalar(0.75);
+// Halo size as a multiple of the node's drawn radius, and how bright each state glows.
+const HALO_SIZE = 5.5;
+const HALO_REST = 0.13;
+const HALO_HOVER = 0.4;
+const HALO_SELECTED = 0.75;
+const HALO_PATH = 0.6;
+const HALO_FAULT = 0.6;
+const PARTICLE_HALO = 0.07; // metres across
+// The projector stage sits just under the lowest parts.
+const STAGE_RADIUS = 0.27;
+const STAGE_Y = -0.2;
+// Boot-up: the scan front climbs this far above the stage in this many seconds.
+const BOOT_SECONDS = 1.3;
+const BOOT_HEIGHT = 0.9;
 const EDGE_DIM = new Color(COLOR.dim);
 const EDGE_PATH = new Color(COLOR.path);
 const EDGE_BROKEN = new Color(COLOR.fault);
@@ -105,15 +124,24 @@ export class GraphView {
   // batch instead of one per node or edge (docs/FINAL_PLAN.md B2).
   private nodeBatches = new Map<string, InstancedMesh>();
   private edgeBatch: InstancedMesh | null = null;
+  /** Per-edge flag for the conduit shader: 1 on traced-path edges, where pulses travel. */
+  private edgeFlow: InstancedBufferAttribute | null = null;
   private particles: InstancedMesh;
+  /** Soft additive glows behind nodes and flow pulses: the stand-in for bloom (one draw call). */
+  private halos: InstancedMesh;
+  private readonly haloGeo = new PlaneGeometry(1, 1);
+  private readonly stage: ReturnType<typeof createStage>;
+  /** 0 → 1 while the model materialises from its stage. */
+  private boot = 0;
   private tray: Group;
   private trayLabel: TextPanel;
   private readonly isMechanical: boolean;
   private readonly edgeGeo = new CylinderGeometry(1, 1, 1, 6, 1, true);
   private readonly plugHitGeo = new SphereGeometry(PLUG_HIT_RADIUS, 10, 8);
   private readonly mats = {
-    edge: new MeshBasicMaterial({ color: 0xffffff }), // tinted per instance
-    particle: new MeshBasicMaterial({ color: COLOR.path }),
+    edge: conduitMaterial(), // tinted per instance
+    halo: haloMaterial(),
+    particle: new MeshBasicMaterial({ color: 0xfff1c4 }), // a white-hot core; its halo carries the gold
     socket: new MeshBasicMaterial({ color: COLOR.action, transparent: true, opacity: 0.9 }),
     /** Never drawn (no draw call), still hit by rays. */
     hit: new MeshBasicMaterial({ visible: false }),
@@ -157,12 +185,20 @@ export class GraphView {
     for (const node of bundle.graph.nodes) this.buildNode(node);
     for (const edge of bundle.graph.edges) this.buildEdge(edge);
     if (this.edges.size > 0) {
+      this.edgeFlow = new InstancedBufferAttribute(new Float32Array(this.edges.size), 1);
+      this.edgeGeo.setAttribute('aFlow', this.edgeFlow);
       this.edgeBatch = this.addBatch(this.edgeGeo, this.mats.edge, this.edges.size);
     }
-    this.particles = this.addBatch(new SphereGeometry(0.006, 8, 6), this.mats.particle, PARTICLES);
+    this.particles = this.addBatch(new SphereGeometry(0.005, 8, 6), this.mats.particle, PARTICLES);
+    this.halos = this.addBatch(this.haloGeo, this.mats.halo, this.nodes.size + PARTICLES);
+    this.halos.renderOrder = 2; // after the bodies they glow around
+
+    this.stage = createStage(STAGE_RADIUS);
+    this.stage.group.position.y = STAGE_Y;
+    this.root.add(this.stage.group);
 
     this.tray = new Group();
-    const plate = new Mesh(new BoxGeometry(0.16, 0.006, 0.09), new MeshStandardMaterial({ color: 0x22303f, roughness: 0.8 }));
+    const plate = new Mesh(new BoxGeometry(0.16, 0.006, 0.09), new HoloMaterial(COLOR.cluster, 0.4));
     this.tray.add(plate);
     this.trayLabel = new TextPanel({ width: 0.16, height: 0.04, pxPerMeter: 2400, background: null, border: null, padding: 8, align: 'center' });
     this.trayLabel.draw([{ text: this.isMechanical ? 'Sandbox tray' : 'Sandbox tray · the real repo is never edited', size: 34, color: '#a9b6c6' }]);
@@ -182,6 +218,11 @@ export class GraphView {
     if (Math.abs(target - this.displayFactor) < 0.001) this.displayFactor = target;
     const f = easeInOut(this.displayFactor);
     camera.getWorldPosition(this.camPos);
+    if (this.boot < 1) {
+      this.boot = Math.min(1, this.boot + dt / BOOT_SECONDS);
+      setReveal(this.boot < 1 ? this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT : null);
+    }
+    const glowIn = this.boot * this.boot; // halos fade in behind the scan front
 
     const activePath = s.active_path_id ? this.store.ctx.paths.get(s.active_path_id) : undefined;
     if (s !== this.derivedFor || this.revealConsequences !== this.derivedReveal) this.derive(s, activePath);
@@ -223,6 +264,28 @@ export class GraphView {
         v.batch.setColorAt(v.slot, c);
       }
 
+      // Halo: every node glows a little; state decides how much and in what colour.
+      const glow = this.tmpColor;
+      let strength = HALO_REST;
+      if (affected.has(v.node.id)) {
+        glow.copy(NODE_FAULT);
+        strength = HALO_FAULT * (0.75 + 0.25 * Math.sin(this.time * 4));
+      } else if (highlighted.has(v.node.id)) {
+        glow.copy(NODE_PATH);
+        strength = HALO_PATH;
+      } else if (dimmed) {
+        strength = 0;
+      } else {
+        glow.copy(v.baseColor);
+        if (selected) {
+          glow.lerp(WHITE, 0.5);
+          strength = HALO_SELECTED;
+        } else if (v.hovered) strength = HALO_HOVER;
+      }
+      const drawn = m ? v.radius : scale;
+      this.halos.setMatrixAt(v.halo, strength > 0 ? this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(drawn * HALO_SIZE)) : this.tmpM.makeScale(0, 0, 0));
+      this.halos.setColorAt(v.halo, glow.multiplyScalar(strength * glowIn));
+
       if (v.spinAxis) {
         const live = !affected.has(v.node.id);
         const want = live ? 5 : 0;
@@ -240,6 +303,8 @@ export class GraphView {
     this.updateEdges(s, f, isolated);
     this.updateParticles(s, f, activePath);
     this.updateSockets(s, f);
+    this.halos.instanceMatrix.needsUpdate = true;
+    if (this.halos.instanceColor) this.halos.instanceColor.needsUpdate = true;
   }
 
   private derive(s: SceneState, path: FlowPath | undefined): void {
@@ -295,6 +360,10 @@ export class GraphView {
     this.edgeGeo.dispose();
     this.particles.geometry.dispose();
     this.particles.dispose();
+    this.halos.dispose();
+    this.haloGeo.dispose();
+    this.stage.dispose();
+    setReveal(null);
     this.plugHitGeo.dispose();
     for (const m of Object.values(this.mats)) m.dispose();
     this.disposeSockets();
@@ -343,7 +412,7 @@ export class GraphView {
     const part = bundle.assets?.parts[node.id];
     if (this.isMechanical && !part) return; // cluster-only nodes in mechanical systems are not rendered
     const baseColor = new Color(part ? part.color : colorForKind(node.kind));
-    const material = part ? new MeshStandardMaterial({ color: baseColor, roughness: 0.45, metalness: 0.35 }) : null;
+    const material = part ? new HoloMaterial(baseColor, 0.62) : null;
     const mesh: Mesh<BufferGeometry, Material> = material && part ? new Mesh(partGeometry(part), material) : new Mesh(softwareGeometry(node), this.mats.hit);
     const batch = part ? null : (this.nodeBatches.get(batchKey(node.kind)) ?? null);
     const slot = batch ? batch.userData.next++ : -1;
@@ -363,6 +432,7 @@ export class GraphView {
       material,
       batch,
       slot,
+      halo: this.nodes.size,
       entity,
       collapsed,
       exploded,
@@ -404,7 +474,9 @@ export class GraphView {
     }
     for (const [key, { count, sample }] of counts) {
       const cluster = key === 'cluster';
-      const material = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.1, flatShading: true, transparent: cluster, opacity: cluster ? 0.35 : 1 });
+      // Clusters are see-through shells round their members; everything else is a solid-looking crystal.
+      const material = new HoloMaterial(0xffffff, cluster ? 0.12 : 0.55);
+      if (cluster) material.depthWrite = false;
       const batch = this.addBatch(softwareGeometry(sample), material, count);
       batch.userData.next = 0;
       this.nodeBatches.set(key, batch);
@@ -450,6 +522,7 @@ export class GraphView {
         const end = isBroken ? this.tmpC.lerpVectors(a, b, 0.4) : b;
         tubeMatrix(this.tmpM, a, end, onPath || isBroken ? 0.0028 : 0.0014, this.tmpA, this.tmpB, this.tmpS, this.tmpQ);
         batch.setColorAt(ev.slot, isBroken ? EDGE_BROKEN : onPath ? EDGE_PATH : dim ? EDGE_DIM : EDGE_COLOR);
+        this.edgeFlow?.setX(ev.slot, onPath && !isBroken ? 1 : 0);
       } else {
         this.tmpM.makeScale(0, 0, 0); // hidden
       }
@@ -472,6 +545,7 @@ export class GraphView {
     batch.visible = anyVisible; // no draw call while every edge is hidden
     batch.instanceMatrix.needsUpdate = true;
     if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+    if (this.edgeFlow) this.edgeFlow.needsUpdate = true;
     this.tray.visible = broken.size > 0 || f > 0.6;
   }
 
@@ -479,13 +553,18 @@ export class GraphView {
     const show = !!path && s.flow_animating && f > 0.3;
     const segs = show ? this.segs : [];
     for (let i = 0; i < PARTICLES; i++) {
+      const halo = this.nodes.size + i;
       if (segs.length === 0) {
         this.tmpM.makeScale(0, 0, 0);
+        this.halos.setMatrixAt(halo, this.tmpM);
       } else {
         const t = ((this.time * 0.35 + i / PARTICLES) % 1) * segs.length;
         const k = Math.min(Math.floor(t), segs.length - 1);
         const seg = segs[k]!;
-        this.tmpM.makeTranslation(this.tmpA.lerpVectors(seg[0], seg[1], t - k));
+        const at = this.tmpA.lerpVectors(seg[0], seg[1], t - k);
+        this.halos.setMatrixAt(halo, this.tmpM.compose(at, IDENTITY, this.tmpS.setScalar(PARTICLE_HALO)));
+        this.halos.setColorAt(halo, EDGE_PATH);
+        this.tmpM.makeTranslation(at);
       }
       this.particles.setMatrixAt(i, this.tmpM);
     }

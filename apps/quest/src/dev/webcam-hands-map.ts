@@ -45,8 +45,15 @@ export interface WebcamHandConfig {
   /** Thumb-index gap as a fraction of palm length: press below, release above. */
   pinchPress: number;
   pinchRelease: number;
-  /** Consecutive samples needed to change the pinch state. */
-  pinchDebounce: number;
+  /**
+   * Consecutive samples needed to press, and to release. Releasing takes longer on purpose: while
+   * pinched hands move, the tracker's gap reading wanders over the release level for a frame or
+   * two, and a pinch that drops out ends a drag or a two-hand gesture.
+   */
+  pressDebounce: number;
+  releaseDebounce: number;
+  /** Smoothing of the reach estimate per sample (0..1); palm size is a noisy stand-in for depth. */
+  reachSmooth: number;
   /** On pinch, rewind the pointer to where it was this long ago (ms). */
   rewindMs: number;
   /** A one-hand pinch keeps the pointer frozen for at most this long (ms); then it is a drag. */
@@ -68,10 +75,12 @@ export const DEFAULT_WEBCAM_HAND_CONFIG: WebcamHandConfig = {
   minReach: 0.3,
   maxReach: 0.6,
   // Palm length (wrist to middle knuckle) is about 9.5 cm, so: press under about 2.5 cm, release
-  // over about 3.2 cm. MediaPipe reads touching fingertips as 1.5-2.5 cm apart.
+  // over about 3.5 cm (for six samples in a row, about 0.2 s). MediaPipe reads touching fingertips as 1.5-2.5 cm apart.
   pinchPress: 0.26,
-  pinchRelease: 0.34,
-  pinchDebounce: 2,
+  pinchRelease: 0.37,
+  pressDebounce: 2,
+  releaseDebounce: 6,
+  reachSmooth: 0.25,
   rewindMs: 120,
   clickHoldMs: 600,
   smoothSlow: 0.15,
@@ -246,7 +255,7 @@ export class PointerFilter {
   }
 }
 
-/** Pinch as a switch: separate press and release levels, each held for a few samples. */
+/** Pinch as a switch: separate press and release levels, each held for a few samples (more to release). */
 export class PinchDetector {
   private pinched = false;
   private streak = 0;
@@ -265,7 +274,7 @@ export class PinchDetector {
   push(ratio: number): boolean {
     const wantsChange = this.pinched ? ratio > this.cfg.pinchRelease : ratio < this.cfg.pinchPress;
     this.streak = wantsChange ? this.streak + 1 : 0;
-    if (this.streak >= this.cfg.pinchDebounce) {
+    if (this.streak >= (this.pinched ? this.cfg.releaseDebounce : this.cfg.pressDebounce)) {
       this.pinched = !this.pinched;
       this.streak = 0;
     }

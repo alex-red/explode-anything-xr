@@ -8,8 +8,12 @@
  * - Two hands, pinch: one continuous "spread" from the change in hand distance. 0..1 is the
  *   explode factor (25 cm of travel, as before); past fully exploded the same pull zooms in.
  *   Pushing together zooms out first, then collapses.
- * - Two hands, twist: turn the model about the vertical axis.
- * - Two hands, move: carry the model. Zoom and turn happen about the model's own centre.
+ * - Two hands, rotate: the line between the pinched hands is a handle on the model. Turning it
+ *   like a steering wheel rolls the model about the viewer's line of sight; pushing one hand
+ *   forward and pulling the other back spins it about the vertical axis.
+ * - Two hands, push away or pull closer: tilt the model about the viewer's left-right axis.
+ * - Two hands, move sideways or up and down: carry the model. Zoom and turn happen about the
+ *   model's own centre.
  *
  * Nothing here allocates per update.
  */
@@ -22,6 +26,8 @@ export interface ViewPose {
   yaw: number;
   /** Tilt: radians about the viewer's left-right axis, applied after the yaw. */
   pitch: number;
+  /** Radians about the viewer's line of sight (+Z, toward the viewer), applied last. */
+  roll: number;
   /** Uniform scale; 1 is the authored size. */
   zoom: number;
 }
@@ -38,12 +44,19 @@ export interface GestureConfig {
   tiltGain: number;
   /** Tilt stops here either way, so the model cannot be flipped over (rad). */
   maxTilt: number;
+  /** Two-hand push/pull: radians of tilt per metre the hands move toward or away from the viewer, */
+  pushTiltGain: number;
+  /** and the travel that is ignored first, so holding still does not tilt it (m). */
+  pushDeadzone: number;
   /** Hand-distance change for a full explode, and for the same step of zoom beyond it (m). */
   spreadTravel: number;
   /** Zoom gained per unit of spread past fully exploded. */
   zoomRate: number;
   maxZoom: number;
-  /** Twist is ignored below this, so an explode pull does not also turn the model (rad). */
+  /**
+   * Two-hand rotations (spin or wheel turn) well below this are ignored, so an explode pull does
+   * not also turn the model; well above it they follow the hands exactly (rad, see `pastDeadzone`).
+   */
   twistDeadzone: number;
   /** Twist counts fully once the hands are twice this far apart, and not at all below it (m). */
   twistMinDist: number;
@@ -64,6 +77,9 @@ export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
   turnGain: 5.5,
   tiltGain: 3.5,
   maxTilt: (60 * Math.PI) / 180,
+  // 15 cm of push or pull is the whole 60°.
+  pushTiltGain: 7,
+  pushDeadzone: 0.02,
   spreadTravel: 0.25,
   zoomRate: 1.5,
   maxZoom: 2, // at 2x the exploded software graph already fills the view
@@ -100,11 +116,21 @@ export const newHandInput = (): HandInput => ({ pinching: false, startedAt: 0, x
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 const wrapAngle = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
+/**
+ * A soft deadzone: nothing below 0.6 × `deadzone`, the full angle from 1.8 × `deadzone` up, and a
+ * smooth ramp between. Small accidental rotations are ignored, and a deliberate one follows the
+ * hands one-to-one instead of trailing them by the deadzone.
+ */
+export function pastDeadzone(angle: number, deadzone: number): number {
+  const t = clamp((Math.abs(angle) - deadzone * 0.6) / (deadzone * 1.2), 0, 1);
+  return angle * t * t * (3 - 2 * t);
+}
+
 type Side = 'left' | 'right';
 
 export class ViewGestures {
   /** Where the model should be. The caller eases the real transform toward it. */
-  readonly pose: ViewPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, zoom: 1 };
+  readonly pose: ViewPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, zoom: 1 };
   mode: GestureMode = 'idle';
   /** While a two-hand gesture is live: the explode factor to preview. Otherwise null. */
   preview: number | null = null;
@@ -128,10 +154,15 @@ export class ViewGestures {
   private pz0 = 0;
   private yaw0 = 0;
   private pitch0 = 0;
+  private roll0 = 0;
   private dist0 = 0;
   private angle0 = 0;
   private twist = 0;
   private lastDist = 0;
+  // The same bookkeeping for the wheel turn, measured in the plane facing the viewer.
+  private wheelAngle0 = 0;
+  private wheel = 0;
+  private lastFront = 0;
   private spread0 = 0;
   private factor0 = 0;
   private factor = 0;
@@ -142,7 +173,7 @@ export class ViewGestures {
 
   /** Back to the authored placement. */
   reset(): void {
-    this.pose.x = this.pose.y = this.pose.z = this.pose.yaw = this.pose.pitch = 0;
+    this.pose.x = this.pose.y = this.pose.z = this.pose.yaw = this.pose.pitch = this.pose.roll = 0;
     this.pose.zoom = 1;
     if (this.mode === 'pan' || this.mode === 'turn') this.mode = 'idle'; // a live two-hand gesture re-bases itself below
     if (this.mode === 'two') this.rebase = true;
@@ -163,6 +194,10 @@ export class ViewGestures {
 
   turnBy(radians: number): void {
     this.pose.yaw = wrapAngle(this.pose.yaw + radians);
+  }
+
+  rollBy(radians: number): void {
+    this.pose.roll = wrapAngle(this.pose.roll + radians);
   }
 
   tiltBy(radians: number): void {
@@ -269,7 +304,12 @@ export class ViewGestures {
     this.dist0 = Math.hypot(right.x - left.x, right.y - left.y, right.z - left.z);
     this.angle0 = Math.atan2(-(right.z - left.z), right.x - left.x);
     this.twist = 0;
-    this.lastDist = this.dist0;
+    this.lastDist = Math.hypot(right.x - left.x, right.z - left.z);
+    this.wheelAngle0 = Math.atan2(right.y - left.y, right.x - left.x);
+    this.wheel = 0;
+    this.lastFront = Math.hypot(right.x - left.x, right.y - left.y);
+    this.roll0 = this.pose.roll;
+    this.pitch0 = this.pose.pitch;
     this.px0 = this.pose.x;
     this.py0 = this.pose.y;
     this.pz0 = this.pose.z;
@@ -293,18 +333,36 @@ export class ViewGestures {
     // Twist: add up the change in the hands' bearing, counting it only while they are far enough
     // apart for that bearing to mean something (close together, palm offsets swamp it).
     const angle = Math.atan2(-(right.z - left.z), right.x - left.x);
-    const weight = clamp((Math.min(dist, this.lastDist) - c.twistMinDist) / c.twistMinDist, 0, 1);
+    // Each rotation only trusts the part of the hand separation it can see: the spin uses the
+    // separation in the horizontal plane, the wheel turn the separation in the plane facing the
+    // viewer. So a big wheel turn (hands one above the other) cannot fake a spin, or the reverse.
+    const flat = Math.hypot(right.x - left.x, right.z - left.z);
+    const weight = clamp((Math.min(flat, this.lastDist) - c.twistMinDist) / c.twistMinDist, 0, 1);
     this.twist += wrapAngle(angle - this.angle0) * weight;
     this.angle0 = angle;
-    this.lastDist = dist;
-    const turned = Math.sign(this.twist) * Math.max(0, Math.abs(this.twist) - c.twistDeadzone);
+    this.lastDist = flat;
+    const turned = pastDeadzone(this.twist, c.twistDeadzone);
+
+    // Wheel turn: counter-clockwise as the viewer sees it (right hand up, left hand down) is a
+    // positive roll about +Z.
+    const wheelAngle = Math.atan2(right.y - left.y, right.x - left.x);
+    const front = Math.hypot(right.x - left.x, right.y - left.y);
+    const wheelWeight = clamp((Math.min(front, this.lastFront) - c.twistMinDist) / c.twistMinDist, 0, 1);
+    this.wheel += wrapAngle(wheelAngle - this.wheelAngle0) * wheelWeight;
+    this.wheelAngle0 = wheelAngle;
+    this.lastFront = front;
+    const rolled = pastDeadzone(this.wheel, c.twistDeadzone);
 
     // Zoom and turn happen about the model's own centre: the hands are always nearer than the
     // model, so a pivot between them would throw it away. Moving both hands carries it.
     this.pose.x = clamp(this.px0 + ((left.x + right.x) / 2 - this.gx) * c.panGain, c.minX, c.maxX);
     this.pose.y = clamp(this.py0 + ((left.y + right.y) / 2 - this.gy) * c.panGain, c.minY, c.maxY);
-    this.pose.z = clamp(this.pz0 + ((left.z + right.z) / 2 - this.gz) * c.panGain, c.minZ, c.maxZ);
+    // Toward or away from the viewer is not a carry: pulling the hands closer tips the top of the
+    // model toward you, pushing them away tips it back (+z is toward the viewer).
+    const pushed = pastDeadzone((left.z + right.z) / 2 - this.gz, c.pushDeadzone);
+    this.pose.pitch = clamp(this.pitch0 + pushed * c.pushTiltGain, -c.maxTilt, c.maxTilt);
     this.pose.yaw = wrapAngle(this.yaw0 + turned);
+    this.pose.roll = wrapAngle(this.roll0 + rolled);
     this.pose.zoom = zoom;
   }
 
