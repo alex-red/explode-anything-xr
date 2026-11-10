@@ -109,8 +109,8 @@ function repoLesson(graph: SystemGraph, recorded: RecordedEvidence): Lesson {
       {
         id: 'step:repo-explode',
         kind: 'explode',
-        caption: `Pull it apart to see its ${clusters} subsystems.`,
-        hint: 'Pinch with both hands and pull them apart, or press Explode.',
+        caption: `Press Explode to see its ${clusters} subsystems, or pull it apart with both hands.`,
+        hint: 'Press Explode. You can also pinch with both hands and pull them apart.',
         expect: { type: 'explode_at_least', factor: 0.8 },
         on_enter: [],
       },

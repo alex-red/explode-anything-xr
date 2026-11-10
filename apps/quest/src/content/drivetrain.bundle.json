@@ -7,7 +7,7 @@
     "display_name": "Simplified EV drivetrain (teaching model)",
     "revision": {
       "kind": "content_hash",
-      "value": "58bf19329481e660e28899390f09c1b283019ec637af340931f14cf332fe63d7"
+      "value": "5b853371f456db28dba91bc403f7a83c10db7d6a221d1cda7508e84937485c84"
     },
     "nodes": [
       {
@@ -551,13 +551,13 @@
         {
           "id": "step:dt-explode",
           "kind": "explode",
-          "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Pinch with both hands and pull apart to open it up.",
+          "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Press Explode to open it up, or pinch with both hands and pull apart.",
           "expect": {
             "type": "explode_at_least",
             "factor": 0.8
           },
           "on_enter": [],
-          "hint": "Pinch with both hands and pull them apart, or press Explode."
+          "hint": "Press Explode. You can also pinch with both hands and pull them apart."
         },
         {
           "id": "step:dt-trace",
@@ -641,13 +641,13 @@
         {
           "id": "step:dt-collapse",
           "kind": "transition",
-          "caption": "Power flows again. Push your hands together, or press Collapse, to close it up. Next: the same moves on a real codebase.",
+          "caption": "Power flows again. Press Collapse to close it up, or push your hands together. Next: the same moves on a real codebase.",
           "expect": {
             "type": "collapse_below",
             "factor": 0.1
           },
           "on_enter": [],
-          "hint": "Bring your hands together, or press Collapse."
+          "hint": "Press Collapse. You can also bring your hands together."
         }
       ]
     }
@@ -789,7 +789,7 @@
       }
     }
   },
-  "content_hash": "279a738d573223a581c68f65a9750b41ccd7e0a232f8f7c86054aa7333f4cc42",
-  "generated_at": "2026-10-25T04:00:53.189Z",
+  "content_hash": "70a4347b356333e0f384806166b6b3d3b8518d24eb28ff069cda7a46de400c9d",
+  "generated_at": "2026-11-10T04:12:19.688Z",
   "generator": "explode-content-tools@0.1.0"
 }

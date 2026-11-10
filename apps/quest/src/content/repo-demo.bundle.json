@@ -4841,13 +4841,13 @@
         {
           "id": "step:repo-explode",
           "kind": "explode",
-          "caption": "Pull it apart to see its 8 subsystems.",
+          "caption": "Press Explode to see its 8 subsystems, or pull it apart with both hands.",
           "expect": {
             "type": "explode_at_least",
             "factor": 0.8
           },
           "on_enter": [],
-          "hint": "Pinch with both hands and pull them apart, or press Explode."
+          "hint": "Press Explode. You can also pinch with both hands and pull them apart."
         },
         {
           "id": "step:repo-trace",
@@ -4960,7 +4960,7 @@
     }
   ],
   "assets": null,
-  "content_hash": "712c9893f23f1cf83135e2ab96edf8939030e3403efd6657692bf6ad6745366b",
-  "generated_at": "2026-10-25T04:00:55.725Z",
+  "content_hash": "24d78e5685502f16a6b0984a7a12ecbb849a0b305f98b659808687ca774a1e9c",
+  "generated_at": "2026-11-10T04:12:22.152Z",
   "generator": "explode-content-tools@0.1.0"
 }

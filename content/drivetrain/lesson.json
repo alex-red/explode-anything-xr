@@ -13,8 +13,8 @@
     {
       "id": "step:dt-explode",
       "kind": "explode",
-      "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Pinch with both hands and pull apart to open it up.",
-      "hint": "Pinch with both hands and pull them apart, or press Explode.",
+      "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Press Explode to open it up, or pinch with both hands and pull apart.",
+      "hint": "Press Explode. You can also pinch with both hands and pull them apart.",
       "expect": { "type": "explode_at_least", "factor": 0.8 }
     },
     {
@@ -64,8 +64,8 @@
     {
       "id": "step:dt-collapse",
       "kind": "transition",
-      "caption": "Power flows again. Push your hands together, or press Collapse, to close it up. Next: the same moves on a real codebase.",
-      "hint": "Bring your hands together, or press Collapse.",
+      "caption": "Power flows again. Press Collapse to close it up, or push your hands together. Next: the same moves on a real codebase.",
+      "hint": "Press Collapse. You can also bring your hands together.",
       "expect": { "type": "collapse_below", "factor": 0.1 }
     }
   ]
