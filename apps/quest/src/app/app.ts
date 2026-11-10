@@ -12,6 +12,7 @@ import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from '.
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
+const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 
@@ -81,8 +82,16 @@ export class ExplodeApp {
 
   private recenteredInXR = false;
 
-  requestRecenter(): void {
+  private recenterWait = 0;
+
+  /**
+   * Re-place the system in front of the viewer. `afterFrames` delays it: right after a session
+   * starts the camera still holds the 2D page's pose, and recentering on that puts the object
+   * at waist height behind the view. A few frames later the head pose is real.
+   */
+  requestRecenter(afterFrames = 0): void {
     this.needsRecenter = true;
+    this.recenterWait = afterFrames;
   }
 
   update(dt: number): void {
@@ -341,9 +350,12 @@ export class ExplodeApp {
 
   /** Place the system in front of and slightly below the eyes, facing the viewer, yaw only. */
   private tryRecenter(): void {
+    if (this.recenterWait > 0) {
+      this.recenterWait--;
+      return;
+    }
     const camera = this.world.camera;
     camera.getWorldPosition(this.tmp);
-    if (this.world.session && this.tmp.lengthSq() < 1e-6) return; // no head pose yet
     camera.getWorldDirection(this.fwd);
     this.fwd.y = 0;
     if (this.fwd.lengthSq() < 1e-6) this.fwd.set(0, 0, -1);
@@ -361,7 +373,8 @@ let app: ExplodeApp | null = null;
 export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false): ExplodeApp {
   app = new ExplodeApp(world, bundles, tutorUrl, debug);
   world.registerSystem(AppSystem);
-  world.renderer.xr.addEventListener('sessionstart', () => app?.requestRecenter());
+  world.renderer.xr.addEventListener('sessionstart', () => app?.requestRecenter(SESSION_START_SETTLE_FRAMES));
+  world.renderer.xr.addEventListener('sessionend', () => app?.requestRecenter(SESSION_START_SETTLE_FRAMES));
   return app;
 }
 
