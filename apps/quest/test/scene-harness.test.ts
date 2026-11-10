@@ -1,5 +1,5 @@
 /**
- * Headless scene harness: runs the real ExplodeApp / GraphView / SpatialUI / TwoHandPull code
+ * Headless scene harness: runs the real ExplodeApp / GraphView / SpatialUI / HandGestures code
  * against a stub IWSDK World and a recording 2D canvas (no WebGL, no dev server, no build).
  * Presses go through the same handler registry InteractionSystem uses for XR rays and mouse.
  */
@@ -361,6 +361,168 @@ describe('scene harness: session backdrop', () => {
     expect(backdrop(h).mode).toBe('passthrough');
     h.press(h.button(/^View: passthrough$/));
     expect(backdrop(h).mode).toBe('dim');
+  });
+});
+
+describe('scene harness: handling the model with the hands', () => {
+  function withHands(h: ReturnType<typeof setup>) {
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20); // session-start recenter
+    const fire = (type: string, handedness: string) => session.dispatchEvent({ type, inputSource: { handedness } } as never);
+    const { left, right } = h.world.player.gripSpaces;
+    const root = (h.view() as unknown as { root: Group }).root;
+    return { fire, left, right, root };
+  }
+  const worldOf = (o: Object3D) => o.getWorldPosition(new Vector3()).toArray();
+
+  it('one hand: pinch and drag moves the model only, and the pinch does not select the part it started on', () => {
+    const h = setup();
+    const { fire, right, root } = withHands(h);
+    const toolbar = worldOf(h.button(/^Explode$/)!);
+    const battery = h.view().nodes.get('part:battery')!.mesh;
+    const before = worldOf(battery);
+
+    right.position.set(0.1, 1.2, -0.3);
+    h.frames(2);
+    clock += 300;
+    fire('selectstart', 'right');
+    pressStart(battery); // the ray was on a part
+    h.frames(2);
+    right.position.set(0.14, 1.2, -0.3); // past the 3 cm drag threshold: the drag starts here
+    h.frames(2);
+    right.position.set(0.24, 1.25, -0.3); // then 10 cm right, 5 cm up
+    h.frames(30);
+    fire('selectend', 'right');
+    pressEnd(battery);
+    h.frames(30);
+
+    expect(root.position.x).toBeGreaterThan(0.05);
+    expect(root.position.y).toBeGreaterThan(0.02);
+    expect(worldOf(battery)[0]).toBeGreaterThan(before[0]! + 0.05);
+    expect(worldOf(h.button(/^Explode$/)!)).toEqual(toolbar); // the toolbar stays put
+    expect(h.state().selected_id).toBeNull();
+    expectFinite(h.scene);
+  });
+
+  it('a pinch that starts on a toolbar button never drags the model, and still presses on release', () => {
+    const h = setup();
+    const { fire, right, root } = withHands(h);
+    const explode = h.button(/^Explode$/)!;
+    right.position.set(0.1, 1.2, -0.3);
+    h.frames(2);
+    clock += 300;
+    fire('selectstart', 'right');
+    pressStart(explode);
+    h.frames(2);
+    right.position.set(0.3, 1.2, -0.3);
+    h.frames(10);
+    fire('selectend', 'right');
+    pressEnd(explode);
+    h.frames(10);
+    expect(root.position.x).toBe(0);
+    expect(h.state().explode_factor).toBe(1);
+  });
+
+  it('two hands: pulling past fully exploded zooms in; Collapse returns it to full size', () => {
+    const h = setup();
+    const { fire, left, right, root } = withHands(h);
+    left.position.set(-0.05, 1.2, -0.3);
+    right.position.set(0.05, 1.2, -0.3);
+    h.frames(2);
+    fire('selectstart', 'left');
+    fire('selectstart', 'right');
+    h.frames(2);
+    left.position.set(-0.25, 1.2, -0.3);
+    right.position.set(0.25, 1.2, -0.3); // +40 cm: a full explode (25) and 15 more
+    h.frames(40);
+    expect(root.scale.x).toBeGreaterThan(1.5);
+    fire('selectend', 'left');
+    fire('selectend', 'right');
+    h.frames(40);
+    expect(h.state().explode_factor).toBe(1);
+    expect(root.scale.x).toBeGreaterThan(1.5); // zoom stays after letting go
+    expect(root.scale.y).toBe(root.scale.x);
+
+    h.press(h.button(/^Collapse$/));
+    h.frames(60);
+    expect(h.state().explode_factor).toBe(0);
+    expect(root.scale.x).toBeCloseTo(1, 3);
+    expectFinite(h.scene);
+  });
+
+  it('two hands: twisting turns the model, and Recenter puts everything back', () => {
+    const h = setup();
+    const { fire, left, right, root } = withHands(h);
+    left.position.set(-0.15, 1.2, -0.3);
+    right.position.set(0.15, 1.2, -0.3);
+    h.frames(2);
+    fire('selectstart', 'left');
+    fire('selectstart', 'right');
+    h.frames(2);
+    left.position.set(-0.106, 1.2, -0.194); // 45° counter-clockwise from above, same distance apart
+    right.position.set(0.106, 1.2, -0.406);
+    h.frames(40);
+    fire('selectend', 'left');
+    fire('selectend', 'right');
+    h.frames(10);
+    expect(Math.abs(root.rotation.y)).toBeGreaterThan(0.4);
+
+    h.press(h.button(/^Recenter$/));
+    h.frames(60);
+    expect(root.rotation.y).toBeCloseTo(0, 3);
+    expect(root.position.length()).toBeLessThan(1e-3);
+    expect(root.scale.x).toBeCloseTo(1, 3);
+  });
+
+  it('the key equivalents move, zoom and turn the model', () => {
+    const h = setup();
+    h.press(h.button(/^Explode$/));
+    const root = (h.view() as unknown as { root: Group }).root;
+    const key = (k: string) => keyListeners.forEach((fn) => fn({ key: k }));
+    key('=');
+    key('ArrowRight');
+    key('[');
+    h.frames(60);
+    expect(root.scale.x).toBeCloseTo(1.25, 2);
+    expect(root.position.x).toBeCloseTo(0.05, 3);
+    expect(root.rotation.y).toBeCloseTo(Math.PI / 12, 3);
+  });
+});
+
+describe('scene harness: a press needs a real release', () => {
+  it('in a session, a pinch whose ray slides off the part is not a press', () => {
+    const h = setup();
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+    const fire = (type: string) => session.dispatchEvent({ type, inputSource: { handedness: 'right' } } as never);
+    const battery = h.view().nodes.get('part:battery')!.mesh;
+
+    clock += 300;
+    fire('selectstart');
+    pressStart(battery);
+    h.frames(3);
+    clock += 400;
+    pressEnd(battery); // IWSDK dropped Pressed because the ray left; the pinch is still held
+    h.frames(3);
+    expect(h.state().selected_id).toBeNull();
+    fire('selectend');
+    h.frames(3);
+    expect(h.state().selected_id).toBeNull();
+
+    clock += 300;
+    fire('selectstart');
+    pressStart(battery);
+    h.frames(3);
+    fire('selectend');
+    pressEnd(battery); // released on the part
+    h.frames(3);
+    expect(h.state().selected_id).toBe('part:battery');
   });
 });
 

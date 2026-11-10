@@ -55,7 +55,8 @@ Node ≥ 24: workspace packages are consumed as `.ts` source through native type
 - Docs: <https://iwsdk.dev>. Project rules and skills come with the scaffold in `apps/quest/AGENTS.md` and `apps/quest/.claude/skills/` (`iwsdk-dev`, `iwsdk-ray`, `iwsdk-grab`, `iwsdk-ui`, `iwsdk-debug`, `iwsdk-pwa-packaging`, `iwsdk-hosting`, …). Read them before touching those areas.
 - Import three.js from `@iwsdk/core`, never from `three`.
 - `iwsdk.config.json` is the project authority, not `vite.config.ts`.
-- Hand pinch maps to WebXR `select` (ray). `GrabSystem.useHandPinchForGrab` defaults to false, and proximity grab uses squeeze. That is why P0 interaction is ray + select through `RayInteractable`/`Pressed` (`apps/quest/src/app/interactions.ts`), and explode is a custom two-hand select-pull (`two-hand-pull.ts`).
+- Hand pinch maps to WebXR `select` (ray). `GrabSystem.useHandPinchForGrab` defaults to false, and proximity grab uses squeeze. That is why P0 interaction is ray + select through `RayInteractable`/`Pressed` (`apps/quest/src/app/interactions.ts`), and the model is handled by custom select gestures (`hand-gestures.ts` over the pure `view-gestures.ts`): two hands pull to explode then zoom, twist to turn, and one hand drags to move it (ADR-0021).
+- IWSDK 1.0.1's ray pointer sticks in `select` when a pinch ends with the ray on nothing, and then ignores that hand's next pinch. `apps/quest/src/app/pointer-unstick.ts` works around it using private SDK fields; re-check it if the SDK version ever changes.
 - Never allocate in per-frame `update()` paths. Text is CanvasTexture panels (`text.ts`), capped at about 30 labels.
 
 ## Done means

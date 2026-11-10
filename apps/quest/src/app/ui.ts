@@ -75,6 +75,7 @@ export class SpatialUI {
           entry.hovered = on;
           this.dirty = true;
         },
+        ui: true,
       });
       this.buttons.push(entry);
     });
@@ -94,7 +95,7 @@ export class SpatialUI {
     this.evidenceClose = new TextPanel({ width: 0.07, height: 0.03, pxPerMeter: PPM, padding: 8, radius: 20, align: 'center' });
     this.evidenceClose.draw([{ text: 'Close', size: 40, bold: true }], CSS.buttonBg);
     this.evidenceClose.mesh.position.set(EVIDENCE_W / 2 - 0.045, -EVIDENCE_H / 2 - 0.022, 0.002);
-    makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence });
+    makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence, ui: true });
     this.evidenceGroup.visible = false;
   }
 

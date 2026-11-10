@@ -263,7 +263,8 @@ async function main(): Promise<void> {
     console.log(`\nPASS: ${modes.join(' + ')}; ${pressed} ray presses; no console warnings or errors; ${((Date.now() - t0) / 1000).toFixed(0)} s`);
     console.log('Emulator only: this does not measure frame rate, readability or real hand tracking.');
   } finally {
-    await cli('xr', 'exit', {}).catch(() => undefined);
+    // KEEP_XR=1 leaves the session open after a failure, so the scene can be inspected as it was.
+    if (!process.env.KEEP_XR) await cli('xr', 'exit', {}).catch(() => undefined);
     if (started) await run(CLI, ['dev', 'down'], { cwd: APP, timeout: 60_000 }).catch(() => undefined);
   }
 }

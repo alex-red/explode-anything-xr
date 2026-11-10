@@ -1,6 +1,6 @@
 # EXPLODE — Interaction Spec (v2)
 
-**Supersedes:** handoff §6, §13 · **Related:** [ADR-0003](adr/0003-session-passthrough.md), [ADR-0012](adr/0012-input.md), [ADR-0014](adr/0014-layout-cone.md), [ADR-0015](adr/0015-audio.md)
+**Supersedes:** handoff §6, §13 · **Related:** [ADR-0003](adr/0003-session-passthrough.md), [ADR-0012](adr/0012-input.md), [ADR-0021](adr/0021-view-manipulation.md), [ADR-0014](adr/0014-layout-cone.md), [ADR-0015](adr/0015-audio.md)
 
 ---
 
@@ -40,10 +40,13 @@ The authoritative steps are the lesson definitions in `apps/quest/src/content/*.
 
 | Input | Behavior | Safeguards / fallback |
 |---|---|---|
-| **Hand ray + pinch** (`select`) on a node | Select / focus | Generous colliders; hover highlight; no dwell. The controller ray works identically |
+| **Hand ray + pinch** (`select`) on a node | Select / focus, on release | Generous colliders; hover highlight; no dwell. A pinch whose ray slides off before release is not a press. The controller ray works identically |
 | Ray + pinch on a toolbar button | Run that command | Buttons ≥ 4 cm, poke-able up close |
-| **Both hands pinch and pull apart** | Explode factor follows the change in hand distance (0→1) | Engages only when both pinches start within about 400 ms and neither ray is on a button. **Explode/Collapse** buttons do the same. Keyboard `E` / `C` in the emulator |
-| Both hands pinch and push together | Collapse | Never collapses while an edge is in the tray |
+| **Both hands pinch and pull apart** | Explode factor follows the change in hand distance (0→1). Past fully exploded, the same pull zooms in (to 2×) | Engages only when both pinches start within about 500 ms. **Explode/Collapse** buttons do the explode part. Keyboard `E`, and `+` / `-` for zoom, in the emulator |
+| Both hands pinch and push together | Zoom out, then collapse. A collapsed model is always full size | Never collapses while an edge is in the tray |
+| Both hands pinch and twist | Turn the model about its vertical axis | Counts only with the hands at least 12 cm apart and past 10°. Keyboard `[` / `]` |
+| Both hands pinch and move together | Carry the model | Held within reach of its authored place. Arrow keys |
+| **One hand pinches and drags** | Move the model. Only the model moves; panels stay put | A pinch that travels under 3 cm is still a click; a drag drops that click. Never starts from a toolbar or panel control. **Recenter** resets move, zoom and turn |
 | Select an edge plug → **Unplug** | Detach into the sandbox tray | Only `is_mutable_in_sandbox` edges |
 | Select a socket while a plug is detached | Repair attempt | A wrong socket shows feedback, plus the expected socket after the 2nd miss |
 | **Undo** / **Reset** | Drop the last undoable event / restart the lesson | Always visible on the toolbar |
@@ -119,7 +122,7 @@ IWSDK facts that shaped this ([ADR-0001](adr/0001-engine.md)): `GrabSystem.useHa
 
 - Complete functionality with hands and no controllers. The controller ray also works.
 - Seated; every target within ~0.65 m and inside the cone; recenter, reset and pause/resume always available.
-- Every gesture has a button equivalent.
+- Every gesture has a button equivalent, except moving, zooming and turning the model: those have Recenter to undo them and keys in the emulator, but no buttons of their own ([ADR-0021](adr/0021-view-manipulation.md)).
 - Captions for every narrated line, always on.
 - Color is never the only signal (see §4).
 - No eye tracking required (Quest 3/3S have none).

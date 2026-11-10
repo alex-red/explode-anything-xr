@@ -7,12 +7,13 @@ import { DebugReadout } from './debug-readout.ts';
 import { GraphView } from './graph-view.ts';
 import { Store } from './store.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
-import { TwoHandPull } from './two-hand-pull.ts';
+import { HandGestures } from './hand-gestures.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
 const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
+const VIEW_EASE = 18; // 1/s: how fast the model follows a hand gesture; high enough to feel held
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 
@@ -24,7 +25,7 @@ export class ExplodeApp {
   private view: GraphView | null = null;
   private readonly ui: SpatialUI;
   private readonly tutor: TutorClient;
-  private readonly pull: TwoHandPull;
+  private readonly hands: HandGestures;
   private readonly backdrop: Backdrop;
   private readonly debug: DebugReadout;
   private readonly sfx = new Sfx();
@@ -56,8 +57,9 @@ export class ExplodeApp {
     this.debug = new DebugReadout(world, this.anchorEntity);
     this.debug.enabled = debug;
     this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
-    this.pull = new TwoHandPull(
+    this.hands = new HandGestures(
       world,
+      this.anchor,
       () => this.store.state.explode_factor,
       (f) => {
         if (this.view) this.view.pullPreview = f;
@@ -106,7 +108,8 @@ export class ExplodeApp {
     const camera = this.world.camera;
     if (this.needsRecenter) this.tryRecenter();
     this.backdrop.update(camera);
-    this.pull.update();
+    this.hands.update();
+    this.applyViewPose(dt);
     this.debug.update(dt);
     if (this.paused) return; // pause animation while blurred/hidden; state is already persisted
     const clamped = Math.min(dt, 1 / 30);
@@ -159,6 +162,25 @@ export class ExplodeApp {
       this.anchorEntity,
     );
     this.view.displayFactor = this.store.state.explode_factor;
+    this.hands.gestures.reset();
+    this.applyViewPose(Infinity);
+  }
+
+  /**
+   * Ease the model toward where the hand gestures (or their key equivalents) have put it. Only
+   * the model moves; the caption, toolbar and evidence panel stay on the anchor.
+   */
+  private applyViewPose(dt: number): void {
+    const root = this.view?.root;
+    if (!root) return;
+    const pose = this.hands.pose;
+    const a = 1 - Math.exp(-dt * VIEW_EASE);
+    root.position.x += (pose.x - root.position.x) * a;
+    root.position.y += (pose.y - root.position.y) * a;
+    root.position.z += (pose.z - root.position.z) * a;
+    const turn = Math.atan2(Math.sin(pose.yaw - root.rotation.y), Math.cos(pose.yaw - root.rotation.y)); // the short way round
+    root.rotation.y += turn * a;
+    root.scale.setScalar(root.scale.x + (pose.zoom - root.scale.x) * a);
   }
 
   private get onMechanical(): boolean {
@@ -238,6 +260,15 @@ export class ExplodeApp {
     else if (k === 'r') this.store.restart();
     else if (k === 'x') void this.askTutor('explain_selection');
     else if (k === 'c') this.needsRecenter = true;
+    // Equivalents of the hand gestures that move the model (Recenter resets them).
+    else if (k === '=' || k === '+') this.hands.gestures.zoomBy(1.25);
+    else if (k === '-') this.hands.gestures.zoomBy(0.8);
+    else if (k === '[') this.hands.gestures.turnBy(Math.PI / 12);
+    else if (k === ']') this.hands.gestures.turnBy(-Math.PI / 12);
+    else if (k === 'arrowleft') this.hands.gestures.panBy(-0.05, 0, 0);
+    else if (k === 'arrowright') this.hands.gestures.panBy(0.05, 0, 0);
+    else if (k === 'arrowup') this.hands.gestures.panBy(0, 0.05, 0);
+    else if (k === 'arrowdown') this.hands.gestures.panBy(0, -0.05, 0);
     else if (k === 'd') this.debug.enabled = !this.debug.enabled;
     else if (k === 'p') this.logTargets();
     else if (k === '0') this.forgetProgress();
@@ -254,7 +285,7 @@ export class ExplodeApp {
     // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
     // own content; inside the emulator it also counts the emulated room and controllers.
     const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
-    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, perf, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 
@@ -368,8 +399,8 @@ export class ExplodeApp {
     else if (s.lesson?.status === 'complete')
       caption = this.onMechanical
         ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
-        : 'Lesson complete. Explore freely: select parts, trace, unplug, and ask why. Reset to try again.';
-    else caption = 'Free exploration. Select a part, trace a path, or unplug a connection.';
+        : 'Lesson complete. Explore freely: pinch and drag to move it, pull with both hands to zoom, twist to turn. Recenter puts it back.';
+    else caption = 'Free exploration. Pinch and drag to move it; with both hands, pull to zoom and twist to turn.';
     const tutor = this.tutorAnswer && this.tutorAnswer.stepKey === this.stepKey() ? this.tutorAnswer : null;
     const graph = this.store.ctx.bundle.graph;
     return {
@@ -402,6 +433,7 @@ export class ExplodeApp {
     this.anchor.position.copy(this.tmp).addScaledVector(this.fwd, ANCHOR_DISTANCE);
     this.anchor.position.y -= ANCHOR_DROP;
     this.anchor.rotation.set(0, Math.atan2(-this.fwd.x, -this.fwd.z), 0);
+    this.hands.gestures.reset(); // Recenter also undoes any move, zoom or turn of the model
     this.needsRecenter = false;
     if (this.world.session) this.recenteredInXR = true;
   }

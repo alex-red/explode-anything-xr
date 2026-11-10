@@ -35,7 +35,7 @@
 | Content | `tools/content/test` | Both bundles parse; `checkBundleIntegrity` is empty; cone check (AT-11); mutation evidence matches lesson break edges |
 | Proxy | `services/tutor-proxy/test` | Validation, rate limit, cap, kill switch, upstream timeout/invalid → error signal (AT-08/09) |
 | App logic | `apps/quest/test/app-logic.test.ts` | Event-sourced store: persistence and restore after a killed session (AT-05), per-system logs, undo, throwing storage; tutor client: live, invalid → scripted, network/HTTP errors, Live AI toggle |
-| Scene harness | `apps/quest/test/scene-harness.test.ts` | The real app, view, UI and two-hand-pull code against a stub World and a recording canvas: both lessons completed by in-world presses, presses delivered on pinch release and dropped by a two-hand pull, the no-hands hint, the debug readout, the consequence hidden until prediction, honest truth badges, evidence panel text, two-hand pull preview and commit, layout within the 60°×50° cone and reach (AT-11), ≤30 labels, no clipped text, pause on blur, disposal when switching systems. **Not covered:** WebGL rendering, real hand tracking, frame rate (device only) |
+| Scene harness | `apps/quest/test/scene-harness.test.ts` | The real app, view, UI and hand-gesture code against a stub World and a recording canvas: both lessons completed by in-world presses, presses delivered on pinch release and dropped by a hand gesture or by sliding off the target, moving, zooming and turning the model with the hands and their key equivalents, the no-hands hint, the debug readout, the consequence hidden until prediction, honest truth badges, evidence panel text, two-hand pull preview and commit, layout within the 60°×50° cone and reach (AT-11), ≤30 labels, no clipped text, pause on blur, disposal when switching systems. **Not covered:** WebGL rendering, real hand tracking, frame rate (device only) |
 | Emulator walkthrough | `bun run emulator:walkthrough` (needs the dev server; `-- --start` runs one headless) | The real app in the IWER emulator: session start, both lessons by emulated ray in controller and hand mode, wrong socket rejected, two-hand pull with no stray selection, no console warnings or errors. **Not covered:** frame rate, readability, real hand tracking |
 | Release | `tools/release/test` | File hashing including dot-directories; changed, missing and unreachable files reported; site root checked against `index.html` (AT-13) |
 
@@ -50,6 +50,11 @@ Run: `bun run test`, `bun run typecheck`, `bun run content:check`.
 - [ ] After a redeploy to the dev URL, a reload shows the new build
 - [ ] Hand ray hover and select on nodes and buttons; controller ray also works
 - [ ] Two-hand pull explodes; button explodes; collapse works
+- [ ] Pulling past fully exploded zooms in; pushing together zooms out, then collapses
+- [ ] One-hand pinch-and-drag moves the model and does not select the part it started on; a quick pinch still selects
+- [ ] Two-hand twist turns the model; a straight pull does not
+- [ ] After any drag, the next pinch with the same hand registers (IWSDK stuck-pointer work-around)
+- [ ] Recenter resets move, zoom and turn
 - [ ] Trace lights the path; flow animates
 - [ ] Unplug → downstream dims; badge matches truth (Observed / Hypothesis / Teaching model)
 - [ ] Wrong socket rejected with feedback; right socket restores

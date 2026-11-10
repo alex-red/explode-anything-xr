@@ -116,6 +116,7 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 | B5 | Explode-first wording: captions and hints name the button first and the two-hand pull second. Changed in the authored lesson and the generator, then regenerated; the recorded test runs were kept, not re-recorded |
 | B6 | VR fallback: if mixed reality is not offered, the page offers a VR session; if it is offered but does not start within 8 s, a second button appears. An opaque session gets the virtual backdrop and the View toggle is locked. Checked in the emulator with a real `immersive-vr` session |
 | — | Emulator-run fixes: recenter waits for a real head pose; a press on a part inside a socket ring plugs into it |
+| — | Handling the model ([ADR-0021](adr/0021-view-manipulation.md)): one hand drags to move it; two hands pull to explode and then zoom, twist to turn, and carry it; Recenter resets. A press now needs a release on its target. Works around an IWSDK pointer bug that ignored the pinch after a drag. Emulator only: the walkthrough passes in both modes, and emulated-hand runs moved, zoomed and turned the model as expected |
 
 ### To do
 

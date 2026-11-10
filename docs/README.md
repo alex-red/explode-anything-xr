@@ -39,3 +39,4 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [0018](adr/0018-fixture-repo.md) | Hero repo: sample auth-service written for this demo |
 | [0019](adr/0019-assets.md) | Assets: procedural only |
 | [0020](adr/0020-testing.md) | Testing: Vitest, IWER end-to-end, device checklist |
+| [0021](adr/0021-view-manipulation.md) | Handling the model: move, zoom and turn on top of the two-hand pull |

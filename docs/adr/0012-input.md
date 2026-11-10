@@ -1,6 +1,6 @@
 # ADR-0012: Input — ray + select, custom two-hand pull, a button for everything
 
-**Status:** Accepted, 2026-10-23
+**Status:** Accepted, 2026-10-23 · **Amended by:** [ADR-0021](0021-view-manipulation.md) (move, zoom and turn; `two-hand-pull.ts` became `hand-gestures.ts`)
 
 ## Context
 
