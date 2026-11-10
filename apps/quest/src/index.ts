@@ -58,9 +58,6 @@ main().catch((err: unknown) => {
   setStatus(`Something went wrong while loading: ${err instanceof Error ? err.message : String(err)}. Reload the page to try again.`);
 });
 
-// Offline-first (ADR-0016): runtime cache-first service worker, production only.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
-  });
-}
+// The service worker is deliberately not registered (docs/FINAL_PLAN.md F2/F3): as written it
+// precaches only index.html and serves cache-first, so it neither makes the app work offline
+// after one launch nor lets a redeploy through. Register it again once it precaches the build.
