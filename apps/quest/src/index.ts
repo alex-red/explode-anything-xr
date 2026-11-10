@@ -7,46 +7,55 @@ import { startApp } from './app/app.ts';
 import { InteractionSystem } from './app/interactions.ts';
 
 const status = document.getElementById('status');
+const landing = document.getElementById('landing');
+const enter = document.getElementById('enter-xr') as HTMLButtonElement | null;
 const setStatus = (text: string) => {
   if (status) status.textContent = text;
 };
+const setEnter = (label: string, enabled: boolean) => {
+  if (!enter) return;
+  enter.textContent = label;
+  enter.disabled = !enabled;
+};
+
+const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace, N next, U undo, R reset, X explain.';
 
 async function main(): Promise<void> {
-  // Bundles are imported statically, so they ship in the build and are precached offline.
+  // Bundles are imported statically, so they ship inside the build.
   const bundles = [ContentBundle.parse(drivetrain), ContentBundle.parse(repoDemo)];
   const world = await World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions);
   world.registerSystem(InteractionSystem);
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   startApp(world, bundles, tutorUrl);
 
-  // Installed PWA only (iwsdk-pwa-packaging): there is no 2D page to click, so spend the
-  // app-icon tap on entering mixed reality. Browser tabs keep the Enter button instead.
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
-  if ('getDigitalGoodsService' in window && nav.xr?.isSessionSupported) {
-    nav.xr
-      .isSessionSupported('immersive-ar')
-      .then((supported) => {
-        if (supported) world.launchXR();
-      })
-      .catch(() => undefined);
-  }
+  const arSupported = world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported('immersive-ar').catch(() => false));
 
-  const enter = document.getElementById('enter-xr') as HTMLButtonElement | null;
-  if (enter) {
-    if (world.xrEnabled) {
-      enter.hidden = false;
-      enter.addEventListener('click', () => world.launchXR());
-      world.visibilityState.subscribe((v) => (enter.hidden = v !== 'non-immersive'));
-    } else {
-      setStatus('WebXR not available in this browser. Desktop preview: click parts; keys E explode, T trace, N next, U undo, R reset, X explain.');
-    }
+  // Installed PWA only: there is no 2D page to click, so spend the app-icon tap on entering
+  // mixed reality. In a browser tab (how judges open the link) this never runs.
+  if (arSupported && 'getDigitalGoodsService' in window) world.launchXR();
+
+  if (arSupported) {
+    setEnter('Enter mixed reality', true);
+    enter?.addEventListener('click', () => {
+      setStatus('');
+      world.launchXR();
+    });
+    // The landing card belongs to the 2D page; hide it while a session is running.
+    world.visibilityState.subscribe((v) => {
+      if (landing) landing.hidden = v !== 'non-immersive';
+    });
+    if (!navigator.onLine) setStatus('You are offline. Everything except the live AI tutor still works.');
+  } else {
+    setEnter('Open this page on a Meta Quest', false);
+    setStatus(`This browser cannot start a mixed-reality session. Open this link in the browser on a Meta Quest 3 or 3S. ${DESKTOP_PREVIEW}`);
   }
-  setStatus(navigator.onLine ? '' : 'Offline. Everything except the live AI tutor still works.');
 }
 
 main().catch((err: unknown) => {
   console.error(err);
-  setStatus(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
+  setEnter('Could not start', false);
+  setStatus(`Something went wrong while loading: ${err instanceof Error ? err.message : String(err)}. Reload the page to try again.`);
 });
 
 // Offline-first (ADR-0016): runtime cache-first service worker, production only.
