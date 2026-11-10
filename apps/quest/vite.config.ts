@@ -6,10 +6,40 @@
  */
 
 import { iwsdkDev } from '@iwsdk/vite-plugin-dev';
-import { defineConfig } from 'vite';
+import { readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * `public/` holds agent guidance files (AGENTS.md) next to the scenes and UI they describe.
+ * Vite copies `public/` verbatim, so remove them from the build: nothing in `dist/` should be
+ * served that is not part of the app.
+ */
+function dropAgentFiles(): Plugin {
+  const sweep = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        sweep(full);
+        if (readdirSync(full).length === 0) rmSync(full, { recursive: true });
+      } else if (entry.name === 'AGENTS.md') rmSync(full);
+    }
+  };
+  let outDir = 'dist';
+  return {
+    name: 'explode:drop-agent-files',
+    apply: 'build',
+    configResolved(config) {
+      outDir = join(config.root, config.build.outDir);
+    },
+    closeBundle() {
+      sweep(outDir);
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [iwsdkDev()],
+  plugins: [iwsdkDev(), dropAgentFiles()],
   server: { host: '0.0.0.0', port: 8081, open: false },
   build: {
     outDir: 'dist',
