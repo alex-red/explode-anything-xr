@@ -333,6 +333,40 @@ describe('scene harness: pinch presses', () => {
   });
 });
 
+describe('scene harness: testing keys', () => {
+  const key = (k: string) => keyListeners.forEach((fn) => fn({ key: k }));
+
+  it('P logs world positions for every button, visible node and plug', () => {
+    const h = setup();
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    key('p');
+    const call = info.mock.calls.find((c) => c[0] === '[explode:targets]');
+    expect(call, 'targets logged').toBeDefined();
+    const t = JSON.parse(call![1] as string) as { step: string; buttons: Record<string, number[]>; nodes: Record<string, number[]>; plugs: Record<string, number[]> };
+    expect(t.step).toMatch(/drivetrain-tutorial:1:active/);
+    expect(Object.keys(t.buttons)).toEqual(expect.arrayContaining(['next', 'explode', 'trace', 'evidence', 'reset']));
+    expect(t.nodes['part:motor']).toHaveLength(3);
+    expect(t.plugs['edge:powers:part:inverter->part:motor']).toHaveLength(3);
+    const explode = h.button(/^Collapse$/)!.getWorldPosition(new Vector3()).toArray();
+    expect(t.buttons.explode).toEqual(explode);
+  });
+
+  it('0 forgets saved progress in both systems and returns to the start of the tutorial', () => {
+    const h = setup();
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.step_index).toBe(1);
+    key('0');
+    h.frames(5);
+    expect(h.state().system_id).toBe('system:ev-drivetrain');
+    expect(h.state().lesson?.step_index).toBe(0);
+    h.press(h.button(/Skip tutorial/));
+    expect(h.state().lesson?.step_index).toBe(0); // the software log was forgotten too
+  });
+});
+
 describe('scene harness: debug readout', () => {
   const readout = (h: ReturnType<typeof setup>) => h.panels().find((p) => /fps/.test(p.text));
 

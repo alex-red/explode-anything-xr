@@ -57,7 +57,9 @@ cd apps/quest && npm run dev       # IWSDK-managed dev server + emulator browser
 | R | reset |
 | X | explain selection |
 | C | recenter |
-| D | debug readout (frame rate, draw calls); on the headset add `?debug` to the URL |
+| D | debug readout (frame rate, draw calls), and log every accepted event; or add `?debug` to the URL |
+| P | log the world position of every button, part and plug |
+| 0 | forget saved progress and restart at the tutorial |
 
 - Emulator controls are documented at <https://iwsdk.dev/guides/02-testing-experience.html>.
 

@@ -231,6 +231,23 @@ export class ExplodeApp {
     else if (k === 'x') void this.askTutor('explain_selection');
     else if (k === 'c') this.needsRecenter = true;
     else if (k === 'd') this.debug.enabled = !this.debug.enabled;
+    else if (k === 'p') this.logTargets();
+    else if (k === '0') this.forgetProgress();
+  }
+
+  /**
+   * Print where every pressable thing is right now, in world space. The emulator walkthrough
+   * (scripts/walkthrough.ts) aims its rays from this, so it follows any layout change.
+   */
+  private logTargets(): void {
+    const targets = { step: this.stepKey(), buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    console.info('[explode:targets]', JSON.stringify(targets));
+  }
+
+  /** Testing only: forget saved progress in both systems and start again at the tutorial. */
+  private forgetProgress(): void {
+    Store.clearSaved();
+    this.loadSystem(this.mechanical.graph.system_id, false);
   }
 
   private next(): void {

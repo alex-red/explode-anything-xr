@@ -81,6 +81,15 @@ export class Store {
     return () => this.listeners.delete(fn);
   }
 
+  /** Forget all saved progress for every system (testing only; the caller then reloads a system). */
+  static clearSaved(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Storage unavailable: there is nothing saved to clear.
+    }
+  }
+
   static lastActiveSystem(): string | null {
     return readPersisted()?.active_system ?? null;
   }

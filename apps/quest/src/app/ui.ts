@@ -1,4 +1,4 @@
-import { Group, type Entity, type World } from '@iwsdk/core';
+import { Group, type Entity, type Vector3, type World } from '@iwsdk/core';
 import type { Evidence, SceneState, TruthStatus } from '@explode/contracts';
 import { makeInteractive } from './interactions.ts';
 import { CSS, TRUTH_BADGE } from './palette.ts';
@@ -88,6 +88,13 @@ export class SpatialUI {
     this.evidenceClose.mesh.position.set(0.105, -0.152, 0.002);
     makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence });
     this.evidenceGroup.visible = false;
+  }
+
+  /** World position of every toolbar button by id (debug and the emulator walkthrough). */
+  buttonPositions(tmp: Vector3): Record<string, number[]> {
+    const out: Record<string, number[]> = {};
+    for (const b of this.buttons) out[b.def.id] = b.panel.mesh.getWorldPosition(tmp).toArray();
+    return out;
   }
 
   render(model: CaptionModel, evidence: Evidence | null): void {

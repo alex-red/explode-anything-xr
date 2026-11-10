@@ -241,6 +241,15 @@ export class GraphView {
     this.rootEntity.dispose();
   }
 
+  /** World positions of visible nodes and plugs by id (debug and the emulator walkthrough). */
+  targetPositions(tmp: Vector3): { nodes: Record<string, number[]>; plugs: Record<string, number[]> } {
+    const nodes: Record<string, number[]> = {};
+    const plugs: Record<string, number[]> = {};
+    for (const v of this.nodes.values()) if (v.mesh.visible) nodes[v.node.id] = v.mesh.getWorldPosition(tmp).toArray();
+    for (const e of this.edges.values()) if (e.plug?.mesh.visible) plugs[e.edge.id] = e.plug.mesh.getWorldPosition(tmp).toArray();
+    return { nodes, plugs };
+  }
+
   /**
    * The detached edge this node is offering a socket for, if any. The ring is a thin torus
    * around the part, so a ray aimed at the socket almost always lands on the part inside it;
