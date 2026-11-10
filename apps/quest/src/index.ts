@@ -76,6 +76,12 @@ async function main(): Promise<void> {
     setStatus('Mixed reality is not available here, so the lesson runs over a plain virtual backdrop.');
   } else {
     setEnter('Open this page on a Meta Quest', false);
+    // The card covers the mouse preview; let a desktop visitor put it away.
+    const showPreview = document.getElementById('show-preview');
+    if (showPreview && landing) {
+      showPreview.hidden = false;
+      showPreview.addEventListener('click', () => (landing.hidden = true));
+    }
     setStatus(`This browser cannot start a mixed-reality session. Open this link in the browser on a Meta Quest 3 or 3S. ${DESKTOP_PREVIEW}`);
   }
 }
