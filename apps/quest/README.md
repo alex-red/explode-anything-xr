@@ -27,8 +27,11 @@ node and its `PanelSystem` registration from the application entry point.
 
 ## Webcam hands (dev only)
 
-To drive the emulated hands with your own hands, open the dev server URL with `?webcam`
-added (for example `https://localhost:8473/?webcam`), allow the camera, then enter XR. Code:
+In dev, a **Webcam hands** panel sits at the bottom right. Pick a camera, press **Start**, allow
+the camera, then enter XR. The camera you pick is remembered. `?webcam` in the URL starts it on
+load. While it runs, IWER is in programmatic control mode, the same mode the CLI walkthrough
+uses. Otherwise the IWER dev UI would overwrite the hands every frame. Its mouse and keyboard
+controls come back on **Stop**. Code:
 `src/dev/webcam-hands.ts` (bridge) and `src/dev/webcam-hands-map.ts` (pure mapping, tested in
 `test/webcam-hands-map.test.ts`).
 

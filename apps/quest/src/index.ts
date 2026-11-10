@@ -30,11 +30,13 @@ async function main(): Promise<void> {
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
   startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'));
-  // Dev only: `?webcam` drives the emulated hands from a webcam (src/dev/webcam-hands.ts).
-  // `import.meta.env.DEV` is false in a build, so this branch and its chunk are dropped.
-  if (import.meta.env.DEV && new URLSearchParams(location.search).has('webcam')) {
+  // Dev only: a "Webcam hands" panel to drive the emulated hands from a camera
+  // (src/dev/webcam-hands.ts); `?webcam` starts it on load. `import.meta.env.DEV` is false in a
+  // build, so this branch and its chunk are dropped.
+  if (import.meta.env.DEV) {
+    const webcam = new URLSearchParams(location.search).get('webcam');
     import('./dev/webcam-hands.ts')
-      .then((m) => m.startWebcamHands())
+      .then((m) => m.mountWebcamHands({ autostart: webcam !== null, swap: webcam === 'swap' }))
       .catch((err: unknown) => console.error('[explode:webcam]', err));
   }
 
