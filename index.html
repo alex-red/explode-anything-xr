@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#0a1120" />
+    <meta name="description" content="Pull a system apart with your hands. Trace what flows through it, break one connection, and fix it yourself. Mixed reality for Meta Quest 3 and 3S." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <title>EXPLODE</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { height: 100%; }
+      body { margin: 0; background: #0a1120; color: #f4f7fb; font-family: system-ui, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+      #scene-container { position: fixed; inset: 0; }
+
+      /* The landing card is the first screen a judge sees in Quest Browser. It sits over the
+         live 3D preview and only the card itself takes pointer input. */
+      #landing { position: fixed; inset: 0; display: flex; align-items: center; padding: 24px; box-sizing: border-box; pointer-events: none; }
+      #landing[hidden] { display: none; }
+      #card { pointer-events: auto; width: min(440px, 100%); max-height: 100%; overflow-y: auto; box-sizing: border-box; padding: 28px 28px 22px; border-radius: 22px; background: rgba(12, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); }
+      h1 { margin: 0; font-size: 34px; letter-spacing: 0.12em; font-weight: 700; }
+      #tagline { margin: 10px 0 18px; font-size: 19px; line-height: 1.4; color: #dfe7f1; text-wrap: balance; }
+      #steps { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 16px; line-height: 1.4; color: #a9b6c6; }
+      #steps b { color: #f2c14e; font-weight: 600; }
+      #enter-xr { display: block; width: 100%; min-height: 64px; font: 600 21px system-ui, sans-serif; border-radius: 16px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
+      #enter-xr:hover { background: #218487; }
+      #enter-xr:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 3px; }
+      #enter-xr:disabled { background: #283850; color: #a9b6c6; cursor: default; }
+      #enter-vr { display: block; width: 100%; min-height: 48px; margin-top: 10px; font: 600 17px system-ui, sans-serif; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.24); background: transparent; color: #f4f7fb; cursor: pointer; }
+      #enter-vr[hidden] { display: none; }
+      #enter-vr:hover { background: rgba(255, 255, 255, 0.08); }
+      #enter-vr:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 3px; }
+      #status { min-height: 1.4em; margin: 12px 0 0; font-size: 15px; line-height: 1.4; color: #f2c14e; }
+      #status:empty { display: none; }
+      #needs { margin: 14px 0 0; font-size: 14px; line-height: 1.45; color: #a9b6c6; }
+      #disclosure { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; line-height: 1.5; color: #8f9caf; }
+      @media (max-height: 520px) { #steps { display: none; } #card { padding: 20px; } }
+    </style>
+    <script type="module" crossorigin src="./assets/index-DJofgmJp.js"></script>
+  </head>
+  <body>
+    <div id="scene-container"></div>
+    <main id="landing">
+      <section id="card">
+        <h1>EXPLODE</h1>
+        <p id="tagline">Pull a system apart with your hands. Break one connection, see what fails, and fix it yourself.</p>
+        <ol id="steps">
+          <li><b>1.</b> A 90-second warm-up on an electric drivetrain.</li>
+          <li><b>2.</b> Then a login request, traced through a TypeScript service back to its source lines.</li>
+        </ol>
+        <button id="enter-xr" disabled>Loading…</button>
+        <button id="enter-vr" hidden>Use a virtual backdrop instead</button>
+        <p id="status" role="status" aria-live="polite"></p>
+        <p id="needs">Meta Quest 3 or 3S. Seated, hands only (controllers also work). About five minutes.</p>
+        <p id="disclosure">
+          The drivetrain is a simplified teaching model, not a real vehicle. <code>auth-service</code> is a sample service written for this demo.
+          “Observed” means a test run recorded when the content was built; nothing runs live.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

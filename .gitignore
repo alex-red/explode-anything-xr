@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+.wrangler/
+.iwsdk/
+.mcp.json
+# Build-time scratch for the content pipeline
+.content-work/
+# Signing keys must never be committed
+*.keystore
+*.jks
