@@ -1,6 +1,6 @@
 # EXPLODE — QA Matrix
 
-**Supersedes:** handoff §16, §17 · Run the device checklist (§3) on **every uploaded build**.
+**Supersedes:** handoff §16, §17 · Run the device checklist (§3) on **every deploy you intend to keep**. Updated 2026-11-09 for link-based submission ([FINAL_PLAN.md](FINAL_PLAN.md)).
 
 ---
 
@@ -8,19 +8,19 @@
 
 | ID | Test | Pass condition | How |
 |---|---|---|---|
-| AT-01 | Store cold start | A second account installs from the invite and reaches an interactive object in ≤15 s on Wi-Fi, hands only | Device |
-| AT-02 | Offline | After one online launch, airplane mode still runs the tutorial and hero lesson. A first launch with no network shows the designed screen, not a browser error | Device |
-| AT-03 | Novice run | 3/3 cold novices finish tutorial + hero without coaching in ≤8 min; first explode ≤60 s | Playtest #3 |
+| AT-01 | Cold start from the link | A fresh Quest Browser profile opens the production URL, and one press on the landing page reaches an interactive object in passthrough in ≤15 s on Wi-Fi, hands only | Device |
+| AT-02 | Network loss (offline relaunch is P1) | With Wi-Fi turned off after the page has loaded, both lessons still complete with the scripted tutor. Relaunching offline is not required | Device |
+| AT-03 | Novice run | Every cold novice finishes tutorial + hero without coaching in ≤8 min; first explode ≤60 s | Playtest #2 |
 | AT-04 | Performance | OVR Metrics: sustained 72 fps, ≤1% dropped frames for 2 min in the worst scene (all exploded, flow on, evidence open, recording) | Device |
 | AT-05 | Pause/resume | Meta button mid-break, or headset off for 2 min → resumes at the same step. Killed session → restores or resets cleanly | Device |
 | AT-06 | Determinism | `replay(events)` reproduces SceneState exactly; 20 explode/collapse and 20 break/repair cycles show no drift; undo drops only the last undoable event | Unit |
 | AT-07 | Truth | Every relation resolves to the pinned revision. `observed` appears only with a recorded run; edges are never observed; unrecorded breaks are `inferred` (hypothesis styling) | Unit + `content:check` + visual |
 | AT-08 | Tutor safety | 100% of fuzzed or invalid plans rejected; no tutor action can break, repair or advance; an injected repo comment is ignored; proxy failure → scripted within 6 s | Unit + device |
 | AT-09 | Proxy limits | Rate limit and daily cap enforced; `KILL_SWITCH` returns a scripted-fallback signal | Unit + load script |
-| AT-10 | Gestures | Explode works in ≥9 of 10 novice attempts; no accidental explode or system menu in 5 min of free use | Playtest |
+| AT-10 | Gestures | Explode works in ≥9 of 10 novice attempts; no accidental explode or system menu in 5 min of free use; the first pinch of a two-hand pull never selects, presses or predicts | Unit + playtest |
 | AT-11 | Reach and field of view | Layout check: every placement inside the 60°×50° cone at the anchor distance; on device at two seated heights, every target within ~0.65 m | Unit + device |
 | AT-12 | Readability | 3 testers read labels and code excerpts seated (on a 3S if available) | Playtest |
-| AT-13 | Freeze | Deployed bundle hash = submitted hash, checked daily until Dec 11 | Script |
+| AT-13 | Freeze | `npm run release:verify <production url>` reports every deployed file identical to `release/manifest.json`; run before submitting and weekly until winners are announced | Script |
 | AT-14 | Video | Public, under 3 min, genuine on-device footage | Manual |
 
 ## 2. Automated suites
@@ -33,14 +33,18 @@
 | Content | `tools/content/test` | Both bundles parse; `checkBundleIntegrity` is empty; cone check (AT-11); mutation evidence matches lesson break edges |
 | Proxy | `services/tutor-proxy/test` | Validation, rate limit, cap, kill switch, upstream timeout/invalid → error signal (AT-08/09) |
 | App logic | `apps/quest/test/app-logic.test.ts` | Event-sourced store: persistence and restore after a killed session (AT-05), per-system logs, undo, throwing storage; tutor client: live, invalid → scripted, network/HTTP errors, Live AI toggle |
-| Scene harness | `apps/quest/test/scene-harness.test.ts` | The real app, view, UI and two-hand-pull code against a stub World and a recording canvas: both lessons completed by in-world presses, the consequence hidden until prediction, honest truth badges, evidence panel text, two-hand pull preview and commit, layout within the 60°×50° cone and reach (AT-11), ≤30 labels, no clipped text, pause on blur, disposal when switching systems. **Not covered:** WebGL rendering, real hand tracking, frame rate (device only) |
-| End-to-end (P1) | Playwright + IWER | The scripted lesson from launch to complete in the emulator |
+| Scene harness | `apps/quest/test/scene-harness.test.ts` | The real app, view, UI and two-hand-pull code against a stub World and a recording canvas: both lessons completed by in-world presses, presses delivered on pinch release and dropped by a two-hand pull, the no-hands hint, the debug readout, the consequence hidden until prediction, honest truth badges, evidence panel text, two-hand pull preview and commit, layout within the 60°×50° cone and reach (AT-11), ≤30 labels, no clipped text, pause on blur, disposal when switching systems. **Not covered:** WebGL rendering, real hand tracking, frame rate (device only) |
+| Release | `tools/release/test` | File hashing including dot-directories; changed, missing and unreachable files reported; site root checked against `index.html` (AT-13) |
 
 Run: `npm test`, `npm run typecheck`, `npm run content:check`.
 
-## 3. Device checklist (every upload)
+## 3. Device checklist (every deploy you intend to keep)
 
-- [ ] Cold launch → AR auto-enter → object visible, hands only
+- [ ] Open the link in Quest Browser → landing page → one press → passthrough AR → object visible, hands only
+- [ ] A single pinch-and-release on a part or button feels immediate
+- [ ] Starting a two-hand pull while pointing at parts or buttons triggers nothing
+- [ ] Hands dropped out of view → the "can't see your hands" hint appears, and clears when they return
+- [ ] After a redeploy to the dev URL, a reload shows the new build
 - [ ] Hand ray hover and select on nodes and buttons; controller ray also works
 - [ ] Two-hand pull explodes; button explodes; collapse works
 - [ ] Trace lights the path; flow animates
@@ -49,8 +53,8 @@ Run: `npm test`, `npm run typecheck`, `npm run content:check`.
 - [ ] Evidence panel readable at seated distance
 - [ ] Undo and Reset
 - [ ] Meta button → resume at the same step
-- [ ] Airplane mode relaunch works
-- [ ] OVR Metrics shows 72 fps in the worst scene
+- [ ] Wi-Fi off after load: the lesson still completes
+- [ ] OVR Metrics shows 72 fps in the worst scene (`?debug` shows draw calls and slow frames)
 - [ ] No system menu triggered during the lesson
 - [ ] Left hand dominant pass; two seated heights; glasses wearer
 
@@ -67,9 +71,8 @@ Run: `npm test`, `npm run typecheck`, `npm run content:check`.
 
 | Playtest | Date | Who |
 |---|---|---|
-| #1 | Sun Nov 1 | You + 1 person |
-| #2 | Sun Nov 8 | 2 novices (1 developer) |
-| #3 | Sat Nov 14 | 3 cold novices |
+| #1 | Fri Nov 13 | 1–2 people |
+| #2 | Sun Nov 15 | 2–3 cold novices (1 developer if possible) |
 
 **Script:**
 

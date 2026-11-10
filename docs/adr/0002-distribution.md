@@ -1,25 +1,29 @@
-# ADR-0002: Distribution — Bubblewrap TWA + immutable static deploy
+# ADR-0002: Distribution — hosted link, frozen production deploy
 
-**Status:** Accepted, 2026-10-23
+**Status:** Accepted, 2026-11-09. Replaces the 2026-10-23 decision (Bubblewrap TWA + immutable versioned path).
 
 ## Context
 
-A Quest PWA APK is a thin wrapper that loads a live URL ([Meta PWA packaging](https://developers.meta.com/vr/documentation/web/pwa-packaging/)). The rules require that judges can access the build until the winners are announced (~Dec 11), with no updates after the deadline.
+- The competition rules say a project built with IWSDK (WebXR) is submitted by sharing a hosted link (GitHub Pages or any host). Only Unity, Unreal, Godot and native entries upload an APK to a "Competition" release channel.
+- No changes are allowed after the entry period, and the project must stay available throughout judging.
+- Judges therefore open the link in Quest Browser, land on a 2D page, and press a button to enter the session.
 
 ## Decision
 
-- Package with Meta's Bubblewrap flow (see `apps/quest/.claude/skills/iwsdk-pwa-packaging`).
-- Host statically on a CDN (Cloudflare Pages or similar), alongside the tutor Worker.
-- Each release candidate deploys to an **immutable versioned path** `/v/<semver>-<hash8>/`, and `start_url` points there.
-- Serve `assetlinks.json` from the root.
-- Back up the signing keystore offline and never commit it.
+- **No APK.** Bubblewrap, the signing keystore, `assetlinks.json`, the release channel and the second-account install are all dropped.
+- Host statically on Cloudflare Pages, in the same account as the tutor Worker, as **two projects**: `explode-dev` for every iteration and `explode` for production.
+- Production is deployed **once**, at the release candidate, from a tagged commit, and never again.
+- `npm run release:manifest` records the SHA-256 of every built file with the commit and both bundle hashes in `release/manifest.json`, which is committed. `npm run release:verify <url>` fetches the deployed files and compares them (AT-13).
+- The landing page (`apps/quest/index.html`) is treated as the first screen of the product.
 
 ## Consequences
 
-- An extra deploy step is needed for `assetlinks.json`.
-- Hosting must stay up through Dec 11.
-- The freeze is enforced by convention plus a daily hash check (AT-13).
+- About two days of packaging and Dashboard work are removed.
+- There is no auto-enter: one press on the landing page is always required.
+- The freeze rests on not deploying to production again, checked by `release:verify`.
+- Hosting must stay up until winners are announced.
+- The app manifest stays, but the service worker is not registered ([ADR-0016](0016-offline.md)).
 
 ## Revisit trigger
 
-The Dashboard rejects the PWA upload, or a "Competition" channel cannot be created.
+The rules or organizers ask WebXR entries for an APK after all. The earlier decision and the `iwsdk-pwa-packaging` skill describe that path.

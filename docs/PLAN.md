@@ -1,5 +1,7 @@
 # EXPLODE — Execution Plan (v2)
 
+> **Superseded on 2026-11-09 by [FINAL_PLAN.md](FINAL_PLAN.md)** for the schedule, gates, work packages and everything about APK packaging. Kept for the risk register and history.
+
 **Supersedes:** handoff §15, §21 · **Team:** one developer + Claude Code agents · **Today:** Sat Oct 24, 2026
 **Deadline:** Wed Nov 18, 2026, 12:00 PM PST (1:00 PM MST). **Target: submit the evening of Tue Nov 17.**
 

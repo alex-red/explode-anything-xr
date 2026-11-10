@@ -117,11 +117,11 @@ A submission can win at most one prize.
 
 **P0 (MUST):**
 
-- PWA on the Competition release channel ([ADR-0002](adr/0002-distribution.md)); immersive AR with passthrough; hands-only end to end; auto-enter; recenter; pause/resume.
+- A hosted link that opens in Quest Browser ([ADR-0002](adr/0002-distribution.md)); one press to enter; immersive AR with passthrough; hands-only end to end; recenter; pause/resume.
 - One indexed TypeScript repo (the sample `auth-service`, [ADR-0018](adr/0018-fixture-repo.md)): 6–10 clusters, an evidence panel, truth badges.
 - Hero lesson: trace login → predict → break (2–3 recorded mutations) → observed failure → repair (3 sockets) → reflect.
 - 90-second procedural EV-drivetrain tutorial on the same engine, skippable.
-- Deterministic lesson engine and scripted tutor; fully offline after the first launch.
+- Deterministic lesson engine and scripted tutor; no network needed once the page has loaded.
 - Sustained 72 fps on Quest 3.
 - Video, Devpost entry, frozen deploy.
 
@@ -133,6 +133,7 @@ A submission can win at most one prize.
 - Backdrop toggle.
 - Reduced motion, a one-handed path, text size.
 - Saved completion.
+- Offline relaunch ([ADR-0016](adr/0016-offline.md)).
 
 **P2 (COULD):**
 

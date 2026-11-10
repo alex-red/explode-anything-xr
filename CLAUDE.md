@@ -1,6 +1,6 @@
 # EXPLODE: agent instructions
 
-A hands-first Quest mixed-reality app for the Meta VR Start Developer Competition 2026. The deadline is **Wed Nov 18, 2026, 12:00 PM PST**. The source of truth for scope, decisions and schedule is `docs/`; start at `docs/README.md`. `EXPLODE_VR_Project_Handoff_2026.md` is the historical v1.0 handoff and is superseded wherever `docs/` disagrees.
+A hands-first Quest mixed-reality app for the Meta VR Start Developer Competition 2026. The deadline is **Wed Nov 18, 2026, 12:00 PM PST**. The source of truth for scope, decisions and schedule is `docs/`; start at `docs/README.md`, and use `docs/FINAL_PLAN.md` for the current schedule. The entry is a **hosted link**, not an APK (ADR-0002). `EXPLODE_VR_Project_Handoff_2026.md` is the historical v1.0 handoff and is superseded wherever `docs/` disagrees.
 
 ## Hard rules
 
@@ -12,7 +12,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
   - `inferred` and `authored_model` are never promoted.
   - `checkBundleIntegrity` must return `[]`.
 - The tutor (LLM or scripted) may only use `TUTOR_ACTION_TYPES`. It cannot break or repair edges, and it cannot pass or advance lessons; only the lesson engine does that.
-- Don't commit, push, deploy, or upload to the Meta Developer Dashboard unless asked.
+- Don't commit, push or deploy unless asked. Never deploy to the production host after the release candidate: the entry is frozen.
 
 ## Layout
 
@@ -26,6 +26,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 | `content/drivetrain` | Authored procedural EV drivetrain spec | — |
 | `apps/quest` | IWSDK 1.0.1 WebXR app (three.js via `@iwsdk/core`) | agents for logic; a human must judge feel on device |
 | `services/tutor-proxy` | Optional Cloudflare Worker for the live tutor | agents |
+| `tools/release` | Freeze check: release manifest and deployed-file comparison | agents |
 
 Generated bundles are `apps/quest/src/content/*.bundle.json`. Never hand-edit them; run the generator.
 
@@ -37,6 +38,8 @@ npx tsc -p tsconfig.json --noEmit            # node-side typecheck
 npm run typecheck -w @explode/quest          # app typecheck (run before any device test)
 npm run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
 npm run content:check                        # re-validate committed bundles + hashes
+npm run release:manifest                     # hash a finished build into release/manifest.json (does not build)
+npm run release:verify -- <url>              # compare a deployed site with that manifest
 ```
 
 Node ≥ 24: workspace packages are consumed as `.ts` source through native type stripping. Use explicit `.ts` import extensions and erasable syntax only (no enums or namespaces).

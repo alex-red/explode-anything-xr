@@ -70,12 +70,17 @@ cd apps/quest && npm run dev       # IWSDK-managed dev server + emulator browser
    - two-hand pull;
    - the label readability check;
    - pause/resume with the Meta button;
-   - airplane-mode relaunch (production build only).
+   - Wi-Fi off after the page has loaded.
 
 ### 3. Live tutor (optional)
 
 The app works fully offline with the scripted guide. To try the live tutor, deploy `services/tutor-proxy` (see its README) and start the app with `VITE_TUTOR_URL=https://<worker>.workers.dev`.
 
-### 4. Store build
+### 4. Release
 
-For PWA → APK packaging, the Competition release channel, and freezing the build, see [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) and the `iwsdk-pwa-packaging` skill in `apps/quest/.claude/skills/`.
+The entry is a hosted link, not an APK. See [`docs/FINAL_PLAN.md`](docs/FINAL_PLAN.md) §7 and [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md).
+
+```sh
+npm run release:manifest                 # after building: hash the build into release/manifest.json
+npm run release:verify -- <production url>   # compare the deployed files with that manifest
+```

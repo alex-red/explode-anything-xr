@@ -208,5 +208,5 @@ The engine lives in `packages/lesson-engine/src/`.
 | API key leak | Key lives only in a Worker secret; the client has no keys |
 | Executing untrusted code | Only the pinned, self-authored fixture's tests run, at build time on the dev machine; nothing runs at runtime |
 | Asset or license problems in a public PWA | Procedural geometry only ([ADR-0019](adr/0019-assets.md)); provenance in [DATA_PROVENANCE.md](DATA_PROVENANCE.md) |
-| Post-deadline changes | Immutable versioned deploy path; daily hash check ([ADR-0002](adr/0002-distribution.md)) |
+| Post-deadline changes | Production is deployed once from a tagged commit; `release:verify` compares the deployed files with the committed manifest ([ADR-0002](adr/0002-distribution.md)) |
 | Privacy | No accounts, no analytics in P0; the local event log only (localStorage); proxy requests contain graph ids and no personal data |
