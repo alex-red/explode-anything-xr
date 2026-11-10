@@ -1,6 +1,6 @@
 # ADR-0013: Render budget — sustained 72 Hz, no post-processing
 
-**Status:** Accepted, 2026-10-23
+**Status:** Accepted, 2026-10-23. Amended 2026-11-09: batching was applied up front, because no headset is available to measure on.
 
 ## Context
 
@@ -12,9 +12,10 @@
 
 P0 rendering:
 
-- Nodes and parts share geometry and materials per state.
-- **Edges are individual tube meshes** sharing geometry and materials.
-- **Labels and panels are CanvasTexture planes**, capped at ~30 visible labels.
+- Software nodes are **instanced batches** (clusters, modules, everything else) tinted per instance; each node keeps an invisible hit volume for rays. Mechanical parts stay individual meshes.
+- **Edges and flow particles are one instanced batch each.**
+- **Labels and panels are CanvasTexture planes**, capped at 18 visible labels.
+- Budget: at most 120 draw calls for the app's own content in the worst scene, held by a test (79 measured).
 - Fake glow with emissive/additive materials; no post-processing or bloom.
 - No per-frame allocations.
 

@@ -11,7 +11,7 @@
 
 | Area | State | Evidence |
 |---|---|---|
-| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 100 tests pass; both typechecks clean; `content:check` ok |
+| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 101 tests pass; both typechecks clean; `content:check` ok |
 | Quest app | Runs in the emulator. Both lessons completed with emulated controller rays; buttons pressed with emulated hand rays; two-hand pull works both ways. No console errors or warnings | Emulator run, Nov 9 |
 | Production build | Builds: 17 files, 7.3 MB, relative paths. **Not yet loaded in a browser** | `vite build`, Nov 9 |
 | Rules | A WebXR (IWSDK) entry is submitted as a hosted link, not an APK | Rules text |
@@ -25,7 +25,7 @@
 - No changes after the entry period, and the link must stay up through judging.
 - Judges open the link in Quest Browser, land on the 2D page, and press a button to enter.
 
-**Read by hand before Wednesday, because the answers can change this plan:**
+**Read by hand during phase 1, because the answers can change this plan:**
 
 1. **Does the video have to show the project running on a headset?** If yes, emulator footage does not qualify and K0 (§8) applies.
 2. Judging criteria and weights.
@@ -66,7 +66,7 @@
 - An automated emulator walkthrough of both lessons (B1), run before every deploy.
 - Video and screenshots from the emulator, labelled. Devpost entry. Frozen deploy.
 
-**P1 — only after Thursday's gate:**
+**P1 — only after G2:**
 
 - Live tutor through the proxy (K6).
 - Toolbar simplification: the step's primary action large, the rest behind "More".
@@ -79,21 +79,19 @@
 - Pre-rendered narration, the Playwright suite, separate accessibility toggles, voice, VR Glasses claims, the transfer challenge.
 - Everything already cut for link-based submission (APK, keystore, release channel).
 
-## 5. Schedule
+## 5. Phases
 
-**H** = you. **A** = agent, verified by tests, typechecks and the emulator walkthrough.
+The plan is organised by phase, not by day. A phase ends when its exit gate is met; the only fixed date is the deadline (Wed Nov 18, 12:00 PM PST), with submission the evening before. **H** = you. **A** = agent, verified by tests, typechecks and the emulator walkthrough.
 
-| Day | H | A | Exit gate |
+| Phase | H | A | Exit gate |
 |---|---|---|---|
-| **Tue Nov 10** | **H1:** find one or two Quest 3/3S owners willing to open a link this week. Read the four rules items (§2). Pick the host and log in | (B1 and B7 are done.) First deploy to the **dev** URL; load the built app in a desktop browser | **G1:** the built app loads from the dev URL, and the walkthrough passes in the emulator. **K0** if the video rule needs a headset |
-| **Wed Nov 11** | Walk both lessons yourself in the emulator window; note everything confusing or ugly | B2 draw-call budget. B3 readability. B4 hit areas | **G2:** draw calls for the app's own content within budget in the worst scene; walkthrough still passes |
-| **Thu Nov 12** | Second pass in the emulator with hand mode. Send the dev link and the tester sheet (B8) to your Quest owners | B5 Explode-first captions. B6 VR fallback. Landing-card overlap. B8 tester sheet | **G3:** both lessons completed by you from the hosted dev URL, in controller and hand mode |
-| **Fri Nov 13** | **Comprehension playtest:** 1–2 people use the desktop preview with the mouse, no coaching. It tests the lesson, not the gestures. Decide K6 | Top fixes from your notes, the playtest and any tester report. Proxy deploy if K6 is yes | **Feature freeze** |
-| **Sat Nov 14** | Capture session in the emulator; rough cut with the "emulator capture" label | Regression tests for every fix; docs match what shipped | Rough cut exists |
-| **Sun Nov 15** | Last tester feedback in. Fix only what blocks completion | Release candidate: tag, build, `release:manifest`, deploy to **production**, `release:verify` | **RC frozen** |
-| **Mon Nov 16** | Final video, 3–5 labelled screenshots, Devpost text | Proofread Devpost text against the truth contract | Video public |
-| **Tue Nov 17** | Dry run; every link opened logged out; **submit tonight** | `release:verify` | Submitted |
-| **Wed Nov 18** | Verify only | — | Deadline 12:00 PST |
+| **1. Harden for unseen hardware** | Read the four rules items (§2), the video rule first. **H1:** find one or two Quest 3/3S owners willing to open a link. Walk both lessons in the emulator window and note anything confusing or ugly | (B2, B3 and B4 are done.) B5 Explode-first captions. B6 VR fallback | **G1:** the app's own draw calls are within budget in the worst scene, and the walkthrough passes |
+| **2. Host and check the built app** | Pick the host and log in. Send the dev link and tester sheet to your Quest owners | First deploy to the **dev** URL. Landing-card overlap. B8 tester sheet | **G2:** the built app loads from the dev URL and both lessons can be completed from it (by emulator extension if one works, otherwise by a Quest owner) |
+| **3. Comprehension and polish** | **Comprehension playtest:** 1–2 people use the desktop preview with the mouse, no coaching; it tests the lesson, not the gestures. Decide K6 | Top fixes from your notes, the playtest and any tester report. Proxy deploy if K6 is yes. Regression tests for every fix | **G3: feature freeze.** Nothing new starts after this |
+| **4. Capture and release candidate** | Capture in the emulator, labelled "emulator capture"; cut the video; 3–5 labelled screenshots; Devpost text | Docs match what shipped. Tag, build, `release:manifest`, deploy to **production** once, `release:verify`. Proofread Devpost text against the truth contract | **G4:** release candidate frozen and the video public |
+| **5. Submit** | Dry run; every link opened logged out; submit the evening before the deadline. After that, verify only | `release:verify` | Submitted |
+
+Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 3 should not start before G1.
 
 ## 6. Agent work packages
 
@@ -111,47 +109,47 @@
 | A8 | Debug readout (`?debug`, or D on desktop); accepted events logged as `[explode] …` |
 | B1 | Emulator walkthrough: `npm run emulator:walkthrough` (add `-- --start` to let it start and stop a headless dev server). Steps are derived from the lesson definitions; it passes in controller and hand mode, 36 ray presses, about 100 s |
 | B7 | `AGENTS.md` files and the unused `sw.js` no longer ship; unused SDK grab and UI-kit features turned off. The 6.8 MB script is the SDK itself and did not shrink |
+| B2 | Draw-call budget met: software nodes, edges and flow particles are instanced batches, and labels are capped at 18. Measured outside a session (the app's own content): the worst software scene went from 230 draw calls to 79; the tutorial from 73 to 60. A test holds the worst scene at ≤120 |
+| B3 | Larger text: evidence code at 32 px (about 0.9° at 0.7 m) and at most 8 lines, small caption lines at 34 px; the evidence panel is wider and further right, and the caption sits above the tallest layout |
+| B4 | Ray targets: software nodes and plugs have invisible hit volumes at least 4 cm across, whatever size they are drawn |
 | — | Emulator-run fixes: recenter waits for a real head pose; a press on a part inside a socket ring plugs into it |
 
 ### To do
 
-| WP | Scope | Files | When |
+| WP | Scope | Files | Phase |
 |---|---|---|---|
-| **B2** | Draw-call budget. Measure the app's own content (not the emulator's room). Target ≤120 in the worst scene: one shared material per node state, instanced or merged software nodes and edges, labels only for the focused cluster and the active path | `graph-view.ts`, `shapes.ts` | Nov 11 |
-| **B3** | Readability by default: evidence code at a larger size and at most 8 lines; label and button text sizes raised; nothing below about 1° of visual angle at 0.7 m | `ui.ts`, `text.ts`, `graph-view.ts` | Nov 11 |
-| **B4** | Forgiving targets: invisible hit volumes larger than the visible plug, socket and small nodes; minimum 4 cm for anything pressable | `graph-view.ts`, `interactions.ts` | Nov 11 |
-| **B5** | Explode-first wording: every caption names the button first and the pull second; the content generator is changed, not the bundles by hand | `tools/content`, `content/` | Nov 12 |
-| **B6** | Session fallback: if an AR session is unsupported or refused, offer a VR session with the virtual backdrop, and say which one started | `src/index.ts`, `backdrop.ts`, `iwsdk.config.json` | Nov 12 |
-| **B8** | Tester sheet for a remote Quest owner: the link with `?debug`, eight things to try, what to report (frame rate shown, anything unreadable, anything that would not select) | `docs/TESTER_SHEET.md` | Nov 12 |
-| **B9** | Proxy deploy prep | `services/tutor-proxy` | Nov 13, only if K6 is yes |
+| **B5** | Explode-first wording: every caption names the button first and the pull second; the content generator is changed, not the bundles by hand | `tools/content`, `content/` | 1 |
+| **B6** | Session fallback: if an AR session is unsupported or refused, offer a VR session with the virtual backdrop, and say which one started | `src/index.ts`, `backdrop.ts`, `iwsdk.config.json` | 1 |
+| **B8** | Tester sheet for a remote Quest owner: the link with `?debug`, eight things to try, what to report (frame rate shown, anything unreadable, anything that would not select) | `docs/TESTER_SHEET.md` | 2 |
+| **B9** | Proxy deploy prep | `services/tutor-proxy` | 3, only if K6 is yes |
 
 ## 7. Hosting and freeze
 
 - **Host:** Cloudflare Pages, two projects: `explode-dev` for every iteration and `explode` for production. The tutor Worker lives in the same account. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
 - **Checking the built app without a headset:** the emulator is injected only by the dev server, so a production build on a desktop browser shows the "open this on a Quest" state plus the mouse preview. To exercise the session path of the hosted build, use a WebXR emulator browser extension on the dev URL. Which extension works with this SDK is unverified; if none does, the hosted session path stays untested until a Quest owner opens it.
-- **Freeze (Nov 15):** tag the commit; build; `release:manifest`; deploy to production once; `release:verify`; never deploy to that project again. Verify again before submitting and weekly until winners are announced.
+- **Freeze (phase 4):** tag the commit; build; `release:manifest`; deploy to production once; `release:verify`; never deploy to that project again. Verify again before submitting and weekly until winners are announced.
 
 ## 8. Kill switches
 
-| ID | When | Trigger → action |
+| ID | Phase | Trigger → action |
 |---|---|---|
-| **K0** | Tue Nov 10 | The rules require headset footage in the video → stop and decide: borrow or buy a headset for one capture day (Sat Nov 14), or do not submit. Emulator footage must not be passed off as headset footage |
-| **K2** | Wed Nov 11 | Draw calls cannot reach the budget → at most 40 nodes shown at once, edges only on the active path |
-| **K4** | Thu Nov 12 | Hosted build fails where the dev build works → Friday becomes a fix day and the comprehension playtest moves to Saturday morning |
-| **K6** | Fri Nov 13 | Live tutor: deploy only if G3 passed on time; it stays behind the "Live AI" toggle, off by default, since its latency cannot be judged without hardware |
-| **K10** | Sun Nov 15 | A tester reports the app unusable on a real headset and the cause is not fixable in a day → submit with the limitation stated, or withdraw. Your call, made that day |
+| **K0** | 1 | The rules require headset footage in the video → stop and decide: borrow or buy a headset for the capture in phase 4, or do not submit. Emulator footage must not be passed off as headset footage |
+| **K2** | 1 | Draw calls cannot reach the budget → at most 40 nodes shown at once, edges only on the active path |
+| **K4** | 2 | Hosted build fails where the dev build works → fixing it comes before anything in phase 3 |
+| **K6** | 3 | Live tutor: deploy only if G2 was met with time to spare; it stays behind the "Live AI" toggle, off by default, since its latency cannot be judged without hardware |
+| **K10** | 4 | A tester reports the app unusable on a real headset and the cause is not quickly fixable → submit with the limitation stated, or withdraw. Your call |
 
 ## 9. Risks, re-ranked
 
 | # | Risk | L | I | Mitigation |
 |---|---|---|---|---|
 | 1 | The app fails or judders on a judge's real headset, and we never knew | M–H | Fatal | H1 remote testers; B2–B6; B1 keeps the logic honest |
-| 2 | The video rule needs headset footage | Unknown | Fatal | Read the rule Tuesday; K0 |
+| 2 | The video rule needs headset footage | Unknown | Fatal | Read the rule first in phase 1; K0 |
 | 3 | Judges mark down an entry with emulator footage or an "untested on hardware" line | M | H | A real tester report removes the line; the video is labelled either way |
 | 4 | The hosted build's session path is never exercised before judging | M | H | §7 extension check; H1 |
-| 5 | Novices do not understand the lesson | M | H | Desktop comprehension playtest Friday; Explode-first captions |
+| 5 | Novices do not understand the lesson | M | H | Desktop comprehension playtest in phase 3; Explode-first captions |
 | 6 | Production URL changes or goes down during judging | L | H | §7 freeze; the scripted tutor is the default |
-| 7 | Schedule slip, solo | M | H | Feature freeze Friday; nothing new after it |
+| 7 | Schedule slip, solo | M | H | Feature freeze at G3; nothing new after it |
 
 ## 10. How things are verified now
 
