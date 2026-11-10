@@ -11,7 +11,7 @@
 
 | Area | State | Evidence |
 |---|---|---|
-| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 101 tests pass; both typechecks clean; `content:check` ok |
+| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 103 tests pass; both typechecks clean; `content:check` ok |
 | Quest app | Runs in the emulator. Both lessons completed with emulated controller rays; buttons pressed with emulated hand rays; two-hand pull works both ways. No console errors or warnings | Emulator run, Nov 9 |
 | Production build | Builds: 17 files, 7.3 MB, relative paths. **Not yet loaded in a browser** | `vite build`, Nov 9 |
 | Rules | A WebXR (IWSDK) entry is submitted as a hosted link, not an APK | Rules text |
@@ -85,7 +85,7 @@ The plan is organised by phase, not by day. A phase ends when its exit gate is m
 
 | Phase | H | A | Exit gate |
 |---|---|---|---|
-| **1. Harden for unseen hardware** | Read the four rules items (§2), the video rule first. **H1:** find one or two Quest 3/3S owners willing to open a link. Walk both lessons in the emulator window and note anything confusing or ugly | (B2, B3 and B4 are done.) B5 Explode-first captions. B6 VR fallback | **G1:** the app's own draw calls are within budget in the worst scene, and the walkthrough passes |
+| **1. Harden for unseen hardware** | Read the four rules items (§2), the video rule first. **H1:** find one or two Quest 3/3S owners willing to open a link. Walk both lessons in the emulator window and note anything confusing or ugly | All of B2–B6 are done; the agent side of G1 is met | **G1:** the app's own draw calls are within budget in the worst scene, and the walkthrough passes |
 | **2. Host and check the built app** | Pick the host and log in. Send the dev link and tester sheet to your Quest owners | First deploy to the **dev** URL. Landing-card overlap. B8 tester sheet | **G2:** the built app loads from the dev URL and both lessons can be completed from it (by emulator extension if one works, otherwise by a Quest owner) |
 | **3. Comprehension and polish** | **Comprehension playtest:** 1–2 people use the desktop preview with the mouse, no coaching; it tests the lesson, not the gestures. Decide K6 | Top fixes from your notes, the playtest and any tester report. Proxy deploy if K6 is yes. Regression tests for every fix | **G3: feature freeze.** Nothing new starts after this |
 | **4. Capture and release candidate** | Capture in the emulator, labelled "emulator capture"; cut the video; 3–5 labelled screenshots; Devpost text | Docs match what shipped. Tag, build, `release:manifest`, deploy to **production** once, `release:verify`. Proofread Devpost text against the truth contract | **G4:** release candidate frozen and the video public |
@@ -112,14 +112,14 @@ Phases 1 and 2 can overlap: hosting does not wait for the hardening work. Phase 
 | B2 | Draw-call budget met: software nodes, edges and flow particles are instanced batches, and labels are capped at 18. Measured outside a session (the app's own content): the worst software scene went from 230 draw calls to 79; the tutorial from 73 to 60. A test holds the worst scene at ≤120 |
 | B3 | Larger text: evidence code at 32 px (about 0.9° at 0.7 m) and at most 8 lines, small caption lines at 34 px; the evidence panel is wider and further right, and the caption sits above the tallest layout |
 | B4 | Ray targets: software nodes and plugs have invisible hit volumes at least 4 cm across, whatever size they are drawn |
+| B5 | Explode-first wording: captions and hints name the button first and the two-hand pull second. Changed in the authored lesson and the generator, then regenerated; the recorded test runs were kept, not re-recorded |
+| B6 | VR fallback: if mixed reality is not offered, the page offers a VR session; if it is offered but does not start within 8 s, a second button appears. An opaque session gets the virtual backdrop and the View toggle is locked. Checked in the emulator with a real `immersive-vr` session |
 | — | Emulator-run fixes: recenter waits for a real head pose; a press on a part inside a socket ring plugs into it |
 
 ### To do
 
 | WP | Scope | Files | Phase |
 |---|---|---|---|
-| **B5** | Explode-first wording: every caption names the button first and the pull second; the content generator is changed, not the bundles by hand | `tools/content`, `content/` | 1 |
-| **B6** | Session fallback: if an AR session is unsupported or refused, offer a VR session with the virtual backdrop, and say which one started | `src/index.ts`, `backdrop.ts`, `iwsdk.config.json` | 1 |
 | **B8** | Tester sheet for a remote Quest owner: the link with `?debug`, eight things to try, what to report (frame rate shown, anything unreadable, anything that would not select) | `docs/TESTER_SHEET.md` | 2 |
 | **B9** | Proxy deploy prep | `services/tutor-proxy` | 3, only if K6 is yes |
 
