@@ -7,6 +7,8 @@ const OPACITY: Record<BackdropMode, number> = { passthrough: 0, dim: 0.72, virtu
 /** Passthrough-first with an optional dimmed / virtual backdrop (ADR-0003). */
 export class Backdrop {
   mode: BackdropMode = 'passthrough';
+  /** False in a session that cannot show the real room (a VR session): the backdrop is then fixed. */
+  passthroughAvailable = true;
   private readonly mesh: Mesh<SphereGeometry, MeshBasicMaterial>;
   private readonly pos = new Vector3();
 
@@ -21,10 +23,30 @@ export class Backdrop {
   }
 
   cycle(): BackdropMode {
-    this.mode = ORDER[(ORDER.indexOf(this.mode) + 1) % ORDER.length]!;
-    this.mesh.material.opacity = OPACITY[this.mode];
-    this.mesh.visible = this.mode !== 'passthrough';
-    return this.mode;
+    if (!this.passthroughAvailable) return this.mode;
+    return this.set(ORDER[(ORDER.indexOf(this.mode) + 1) % ORDER.length]!);
+  }
+
+  set(mode: BackdropMode): BackdropMode {
+    this.mode = mode;
+    this.mesh.material.opacity = OPACITY[mode];
+    this.mesh.visible = mode !== 'passthrough';
+    return mode;
+  }
+
+  /**
+   * Called when a session starts. An opaque session (VR, or AR without passthrough blending)
+   * shows black behind the scene, so switch to the virtual backdrop and lock the toggle.
+   * A session that blends with the room goes back to passthrough.
+   */
+  onSessionStart(blendMode: string | undefined): void {
+    this.passthroughAvailable = blendMode !== 'opaque';
+    this.set(this.passthroughAvailable ? 'passthrough' : 'virtual');
+  }
+
+  onSessionEnd(): void {
+    this.passthroughAvailable = true;
+    this.set('passthrough');
   }
 
   update(camera: Camera): void {

@@ -1,4 +1,4 @@
-import { World } from '@iwsdk/core';
+import { SessionMode, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { ContentBundle } from '@explode/contracts';
 import drivetrain from './content/drivetrain.bundle.json';
@@ -9,6 +9,8 @@ import { InteractionSystem } from './app/interactions.ts';
 const status = document.getElementById('status');
 const landing = document.getElementById('landing');
 const enter = document.getElementById('enter-xr') as HTMLButtonElement | null;
+const vrButton = document.getElementById('enter-vr') as HTMLButtonElement | null;
+const AR_START_GRACE_MS = 8000;
 const setStatus = (text: string) => {
   if (status) status.textContent = text;
 };
@@ -30,23 +32,48 @@ async function main(): Promise<void> {
   startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'));
 
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
-  const arSupported = world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported('immersive-ar').catch(() => false));
+  const supports = async (mode: string): Promise<boolean> =>
+    world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported(mode).catch(() => false));
+  const arSupported = await supports('immersive-ar');
+  const vrSupported = await supports('immersive-vr');
+  const enterVr = () => world.launchXR({ sessionMode: SessionMode.ImmersiveVR });
 
   // Installed PWA only: there is no 2D page to click, so spend the app-icon tap on entering
   // mixed reality. In a browser tab (how judges open the link) this never runs.
   if (arSupported && 'getDigitalGoodsService' in window) world.launchXR();
+
+  // The landing card belongs to the 2D page; hide it while a session is running.
+  let inSession = false;
+  world.visibilityState.subscribe((v) => {
+    inSession = v !== 'non-immersive';
+    if (landing) landing.hidden = inSession;
+  });
+  vrButton?.addEventListener('click', () => {
+    setStatus('');
+    enterVr();
+  });
 
   if (arSupported) {
     setEnter('Enter mixed reality', true);
     enter?.addEventListener('click', () => {
       setStatus('');
       world.launchXR();
-    });
-    // The landing card belongs to the 2D page; hide it while a session is running.
-    world.visibilityState.subscribe((v) => {
-      if (landing) landing.hidden = v !== 'non-immersive';
+      // launchXR reports nothing back. If mixed reality was refused or never starts, offer the
+      // same lesson over a plain virtual backdrop instead of leaving a button that does nothing.
+      if (vrSupported) {
+        setTimeout(() => {
+          if (inSession) return;
+          setStatus('Mixed reality did not start. You can run the same lesson over a plain virtual backdrop.');
+          if (vrButton) vrButton.hidden = false;
+        }, AR_START_GRACE_MS);
+      }
     });
     if (!navigator.onLine) setStatus('You are offline. Everything except the live AI tutor still works.');
+  } else if (vrSupported) {
+    // No passthrough session on this device or browser: same lesson, virtual backdrop.
+    setEnter('Enter virtual reality', true);
+    enter?.addEventListener('click', enterVr);
+    setStatus('Mixed reality is not available here, so the lesson runs over a plain virtual backdrop.');
   } else {
     setEnter('Open this page on a Meta Quest', false);
     setStatus(`This browser cannot start a mixed-reality session. Open this link in the browser on a Meta Quest 3 or 3S. ${DESKTOP_PREVIEW}`);

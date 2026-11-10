@@ -1,4 +1,4 @@
-import { createSystem, Group, Vector3, VisibilityState, type Entity, type World } from '@iwsdk/core';
+import { createSystem, Group, SessionMode, Vector3, VisibilityState, type Entity, type World } from '@iwsdk/core';
 import type { ContentBundle, EngineEvent, Evidence, TutorTrigger } from '@explode/contracts';
 import { currentLesson, currentStep } from '@explode/lesson-engine';
 import { Sfx } from './audio.ts';
@@ -83,6 +83,14 @@ export class ExplodeApp {
   private recenteredInXR = false;
 
   private recenterWait = 0;
+
+  /** A session started or ended: pick the backdrop it needs and re-place the system. */
+  onSessionChange(active: boolean): void {
+    if (active) this.backdrop.onSessionStart(this.world.renderer.xr.getSession()?.environmentBlendMode);
+    else this.backdrop.onSessionEnd();
+    this.ui.dirty = true;
+    this.requestRecenter(SESSION_START_SETTLE_FRAMES);
+  }
 
   /**
    * Re-place the system in front of the viewer. `afterFrames` delays it: right after a session
@@ -234,6 +242,7 @@ export class ExplodeApp {
     else if (k === 'p') this.logTargets();
     else if (k === '0') this.forgetProgress();
     else if (k === 's') this.switchSystem();
+    else if (k === 'v') this.world.launchXR({ sessionMode: SessionMode.ImmersiveVR }); // testing: the VR fallback path
   }
 
   /**
@@ -245,7 +254,7 @@ export class ExplodeApp {
     // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
     // own content; inside the emulator it also counts the emulated room and controllers.
     const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
-    const targets = { step: this.stepKey(), perf, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, perf, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 
@@ -312,7 +321,7 @@ export class ExplodeApp {
       { id: 'undo', label: () => 'Undo', enabled: () => this.store.log.length > 0, onPress: () => this.store.undo() },
       { id: 'reset', label: () => 'Reset', enabled: () => true, onPress: () => this.store.restart() },
       { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => (this.needsRecenter = true) },
-      { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => true, onPress: () => this.backdrop.cycle() },
+      { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
         label: () => (this.onMechanical ? (lessonDone() ? 'Software ▸' : 'Skip tutorial') : '◂ Car'),
@@ -403,8 +412,8 @@ let app: ExplodeApp | null = null;
 export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false): ExplodeApp {
   app = new ExplodeApp(world, bundles, tutorUrl, debug);
   world.registerSystem(AppSystem);
-  world.renderer.xr.addEventListener('sessionstart', () => app?.requestRecenter(SESSION_START_SETTLE_FRAMES));
-  world.renderer.xr.addEventListener('sessionend', () => app?.requestRecenter(SESSION_START_SETTLE_FRAMES));
+  world.renderer.xr.addEventListener('sessionstart', () => app?.onSessionChange(true));
+  world.renderer.xr.addEventListener('sessionend', () => app?.onSessionChange(false));
   return app;
 }
 

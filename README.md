@@ -61,6 +61,7 @@ cd apps/quest && npm run dev       # IWSDK-managed dev server + emulator browser
 | P | log the world position of every button, part and plug |
 | 0 | forget saved progress and restart at the tutorial |
 | S | switch between the tutorial and the software system |
+| V | start a VR session (tests the fallback used when mixed reality is unavailable) |
 
 - Emulator controls are documented at <https://iwsdk.dev/guides/02-testing-experience.html>.
 

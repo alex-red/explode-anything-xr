@@ -333,6 +333,37 @@ describe('scene harness: pinch presses', () => {
   });
 });
 
+describe('scene harness: session backdrop', () => {
+  const start = (h: ReturnType<typeof setup>, blend: string) => {
+    (h.xr as unknown as { session: unknown }).session = { environmentBlendMode: blend, addEventListener: () => undefined };
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+  };
+  const backdrop = (h: ReturnType<typeof setup>) => (h.app as unknown as { backdrop: { mode: string; passthroughAvailable: boolean } }).backdrop;
+
+  it('an opaque (VR) session gets the virtual backdrop and locks the View toggle', () => {
+    const h = setup();
+    start(h, 'opaque');
+    expect(backdrop(h).mode).toBe('virtual');
+    const view = h.button(/^View: virtual$/);
+    expect(view).toBeDefined();
+    h.press(view);
+    expect(backdrop(h).mode).toBe('virtual'); // disabled: cannot switch to a passthrough that is not there
+
+    h.xr.dispatchEvent({ type: 'sessionend' });
+    h.frames(20);
+    expect(backdrop(h).mode).toBe('passthrough');
+  });
+
+  it('a session that blends with the room keeps passthrough and a working toggle', () => {
+    const h = setup();
+    start(h, 'alpha-blend');
+    expect(backdrop(h).mode).toBe('passthrough');
+    h.press(h.button(/^View: passthrough$/));
+    expect(backdrop(h).mode).toBe('dim');
+  });
+});
+
 describe('scene harness: testing keys', () => {
   const key = (k: string) => keyListeners.forEach((fn) => fn({ key: k }));
 
