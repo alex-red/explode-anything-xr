@@ -1,0 +1,11 @@
+{
+  "name": "EXPLODE",
+  "short_name": "EXPLODE",
+  "description": "Pull complex systems apart with your hands. Trace, break, and repair them to understand why they work.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a1120",
+  "theme_color": "#0a1120",
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

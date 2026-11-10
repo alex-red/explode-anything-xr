@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#0a1120" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <title>EXPLODE</title>
+    <style>
+      body { margin: 0; background: #0a1120; color: #f4f7fb; font-family: system-ui, sans-serif; }
+      #hud { position: fixed; left: 16px; bottom: 16px; right: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; pointer-events: none; }
+      #hud > * { pointer-events: auto; }
+      #enter-xr { font: 600 18px system-ui, sans-serif; padding: 14px 22px; border-radius: 14px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
+      #status { font-size: 14px; opacity: 0.85; max-width: 60ch; }
+    </style>
+  </head>
+  <body>
+    <div id="scene-container"></div>
+    <div id="hud">
+      <button id="enter-xr" hidden>Enter mixed reality</button>
+      <span id="status">Loading…</span>
+    </div>
+    <script type="module" src="/src/index.ts"></script>
+  </body>
+</html>
