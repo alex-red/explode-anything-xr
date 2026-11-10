@@ -125,6 +125,17 @@ Done and committed: A1, A2, A3, A4, A6 (`npm run release:manifest`, `npm run rel
 
 Not done from F1: the pull still engages when a ray is on a button; the press is cancelled instead, which gives the same result for the learner.
 
+### Emulator run, Nov 9 night
+
+First run against the real SDK, in the IWER desktop emulator (headless, emulated Quest 3). The page loads with no console errors or warnings, and the `immersive-ar` session starts. Both lessons were completed with emulated controller rays; buttons were also pressed with emulated hand rays, and the two-hand pull collapsed and exploded the system without any stray select.
+
+Two bugs found and fixed:
+
+- **Object out of view at session start (F9, worse than predicted).** Recentering ran on the 2D page's camera pose, which put the object at waist height under the viewer. It now waits ten frames for a real head pose.
+- **Sockets could not be hit.** A ray aimed at a socket ring lands on the part inside it, which only selected the part. Pressing a part that is offering a socket now plugs into it.
+
+Still unknown until the headset: feel, readability, real hand-ray aim, and frame rate. The emulator scene showed roughly 400 draw calls with the software system exploded (that count includes the emulator's room and controller models), so G2 needs a real measurement. With the debug readout on, every accepted event is logged to the console as `[explode] …`.
+
 ## 7. Hosting and freeze
 
 - **Host:** Cloudflare Pages, two projects. `explode-dev` takes every iteration. `explode` (production) is deployed once at the release candidate. The tutor Worker lives in the same account, and its `ALLOWED_ORIGINS` is the production origin. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
