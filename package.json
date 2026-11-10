@@ -10,6 +10,7 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "bun run --cwd apps/quest dev",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && bun run --cwd apps/quest typecheck",
     "content:generate": "node tools/content/src/generate.ts",

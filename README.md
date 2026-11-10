@@ -41,8 +41,8 @@ bun run content:generate          # only after changing content/ or the tools
 
 ```sh
 bunx playwright install chromium   # once: the IWSDK-managed emulator browser is Playwright Chromium
-cd apps/quest && bun run dev      # IWSDK-managed dev server + emulator browser (port 8473)
-# or: bun run dev:runtime          # plain Vite, then open the URL in your own browser
+bun run dev                       # IWSDK-managed dev server + emulator browser (port 8473)
+# or: bun run --cwd apps/quest dev:runtime   # plain Vite, then open the URL in your own browser
 ```
 
 - Click **Enter mixed reality** in the emulator to test the immersive path with emulated controllers or hands. Ray-select works as a pinch.

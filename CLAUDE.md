@@ -33,6 +33,7 @@ Generated bundles are `apps/quest/src/content/*.bundle.json`. Never hand-edit th
 ## Commands (repo root)
 
 ```sh
+bun run dev                                  # IWSDK dev server + emulator browser, port 8473 (only when the user asks)
 bun run test                                 # vitest: all packages, tools, proxy
 bunx tsc -p tsconfig.json --noEmit           # node-side typecheck
 bun run --cwd apps/quest typecheck           # app typecheck (run before any device test)
