@@ -252,11 +252,12 @@ async function main(): Promise<void> {
     if (!status.sessionActive) fail('the emulated session did not start');
     console.log(`session started: ${status.sessionMode}`);
     await newLogs();
+    const runStartedAt = seenUntil; // the log buffer outlives reloads; only this run's entries count
 
     for (const mode of modes) await runMode(mode, mechanical, software);
 
     const problems = (await cli<LogEntry[]>('browser', 'logs', { count: 200, level: 'warn' })).concat(await cli<LogEntry[]>('browser', 'logs', { count: 200, level: 'error' }));
-    const real = problems.filter((e) => e.level === 'warn' || e.level === 'error');
+    const real = problems.filter((e) => (e.level === 'warn' || e.level === 'error') && e.timestamp > runStartedAt);
     if (real.length) fail(`${real.length} console warning(s) or error(s), first: ${real[0]!.message.slice(0, 300)}`);
 
     console.log(`\nPASS: ${modes.join(' + ')}; ${pressed} ray presses; no console warnings or errors; ${((Date.now() - t0) / 1000).toFixed(0)} s`);
