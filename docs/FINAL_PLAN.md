@@ -119,6 +119,12 @@ Each one ends with `npm test`, both typechecks and `content:check` green, plus a
 | **A8** | In-world debug readout behind a key or URL flag: frame time, draw calls, triangles from `renderer.info` | `apps/quest/src/app/` | Nov 10, before G2 |
 | **A9** | Proxy deploy prep: KV namespace, allowed origin, spend cap, kill-switch note | `services/tutor-proxy/wrangler.toml`, its README | Nov 13, only if K6 is yes |
 
+### Status, Nov 9 evening
+
+Done and committed: A1, A2, A3, A4, and the "unregister" half of A5. The baseline is commit `82aad18`. 93 tests, both typechecks and `content:check` pass. None of it has run in an emulator or on a headset yet.
+
+Not done from F1: the pull still engages when a ray is on a button; the press is cancelled instead, which gives the same result for the learner. [ADR-0008](adr/0008-versioning.md) still says the repo uses a git revision; A7 will correct it.
+
 ## 7. Hosting and freeze
 
 - **Host:** Cloudflare Pages, two projects. `explode-dev` takes every iteration. `explode` (production) is deployed once at the release candidate. The tutor Worker lives in the same account, and its `ALLOWED_ORIGINS` is the production origin. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
