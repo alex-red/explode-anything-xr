@@ -1,0 +1,21 @@
+name = "explode-tutor-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+# No nodejs_compat needed: only fetch, URL, TextEncoder, AbortController and timers are used.
+
+[vars]
+TUTOR_MODEL = "claude-haiku-5-5"
+# Comma-separated origins of the hosted PWA (no trailing slash).
+ALLOWED_ORIGINS = "https://REPLACE-WITH-PWA-ORIGIN"
+DAILY_TOKEN_CAP = "2000000"
+KILL_SWITCH = "0"
+
+# Rate-limit windows and the daily spend counter. Create with:
+#   npx wrangler kv namespace create TUTOR_KV
+# then paste the returned id here. Without a binding the worker falls back to per-isolate memory.
+[[kv_namespaces]]
+binding = "TUTOR_KV"
+id = "REPLACE-WITH-KV-NAMESPACE-ID"
+
+# Secret (never put it in this file):
+#   npx wrangler secret put ANTHROPIC_API_KEY
