@@ -1,0 +1,29 @@
+{
+  "name": "explode",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "tools/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w apps/quest",
+    "content:generate": "node tools/content/src/generate.ts",
+    "content:check": "node tools/content/src/check.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "sharp": "0.35.4",
+    "three": "npm:super-three@0.181.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
