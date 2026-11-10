@@ -1,177 +1,162 @@
-# EXPLODE — Final Implementation Plan (v3)
+# EXPLODE — Final Implementation Plan (v4, emulator-only)
 
-**Written:** Mon Nov 9, 2026 (evening) · **Deadline:** Wed Nov 18, 2026, 12:00 PM PST · **Target submit:** evening of Tue Nov 17
-**Supersedes:** the schedule, gates and work packages in [PLAN.md](PLAN.md), and the packaging parts of [ADR-0002](adr/0002-distribution.md), [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) §B and [QA_MATRIX.md](QA_MATRIX.md) AT-01/AT-02/AT-13. Everything else in `docs/` still stands.
+**Written:** Mon Nov 9, 2026 (night) · **Deadline:** Wed Nov 18, 2026, 12:00 PM PST · **Target submit:** evening of Tue Nov 17
+**Supersedes:** v3 of this file, the schedule, gates and work packages in [PLAN.md](PLAN.md), and every "Device" row in [QA_MATRIX.md](QA_MATRIX.md). Everything else in `docs/` still stands.
+
+**Decision (Nov 9):** build and submit as a WebXR link **without buying a headset**. All development and verification happen in the IWER desktop emulator. A real headset appears in this plan only as a borrowed check by someone else.
 
 ---
 
-## 1. Where the project actually is
+## 1. Where the project is
 
-| Area | State on Nov 9 | Evidence |
+| Area | State | Evidence |
 |---|---|---|
-| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | `npm test`: 89/89 pass; both typechecks clean; `content:check` ok for both bundles |
-| Quest app (`apps/quest`) | Written, passes the headless scene harness, **never built and never run** in an emulator or on a headset | No `dist/`, no `.iwsdk/`; no file modified since Oct 24 22:10 |
-| Headset | **Not bought** (K0 was due Oct 24) | Your answer |
-| Device gates G0–G4, playtests #1 and #2 | **None happened** | No trace in the repo |
-| Rules question (K1) | **Resolved, and better than assumed** — see §2 | Rules text you quoted |
-| Meta admin | Start membership only | Your answer |
-| Git | No commits at all; the whole project is untracked | `git log` |
-| Hosting, proxy deploy | Not started; `wrangler.toml` still has placeholders | — |
+| Contracts, lesson engine, indexer, content pipeline, tutor proxy | Written and tested | 100 tests pass; both typechecks clean; `content:check` ok |
+| Quest app | Runs in the emulator. Both lessons completed with emulated controller rays; buttons pressed with emulated hand rays; two-hand pull works both ways. No console errors or warnings | Emulator run, Nov 9 |
+| Production build | Builds: 17 files, 7.3 MB, relative paths. **Not yet loaded in a browser** | `vite build`, Nov 9 |
+| Rules | A WebXR (IWSDK) entry is submitted as a hosted link, not an APK | Rules text |
+| Git | 22 logical commits on `main`; nothing pushed | `git log` |
+| Hosting, proxy deploy | Not started | — |
+| Real hardware | Never run on one, and no headset is planned | — |
 
-The headless half is ahead of schedule. The on-device half is 16 days behind, with 8 working days left. The plan below is built around that.
+## 2. What the rules mean for us
 
-## 2. What the rules change
+- The entry is **a hosted link** (GitHub Pages or any host). No APK, keystore, release channel or Dashboard work ([ADR-0002](adr/0002-distribution.md)).
+- No changes after the entry period, and the link must stay up through judging.
+- Judges open the link in Quest Browser, land on the 2D page, and press a button to enter.
 
-The rules say an IWSDK (WebXR) project is submitted as **a hosted link** (GitHub Pages or any host), not as an APK on a "Competition" release channel. No changes are allowed after the entry period, and the link must stay up through judging.
+**Read by hand before Wednesday, because the answers can change this plan:**
 
-**Cut entirely** (about two days of planned work and the riskiest admin):
+1. **Does the video have to show the project running on a headset?** If yes, emulator footage does not qualify and K0 (§8) applies.
+2. Judging criteria and weights.
+3. Video length limit.
+4. The exact "New division" wording, and whether a public code repository is required.
 
-- Bubblewrap/TWA, the signing keystore, `assetlinks.json`, the JDK and Android SDK setup.
-- The Competition release channel, the Developer Distribution Agreement, the second-account invite install.
-- Auto-enter XR for an installed PWA (the code is a harmless no-op in a browser tab; leave it).
+## 3. What "no headset" changes
 
-**New consequences:**
+**What the emulator proves:** the app loads, the session starts, input events reach the app, every lesson step can be completed by ray and pinch, layout stays inside the cone, state persists, and nothing throws.
 
-- Judges land on a **2D web page in Quest Browser** and must press a button to enter. That page is now the first ten seconds of the product, and today it is a bare button and a status line.
-- "Frozen build" means: one production URL, deployed once at the release candidate, never deployed to again, with the commit tagged and file hashes archived.
-- Offline relaunch is no longer a judging path (a judge needs the network to open the link). It drops from P0 to P1.
-- A developer org in the Meta Dashboard is still needed, but only to turn on developer mode for `adb` and `chrome://inspect`.
+**What it cannot prove, and judges will experience on real hardware:**
 
-**Still to read by hand on Devpost (30 minutes, tonight):** judging criteria and weights, the video length limit, the exact "New division" wording, and whether a public code repository is required.
+| Unknown | Why it matters | How this plan reduces the risk |
+|---|---|---|
+| Frame rate | WebXR has no reprojection help; missed frames judder | Cut draw calls to a fixed budget now instead of after measuring (B2) |
+| Text readability | Code excerpts are the hardest text; a 3S has lower pixel density | Larger type, fewer lines, by default (B3) |
+| Real hand-ray aim and pinch jitter | The emulator points exactly where it is told | Bigger targets and hit areas; presses already fire on release (B4) |
+| Two-hand pull with tracked hands | Grip-space distance may behave differently for hands | The Explode button becomes the primary instruction; the pull is a bonus (B5) |
+| Passthrough look | Colors and translucency over a real room | Dark panels with bright text already; no new translucent layers |
+| Session start on a real browser | Permission prompts, reference space, first pose | Enter falls back to a VR session with the virtual backdrop if AR is refused (B6) |
+| Comfort and reach | Seated height, arm length | Layout is already inside a 60°×50° cone at 0.7 m; Recenter stays on the toolbar |
 
-## 3. Findings from the code review
+**The one cheap fix for all of these is someone else's headset.** Ten minutes from any Quest 3 or 3S owner opening the dev link would turn most of this table from unknown into known. Finding that person (a friend, a colleague, the Start Discord) is task H1 in §5 and the best use of an hour this week.
 
-Found by reading the app code. None is confirmed on a device, because nothing has run on one.
+**Honesty consequences** (truth contract, [PRODUCT_SPEC.md §7](PRODUCT_SPEC.md#7-honesty-rules)):
 
-| # | Finding | Where | Severity | Fix |
-|---|---|---|---|---|
-| F1 | A press fires the moment a pinch starts. The first hand of a two-hand pull will therefore select a node, press a toolbar button, or **commit a prediction** if its ray is over one. The spec's "both pinches within ~400 ms, neither ray on a button" rule is not implemented | `interactions.ts:48`, `two-hand-pull.ts:39` | High (AT-10) | Fire presses on pinch release, and cancel the press if the other hand pinched meanwhile |
-| F2 | The service worker precaches only `index.html`. The hashed JS is fetched before the worker controls the page, so one online launch does not make the app work offline | `public/sw.js:8` | Medium (P1 now) | Emit a precache list at build time and derive the cache version from the build hash; or stop registering the worker |
-| F3 | The cache name is a hand-edited constant and the cache is cache-first, so a redeploy can keep serving the old build on your own headset during the fix loop | `public/sw.js:5` | Medium | Same fix as F2. Until then, do not register the worker |
-| F4 | Per-frame allocation, against the project rule: two `new Set` per frame in `updateEdges`, and `JSON.stringify` of every panel's lines at 10 Hz (16 panels) | `graph-view.ts:324`, `text.ts:52`, `ui.ts:87` | Medium (frame hitches; there is no SpaceWarp) | Move the sets into `derive()`; dirty-check the UI model before rendering |
-| F5 | The landing page has no explanation, no "hands only" note, no disclosure line, and no message for a browser without WebXR beyond a status string | `index.html` | High, given §2 | Design it as the real first screen |
-| F6 | 14 toolbar buttons are shown at all times in two columns. That is a lot for a cold novice in the first minute | `app.ts:202` | Medium (AT-03) | Show the step's primary action large; fold the rest behind "More" |
-| F7 | Evidence shows `path:lines @ <hash>` and the docs call it a pinned git revision, but the indexer always writes a content hash of the fixture tree | `indexer.ts:54,270`, `ui.ts:128` | Low, but it is a truth-contract wording issue | Label it "content hash" in the UI and docs, or record the git revision once commits exist |
-| F8 | No hint when hand tracking is off or hands are not visible | — | Medium (judge robustness) | A caption hint when no input source has been seen for a few seconds |
-| F9 | Recenter waits until the head is more than 1 mm from the origin. In a `local` reference space the head starts at the origin | `app.ts:315` | Low | Check on device; switch to "first frame with a pose" if it stalls |
-| F10 | 67 nodes each own a material, so about 150–200 draw calls with edges, labels and panels | `graph-view.ts:262` | Unknown until measured | Measure first (G2). Fallbacks are already listed in [ADR-0013](adr/0013-render-budget.md) |
-| F11 | The grip-space distance used by the pull may not be meaningful for tracked hands | `two-hand-pull.ts:36` | Unknown | Device check on day 1; fall back to the wrist or index-tip joint |
+- Video and screenshots are real captures of the real app running in the emulator, and are **labelled as emulator captures**. Nothing is presented as headset or passthrough footage.
+- If no real-headset check has happened by submission, the Devpost "known limitations" section says so in one plain sentence.
+- No frame-rate, comfort or readability claim is made anywhere.
 
 ## 4. Scope for Nov 18
 
 **P0 — must ship:**
 
-- Hosted link that opens in Quest Browser and enters passthrough AR with one press, hands only.
-- Both lessons completable end to end by hand ray and pinch, with a button for every gesture.
-- Truth badges and the evidence panel, readable seated.
-- Scripted tutor chips.
-- Sustained 72 fps in the worst scene on a Quest 3 (or 3S, whichever you buy).
-- Pause and resume through the Meta button.
-- Video under the length limit, genuine headset footage. Devpost entry. Frozen deploy.
+- Hosted link that enters the session with one press and completes both lessons by ray and pinch, with a button for every gesture.
+- Truth badges, the evidence panel, scripted tutor chips.
+- The defensive changes B2–B6.
+- An automated emulator walkthrough of both lessons (B1), run before every deploy.
+- Video and screenshots from the emulator, labelled. Devpost entry. Frozen deploy.
 
-**P1 — only after the walking skeleton passes on Nov 12:**
+**P1 — only after Thursday's gate:**
 
-- Live tutor through the proxy (decision K6, Nov 13).
-- Offline relaunch (F2).
-- Toolbar simplification (F6), if playtest #1 shows confusion.
-- Backdrop toggle: keep if it works on device, otherwise hide the button.
+- Live tutor through the proxy (K6).
+- Toolbar simplification: the step's primary action large, the rest behind "More".
+- Backdrop toggle polish.
 
-**Cut now:**
+**Cut:**
 
-- Everything in §2's cut list.
-- Pre-rendered narration (synthesized SFX and captions stay).
-- Playwright + IWER end-to-end suite.
-- Reduced motion, text-size toggle, left-handed toolbar mirror, one-handed path as separate features. Every gesture already has a button, which covers the one-handed path.
-- Any VR Glasses claim, voice, the transfer challenge, and the third playtest.
+- Buying a headset; every on-device gate, OVR Metrics, and in-person headset playtests.
+- Offline relaunch and the service worker.
+- Pre-rendered narration, the Playwright suite, separate accessibility toggles, voice, VR Glasses claims, the transfer challenge.
+- Everything already cut for link-based submission (APK, keystore, release channel).
 
 ## 5. Schedule
 
-**H** = you (headset, accounts, judgement of feel). **A** = agent (headless, verified by tests and typechecks).
+**H** = you. **A** = agent, verified by tests, typechecks and the emulator walkthrough.
 
 | Day | H | A | Exit gate |
 |---|---|---|---|
-| **Mon Nov 9** (tonight) | Find a store with a Quest 3 or 3S in stock for tomorrow morning. Read the four open rules items (§2). Create the Meta developer org (needed for developer mode) | First commit of the whole repo. Work package A (§6): F1, F4, F5, F7, F8 | Repo committed; store located |
-| **Tue Nov 10** | **Buy the headset in the morning.** Developer mode, `adb`, `chrome://inspect`, OVR Metrics. First run in the desktop emulator, then on device over `adb reverse`. Walk both lessons with buttons only and write down everything that is wrong | Fix runtime bugs as you report them. Set up hosting; first deploy to a **dev** URL | **G0:** in passthrough, ray-pinch selects a node and presses a button. **K0:** no headset by tonight → see §8 |
-| **Wed Nov 11** | Two-hand pull, placement and reach, label and code readability, tray and sockets. Measure frame rate in the worst scene | Fixes from your notes; F9–F11 as needed | **G2:** 72 fps sustained, or K2 cuts applied. **K3:** pull unreliable → the button is primary and the caption says so |
-| **Thu Nov 12** | Full lesson pass on the hosted dev URL from a cold browser tab: landing page → AR → drivetrain → repo → complete. Pause and resume. Controller fallback | Fixes; freeze-check script (§6, A6) | **G3 walking skeleton:** both lessons completed hands-only from the hosted URL |
-| **Fri Nov 13** | **Playtest #1** in the morning (1–2 people, recorded, no coaching). Decide K6. Check that headset recordings include passthrough | Top-5 fixes; proxy deploy if K6 says yes; F2 and F6 if chosen | **Feature freeze** at end of day |
-| **Sat Nov 14** | Polish on device: timing, colors over passthrough, comfort at two seated heights, left hand dominant. Video capture session and rough cut | Regression tests for every fix; docs updated to match what shipped | Rough cut exists |
-| **Sun Nov 15** | **Playtest #2** (2–3 cold novices, metrics from [QA_MATRIX.md §4](QA_MATRIX.md#4-playtest-protocol)). Fix only what blocks completion | Release candidate: deploy to the **production** URL, tag the commit, archive file hashes | **RC frozen.** Cold open on the production URL passes the device checklist |
-| **Mon Nov 16** | Final video, 3–5 screenshots, Devpost text with the three disclosures | Proofread Devpost text against the truth contract | Video uploaded, public |
-| **Tue Nov 17** | Submission dry run; open every link logged out; **submit tonight** | Run the freeze check | Submitted |
-| **Wed Nov 18** | Verify only. Touch nothing | — | Deadline 12:00 PST |
-
-There are two slack points: Saturday afternoon and Monday evening. Nothing new starts after Friday.
+| **Tue Nov 10** | **H1:** find one or two Quest 3/3S owners willing to open a link this week. Read the four rules items (§2). Pick the host and log in | (B1 and B7 are done.) First deploy to the **dev** URL; load the built app in a desktop browser | **G1:** the built app loads from the dev URL, and the walkthrough passes in the emulator. **K0** if the video rule needs a headset |
+| **Wed Nov 11** | Walk both lessons yourself in the emulator window; note everything confusing or ugly | B2 draw-call budget. B3 readability. B4 hit areas | **G2:** draw calls for the app's own content within budget in the worst scene; walkthrough still passes |
+| **Thu Nov 12** | Second pass in the emulator with hand mode. Send the dev link and the tester sheet (B8) to your Quest owners | B5 Explode-first captions. B6 VR fallback. Landing-card overlap. B8 tester sheet | **G3:** both lessons completed by you from the hosted dev URL, in controller and hand mode |
+| **Fri Nov 13** | **Comprehension playtest:** 1–2 people use the desktop preview with the mouse, no coaching. It tests the lesson, not the gestures. Decide K6 | Top fixes from your notes, the playtest and any tester report. Proxy deploy if K6 is yes | **Feature freeze** |
+| **Sat Nov 14** | Capture session in the emulator; rough cut with the "emulator capture" label | Regression tests for every fix; docs match what shipped | Rough cut exists |
+| **Sun Nov 15** | Last tester feedback in. Fix only what blocks completion | Release candidate: tag, build, `release:manifest`, deploy to **production**, `release:verify` | **RC frozen** |
+| **Mon Nov 16** | Final video, 3–5 labelled screenshots, Devpost text | Proofread Devpost text against the truth contract | Video public |
+| **Tue Nov 17** | Dry run; every link opened logged out; **submit tonight** | `release:verify` | Submitted |
+| **Wed Nov 18** | Verify only | — | Deadline 12:00 PST |
 
 ## 6. Agent work packages
 
-Each one ends with `npm test`, both typechecks and `content:check` green, plus a list of what you must check on the headset.
+### Done
+
+| WP | What |
+|---|---|
+| A1 | Presses fire on pinch release; a two-hand pull drops pinches already started |
+| A2 | No per-frame allocation; panels repaint only when dirty |
+| A3 | Landing page as the first screen |
+| A4 | Tree-hash label on evidence; no-hands caption hint |
+| A5 | Service worker no longer registered |
+| A6 | Freeze check: `npm run release:manifest`, `npm run release:verify -- <url>` |
+| A7 | Docs aligned with link-based submission |
+| A8 | Debug readout (`?debug`, or D on desktop); accepted events logged as `[explode] …` |
+| B1 | Emulator walkthrough: `npm run emulator:walkthrough` (add `-- --start` to let it start and stop a headless dev server). Steps are derived from the lesson definitions; it passes in controller and hand mode, 36 ray presses, about 100 s |
+| B7 | `AGENTS.md` files and the unused `sw.js` no longer ship; unused SDK grab and UI-kit features turned off. The 6.8 MB script is the SDK itself and did not shrink |
+| — | Emulator-run fixes: recenter waits for a real head pose; a press on a part inside a socket ring plugs into it |
+
+### To do
 
 | WP | Scope | Files | When |
 |---|---|---|---|
-| **A1** | Press on release, cancelled by a second-hand pinch (F1); harness tests for "first hand of a pull never selects, presses or predicts" | `apps/quest/src/app/interactions.ts`, `two-hand-pull.ts`, `test/scene-harness.test.ts` | Tonight |
-| **A2** | Remove per-frame allocation (F4) | `graph-view.ts`, `ui.ts`, `text.ts` | Tonight |
-| **A3** | Landing page as the first screen (F5): what it is, one large Enter button, "hands only, seated", the sample-service disclosure, clear messages for no-WebXR and for load failure | `apps/quest/index.html`, `src/index.ts` | Tonight |
-| **A4** | Revision wording (F7) and the no-hands hint (F8) | `ui.ts`, `app.ts`, `docs/ARCHITECTURE.md` | Tonight |
-| **A5** | Stop registering the service worker until F2 is done; then a build-time precache list with a hash-derived cache name | `src/index.ts`, `public/sw.js`, a small Vite plugin | Unregister tonight; precache Nov 13 if P1 is open |
-| **A6** | Freeze check: fetch every file of the production URL, compare SHA-256 with the tagged build, print a diff (new AT-13) | `tools/release/` | Nov 12 |
-| **A7** | Bring the docs in line with link-based submission: ADR-0002, SUBMISSION_CHECKLIST §B/§C, QA AT-01/02/13, PLAN | `docs/` | Nov 14 |
-| **A8** | In-world debug readout behind a key or URL flag: frame time, draw calls, triangles from `renderer.info` | `apps/quest/src/app/` | Nov 10, before G2 |
-| **A9** | Proxy deploy prep: KV namespace, allowed origin, spend cap, kill-switch note | `services/tutor-proxy/wrangler.toml`, its README | Nov 13, only if K6 is yes |
-
-### Status, Nov 9 evening
-
-Done and committed: A1, A2, A3, A4, A6 (`npm run release:manifest`, `npm run release:verify -- <url>`), A7, A8 (open the page with `?debug`, or press D on desktop), and the "unregister" half of A5. The baseline is commit `82aad18`. 98 tests, both typechecks and `content:check` pass. None of it has run in an emulator or on a headset yet.
-
-Not done from F1: the pull still engages when a ray is on a button; the press is cancelled instead, which gives the same result for the learner.
-
-### Emulator run, Nov 9 night
-
-First run against the real SDK, in the IWER desktop emulator (headless, emulated Quest 3). The page loads with no console errors or warnings, and the `immersive-ar` session starts. Both lessons were completed with emulated controller rays; buttons were also pressed with emulated hand rays, and the two-hand pull collapsed and exploded the system without any stray select.
-
-Two bugs found and fixed:
-
-- **Object out of view at session start (F9, worse than predicted).** Recentering ran on the 2D page's camera pose, which put the object at waist height under the viewer. It now waits ten frames for a real head pose.
-- **Sockets could not be hit.** A ray aimed at a socket ring lands on the part inside it, which only selected the part. Pressing a part that is offering a socket now plugs into it.
-
-Still unknown until the headset: feel, readability, real hand-ray aim, and frame rate. The emulator scene showed roughly 400 draw calls with the software system exploded (that count includes the emulator's room and controller models), so G2 needs a real measurement. With the debug readout on, every accepted event is logged to the console as `[explode] …`.
+| **B2** | Draw-call budget. Measure the app's own content (not the emulator's room). Target ≤120 in the worst scene: one shared material per node state, instanced or merged software nodes and edges, labels only for the focused cluster and the active path | `graph-view.ts`, `shapes.ts` | Nov 11 |
+| **B3** | Readability by default: evidence code at a larger size and at most 8 lines; label and button text sizes raised; nothing below about 1° of visual angle at 0.7 m | `ui.ts`, `text.ts`, `graph-view.ts` | Nov 11 |
+| **B4** | Forgiving targets: invisible hit volumes larger than the visible plug, socket and small nodes; minimum 4 cm for anything pressable | `graph-view.ts`, `interactions.ts` | Nov 11 |
+| **B5** | Explode-first wording: every caption names the button first and the pull second; the content generator is changed, not the bundles by hand | `tools/content`, `content/` | Nov 12 |
+| **B6** | Session fallback: if an AR session is unsupported or refused, offer a VR session with the virtual backdrop, and say which one started | `src/index.ts`, `backdrop.ts`, `iwsdk.config.json` | Nov 12 |
+| **B8** | Tester sheet for a remote Quest owner: the link with `?debug`, eight things to try, what to report (frame rate shown, anything unreadable, anything that would not select) | `docs/TESTER_SHEET.md` | Nov 12 |
+| **B9** | Proxy deploy prep | `services/tutor-proxy` | Nov 13, only if K6 is yes |
 
 ## 7. Hosting and freeze
 
-- **Host:** Cloudflare Pages, two projects. `explode-dev` takes every iteration. `explode` (production) is deployed once at the release candidate. The tutor Worker lives in the same account, and its `ALLOWED_ORIGINS` is the production origin. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
-- **Freeze procedure (Nov 15):** tag the commit; build; deploy to production; run A6 and save its output with the bundle `content_hash` values; open the URL in a fresh Quest Browser profile; then never deploy to that project again. Run A6 on Nov 17 before submitting and weekly until winners are announced.
-- **Why not versioned paths:** `/v/<semver>-<hash>/` was needed so an installed APK could pin a start URL. With a link submission, a dedicated production project that is never redeployed gives the same guarantee with less to get wrong.
+- **Host:** Cloudflare Pages, two projects: `explode-dev` for every iteration and `explode` for production. The tutor Worker lives in the same account. GitHub Pages is the alternative the rules name; it needs a public repo on a free plan.
+- **Checking the built app without a headset:** the emulator is injected only by the dev server, so a production build on a desktop browser shows the "open this on a Quest" state plus the mouse preview. To exercise the session path of the hosted build, use a WebXR emulator browser extension on the dev URL. Which extension works with this SDK is unverified; if none does, the hosted session path stays untested until a Quest owner opens it.
+- **Freeze (Nov 15):** tag the commit; build; `release:manifest`; deploy to production once; `release:verify`; never deploy to that project again. Verify again before submitting and weekly until winners are announced.
 
 ## 8. Kill switches
 
 | ID | When | Trigger → action |
 |---|---|---|
-| **K0** | Tue Nov 10, 6 PM | Still no headset → order same-day or next-day delivery **and** borrow one for Wednesday. With no headset by Thu Nov 12 there is no genuine footage and the entry cannot be submitted; stop and decide then |
-| **K2** | Wed Nov 11 | Below 72 fps → labels on the focused cluster only, hide non-path edges, one shared material per node state, ≤40 nodes ([ADR-0013](adr/0013-render-budget.md)) |
-| **K3** | Wed Nov 11 | Two-hand pull works in fewer than 9 of 10 tries → Explode button is primary; the pull stays as a bonus and leaves the first caption |
-| **K4** | Thu Nov 12 | Walking skeleton fails on the repo lesson → ship the drivetrain as the full experience and the repo as a guided viewer (trace + evidence, no break/repair). Fails on both → Friday's playtest becomes a fix day and playtest #2 is the only one |
-| **K6** | Fri Nov 13 | Live tutor: deploy only if G3 passed on time. Default it on only if answers return in under about 2.5 s on device; otherwise it stays behind the "Live AI" toggle |
-| **K9** | Sat Nov 14 | Passthrough missing from recordings → record through `scrcpy`/MQDH casting; as a last resort film the virtual backdrop mode and say so in the video |
+| **K0** | Tue Nov 10 | The rules require headset footage in the video → stop and decide: borrow or buy a headset for one capture day (Sat Nov 14), or do not submit. Emulator footage must not be passed off as headset footage |
+| **K2** | Wed Nov 11 | Draw calls cannot reach the budget → at most 40 nodes shown at once, edges only on the active path |
+| **K4** | Thu Nov 12 | Hosted build fails where the dev build works → Friday becomes a fix day and the comprehension playtest moves to Saturday morning |
+| **K6** | Fri Nov 13 | Live tutor: deploy only if G3 passed on time; it stays behind the "Live AI" toggle, off by default, since its latency cannot be judged without hardware |
+| **K10** | Sun Nov 15 | A tester reports the app unusable on a real headset and the cause is not fixable in a day → submit with the limitation stated, or withdraw. Your call, made that day |
 
 ## 9. Risks, re-ranked
 
 | # | Risk | L | I | Mitigation |
 |---|---|---|---|---|
-| 1 | No headset in hand tomorrow | M | Fatal | K0. Everything else in this plan assumes Tuesday |
-| 2 | The app has never run; IWSDK runtime behavior differs from the stub the harness uses | H | H | Emulator run first on Tuesday, then device; Wednesday is reserved for the fallout |
-| 3 | One person has to fit two weeks of on-device tuning into three days | H | H | Feature freeze Friday; cuts in §4; K3 and K4 |
-| 4 | Frame rate over passthrough | M | H | A8 readout, G2, K2 |
-| 5 | Novices cannot complete without coaching | M | H | Two playtests; F1, F5, F6 |
-| 6 | Code text unreadable on a 3S | M | M | Check Wednesday; raise the mono size and cut the excerpt to 8 lines |
-| 7 | Production URL changes or goes down during judging | L | H | §7; proxy is optional and the scripted tutor is the default |
-| 8 | Nothing is in git | H today | H | First commit tonight; push to a private remote when you say so |
+| 1 | The app fails or judders on a judge's real headset, and we never knew | M–H | Fatal | H1 remote testers; B2–B6; B1 keeps the logic honest |
+| 2 | The video rule needs headset footage | Unknown | Fatal | Read the rule Tuesday; K0 |
+| 3 | Judges mark down an entry with emulator footage or an "untested on hardware" line | M | H | A real tester report removes the line; the video is labelled either way |
+| 4 | The hosted build's session path is never exercised before judging | M | H | §7 extension check; H1 |
+| 5 | Novices do not understand the lesson | M | H | Desktop comprehension playtest Friday; Explode-first captions |
+| 6 | Production URL changes or goes down during judging | L | H | §7 freeze; the scripted tutor is the default |
+| 7 | Schedule slip, solo | M | H | Feature freeze Friday; nothing new after it |
 
-## 10. What you verify on the headset
+## 10. How things are verified now
 
-The device checklist in [QA_MATRIX.md §3](QA_MATRIX.md#3-device-checklist-every-upload) still applies, with these changes:
-
-- "Cold launch → AR auto-enter" becomes "open the link in Quest Browser → landing page → one press → passthrough AR".
-- "Airplane mode relaunch" is P1.
-- Added: the first pinch of a two-hand pull never selects, presses or predicts (F1).
-- Added: with hand tracking off, the hint appears and the controller ray completes the lesson (F8).
-- Added: after a redeploy to the dev URL, a reload shows the new build (F3).
+- **Every change:** `npm test`, both typechecks, `content:check`.
+- **Every deploy:** the B1 walkthrough in the emulator, then load the hosted URL in a desktop browser.
+- **By you, in the emulator window:** does each step read clearly, does the layout look right, is anything overlapping.
+- **By a Quest owner, if H1 succeeds:** the tester sheet (B8).
+- **Not verified by anyone unless H1 succeeds:** frame rate, readability, real hand input, passthrough appearance, comfort. These are stated as unknown, never as passing.

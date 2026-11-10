@@ -1,6 +1,6 @@
 # EXPLODE: agent instructions
 
-A hands-first Quest mixed-reality app for the Meta VR Start Developer Competition 2026. The deadline is **Wed Nov 18, 2026, 12:00 PM PST**. The source of truth for scope, decisions and schedule is `docs/`; start at `docs/README.md`, and use `docs/FINAL_PLAN.md` for the current schedule. The entry is a **hosted link**, not an APK (ADR-0002). `EXPLODE_VR_Project_Handoff_2026.md` is the historical v1.0 handoff and is superseded wherever `docs/` disagrees.
+A hands-first Quest mixed-reality app for the Meta VR Start Developer Competition 2026. The deadline is **Wed Nov 18, 2026, 12:00 PM PST**. The source of truth for scope, decisions and schedule is `docs/`; start at `docs/README.md`, and use `docs/FINAL_PLAN.md` for the current schedule. The entry is a **hosted link**, not an APK (ADR-0002). There is **no headset**: everything is verified in the IWER desktop emulator. `EXPLODE_VR_Project_Handoff_2026.md` is the historical v1.0 handoff and is superseded wherever `docs/` disagrees.
 
 ## Hard rules
 
@@ -24,7 +24,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 | `tools/content` | Build-time pipeline: coverage + mutation evidence, layout, lessons, bundles | agents |
 | `content/repo-demo/fixture` | The sample auth-service being taught (MIT, written for this demo) | changing it changes evidence: regenerate |
 | `content/drivetrain` | Authored procedural EV drivetrain spec | — |
-| `apps/quest` | IWSDK 1.0.1 WebXR app (three.js via `@iwsdk/core`) | agents for logic; a human must judge feel on device |
+| `apps/quest` | IWSDK 1.0.1 WebXR app (three.js via `@iwsdk/core`) | agents for logic; the human judges look and clarity in the emulator |
 | `services/tutor-proxy` | Optional Cloudflare Worker for the live tutor | agents |
 | `tools/release` | Freeze check: release manifest and deployed-file comparison | agents |
 
@@ -38,6 +38,7 @@ npx tsc -p tsconfig.json --noEmit            # node-side typecheck
 npm run typecheck -w @explode/quest          # app typecheck (run before any device test)
 npm run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
 npm run content:check                        # re-validate committed bundles + hashes
+npm run emulator:walkthrough                 # both lessons in the IWER emulator (needs the dev server; `-- --start` runs one)
 npm run release:manifest                     # hash a finished build into release/manifest.json (does not build)
 npm run release:verify -- <url>              # compare a deployed site with that manifest
 ```
@@ -55,4 +56,4 @@ Node ≥ 24: workspace packages are consumed as `.ts` source through native type
 
 ## Done means
 
-Tests green (this includes `apps/quest/test/scene-harness.test.ts`, which drives the real app code headless through both lessons), both typechecks green, `content:check` green. For anything that changes how the app looks or feels, also list what the human must verify on the headset (see `docs/QA_MATRIX.md`).
+Tests green (this includes `apps/quest/test/scene-harness.test.ts`, which drives the real app code headless through both lessons), both typechecks green, `content:check` green. For anything that changes how the app looks or feels, also say what was checked in the emulator and what stays unknown without a headset. Never state or imply that something was verified on a device.

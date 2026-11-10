@@ -16,6 +16,7 @@
   - [x] WebXR entries accepted: the rules say an IWSDK project is submitted as a hosted link (read Nov 9)
   - [ ] Whether a public code repository is required
   - [ ] Judging devices (Quest 3 / 3S?)
+  - [ ] **Whether the video must show the project on a headset** (emulator-only plan, K0)
   - [ ] Criteria and weights
   - [ ] Video length rule
   - [ ] Team rules
@@ -36,7 +37,8 @@
 - [ ] Release candidate built from a tagged commit with a clean working tree
 - [ ] `npm run release:manifest` run on that build; `release/manifest.json` committed
 - [ ] Deployed to production **once**; `npm run release:verify <production url>` prints `ok`
-- [ ] Cold open of the production URL in a fresh Quest Browser profile passes the device checklist
+- [ ] The emulator walkthrough passes on the release-candidate commit, and the production URL loads in a desktop browser
+- [ ] If a Quest owner is available: cold open of the production URL passes the tester sheet
 - [ ] If the live tutor ships: proxy `ALLOWED_ORIGINS` is the production origin, the daily cap is set, `KILL_SWITCH` is documented
 - [ ] No deploys to production after this point. `release:verify` again before submitting, then weekly until winners are announced
 
@@ -47,8 +49,9 @@
 - [ ] Discloses: "`auth-service` is a sample service written for this demo"; "drivetrain is a simplified teaching model"; "Observed = recorded at build time"
 - [ ] Track and division selected
 - [ ] The production URL
-- [ ] Public YouTube/Vimeo video, under 3 min, captions, genuine footage ([VIDEO_STORYBOARD.md](VIDEO_STORYBOARD.md))
-- [ ] 3–5 genuine screenshots (no concept art)
+- [ ] Public YouTube/Vimeo video, under the length limit, captions, genuine capture labeled "emulator capture" ([VIDEO_STORYBOARD.md](VIDEO_STORYBOARD.md))
+- [ ] 3–5 genuine screenshots, labeled as emulator captures (no concept art)
+- [ ] Known limitations state plainly whether the app has been checked on a physical headset
 - [ ] Third-party licenses and attributions reviewed ([DATA_PROVENANCE.md](DATA_PROVENANCE.md))
 
 ## E. Final verification (Nov 17 evening → Nov 18 morning)
@@ -56,5 +59,5 @@
 - [ ] Devpost shows submitted
 - [ ] Every link opens logged-out: video, production URL
 - [ ] `npm run release:verify <production url>` prints `ok`
-- [ ] Production URL opened once more on the headset
+- [ ] Production URL opened once more in a desktop browser
 - [ ] Touch nothing after submitting

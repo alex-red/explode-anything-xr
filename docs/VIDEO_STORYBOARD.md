@@ -1,6 +1,6 @@
 # EXPLODE — Video Storyboard
 
-**Target length:** 1:45–2:15 (judges need not watch past 3:00). All footage is genuine on-device capture: passthrough MR recorded from the headset. Label any composited overlay.
+**Target length:** 1:45–2:15 (judges need not watch past 3:00). **Updated 2026-11-09 (emulator-only plan):** footage is captured from the real app running in the IWER desktop emulator and carries a visible "emulator capture" label throughout. It is never presented as headset or passthrough footage. If the rules require headset footage, see K0 in [FINAL_PLAN.md](FINAL_PLAN.md). Label any composited overlay.
 
 **Rough cut Tue Nov 10 · final Mon Nov 16.** Tidy the room first, because passthrough shows it. Profile while recording, since capture costs frame time.
 
@@ -20,6 +20,6 @@
 
 **Capture notes:**
 
-- Use headset recording, MQDH, or scrcpy; raise capture resolution via adb if possible (**VERIFY** Oct 26).
+- Record the emulator window with the OS screen recorder at the highest resolution available; hide the debug readout.
 - Check that passthrough is present in captures.
 - Captions are burned in; also upload an SRT.

@@ -168,7 +168,8 @@ A submission can win at most one prize.
 4. The drivetrain is labeled "simplified teaching model, not a real vehicle".
 5. The hero repo is disclosed as "a sample service written for this demo" in both the UI and Devpost text.
 6. The tutor cannot invent ids, cite missing evidence, or claim more than its evidence supports. Plans that do are rejected ([ADR-0011](adr/0011-tutor.md)).
-7. Video and screenshots are genuine on-device footage. Any composited overlay is labeled.
+7. Video and screenshots are genuine captures of the real app. Captures made in the desktop emulator are labeled as emulator captures and are never presented as headset or passthrough footage. Any composited overlay is labeled.
+8. Nothing is claimed about frame rate, comfort or readability on a headset unless someone has checked it on one ([FINAL_PLAN.md §3](FINAL_PLAN.md#3-what-no-headset-changes)).
 
 ## 8. Hypotheses and invalidation
 
