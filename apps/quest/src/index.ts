@@ -18,7 +18,7 @@ const setEnter = (label: string, enabled: boolean) => {
   enter.disabled = !enabled;
 };
 
-const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace, N next, U undo, R reset, X explain.';
+const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace, N next, U undo, R reset, X explain, D debug readout.';
 
 async function main(): Promise<void> {
   // Bundles are imported statically, so they ship inside the build.
@@ -26,7 +26,8 @@ async function main(): Promise<void> {
   const world = await World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions);
   world.registerSystem(InteractionSystem);
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
-  startApp(world, bundles, tutorUrl);
+  // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
+  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'));
 
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
   const arSupported = world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported('immersive-ar').catch(() => false));

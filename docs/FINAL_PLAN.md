@@ -121,7 +121,7 @@ Each one ends with `npm test`, both typechecks and `content:check` green, plus a
 
 ### Status, Nov 9 evening
 
-Done and committed: A1, A2, A3, A4, and the "unregister" half of A5. The baseline is commit `82aad18`. 93 tests, both typechecks and `content:check` pass. None of it has run in an emulator or on a headset yet.
+Done and committed: A1, A2, A3, A4, A8 (open the page with `?debug`, or press D on desktop), and the "unregister" half of A5. The baseline is commit `82aad18`. 94 tests, both typechecks and `content:check` pass. None of it has run in an emulator or on a headset yet.
 
 Not done from F1: the pull still engages when a ray is on a button; the press is cancelled instead, which gives the same result for the learner. [ADR-0008](adr/0008-versioning.md) still says the repo uses a git revision; A7 will correct it.
 

@@ -99,7 +99,7 @@ function makeWorld() {
     player,
     session: undefined as unknown,
     xrEnabled: true,
-    renderer: { xr },
+    renderer: { xr, info: { render: { calls: 123, triangles: 4567 }, memory: { geometries: 8, textures: 9 } } },
     visibilityState: signal<VisibilityState>(VisibilityState.NonImmersive),
     systems: [] as unknown[],
     registerSystem(s: unknown) {
@@ -128,9 +128,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup() {
+function setup(debug = false) {
   const w = makeWorld();
-  const app = startApp(w.world as never, bundles, null);
+  const app = startApp(w.world as never, bundles, null, debug);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -326,6 +326,26 @@ describe('scene harness: pinch presses', () => {
     session.inputSources = [{}];
     h.frames(30);
     expect(h.caption()).not.toMatch(/can't see your hands/);
+  });
+});
+
+describe('scene harness: debug readout', () => {
+  const readout = (h: ReturnType<typeof setup>) => h.panels().find((p) => /fps/.test(p.text));
+
+  it('is absent by default and shows frame rate and draw calls with the debug flag', () => {
+    const off = setup();
+    off.frames(72);
+    expect(readout(off)).toBeUndefined();
+
+    const on = setup(true);
+    on.frames(72);
+    const r = readout(on)!;
+    expect(r.mesh.visible).toBe(true);
+    expect(r.text).toMatch(/72 fps/);
+    expect(r.text).toMatch(/slow 0\//);
+    expect(r.text).toMatch(/draws 123 +tris 4567/);
+    expect(r.text).not.toMatch(/…/); // no line truncated to fit
+    expect(TextPanel.clipEvents).toEqual([]);
   });
 });
 

@@ -3,6 +3,7 @@ import type { ContentBundle, EngineEvent, Evidence, TutorTrigger } from '@explod
 import { currentLesson, currentStep } from '@explode/lesson-engine';
 import { Sfx } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
+import { DebugReadout } from './debug-readout.ts';
 import { GraphView } from './graph-view.ts';
 import { Store } from './store.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
@@ -24,6 +25,7 @@ export class ExplodeApp {
   private readonly tutor: TutorClient;
   private readonly pull: TwoHandPull;
   private readonly backdrop: Backdrop;
+  private readonly debug: DebugReadout;
   private readonly sfx = new Sfx();
   private readonly software: ContentBundle;
   private readonly mechanical: ContentBundle;
@@ -39,6 +41,7 @@ export class ExplodeApp {
     private readonly world: World,
     bundles: ContentBundle[],
     tutorUrl: string | null,
+    debug = false,
   ) {
     const software = bundles.find((b) => b.graph.system_kind === 'software');
     const mechanical = bundles.find((b) => b.graph.system_kind === 'mechanical');
@@ -49,6 +52,8 @@ export class ExplodeApp {
     this.tutor = new TutorClient(tutorUrl);
     this.anchorEntity = world.createTransformEntity(this.anchor);
     this.backdrop = new Backdrop(world);
+    this.debug = new DebugReadout(world, this.anchorEntity);
+    this.debug.enabled = debug;
     this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
     this.pull = new TwoHandPull(
       world,
@@ -85,6 +90,7 @@ export class ExplodeApp {
     if (this.needsRecenter) this.tryRecenter();
     this.backdrop.update(camera);
     this.pull.update();
+    this.debug.update(dt);
     if (this.paused) return; // pause animation while blurred/hidden; state is already persisted
     const clamped = Math.min(dt, 1 / 30);
     if (this.view) {
@@ -207,6 +213,7 @@ export class ExplodeApp {
     else if (k === 'r') this.store.restart();
     else if (k === 'x') void this.askTutor('explain_selection');
     else if (k === 'c') this.needsRecenter = true;
+    else if (k === 'd') this.debug.enabled = !this.debug.enabled;
   }
 
   private next(): void {
@@ -351,8 +358,8 @@ export class ExplodeApp {
 
 let app: ExplodeApp | null = null;
 
-export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null): ExplodeApp {
-  app = new ExplodeApp(world, bundles, tutorUrl);
+export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false): ExplodeApp {
+  app = new ExplodeApp(world, bundles, tutorUrl, debug);
   world.registerSystem(AppSystem);
   world.renderer.xr.addEventListener('sessionstart', () => app?.requestRecenter());
   return app;
