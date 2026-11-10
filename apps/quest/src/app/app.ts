@@ -186,6 +186,9 @@ export class ExplodeApp {
   }
 
   private onEvent(event: EngineEvent | null): void {
+    // With the debug readout on, every accepted event is logged so a run can be followed from
+    // the console (chrome://inspect on the headset, or the emulator's log capture).
+    if (this.debug.enabled) console.info('[explode]', event ? JSON.stringify(event) : 'replay', '→', this.stepKey());
     if (!event) return;
     switch (event.type) {
       case 'set_explode':
