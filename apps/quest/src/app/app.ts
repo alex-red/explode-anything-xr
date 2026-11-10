@@ -11,6 +11,8 @@ import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from '.
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
+const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
+const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 
 /** Top-level controller: owns the store, view, UI, tutor, and input glue. */
 export class ExplodeApp {
@@ -89,6 +91,7 @@ export class ExplodeApp {
       this.view.revealConsequences = !this.predicting();
       this.view.update(clamped, camera);
     }
+    this.trackInput(clamped);
     // Panels repaint at most at ~10 Hz, and only when something they show may have changed
     // (plus a 1 Hz safety refresh), so idle frames build no view models and upload no textures.
     this.uiClock += clamped;
@@ -102,6 +105,19 @@ export class ExplodeApp {
 
   private uiClock = 1;
   private uiRefresh = 0;
+  private noInputFor = 0;
+  private noInputHint = false;
+
+  /** Hand tracking can be off or the hands out of view; say so instead of looking frozen. */
+  private trackInput(dt: number): void {
+    const sources = this.world.session?.inputSources;
+    this.noInputFor = sources && sources.length === 0 ? this.noInputFor + dt : 0;
+    const hint = this.noInputFor >= NO_INPUT_HINT_AFTER;
+    if (hint !== this.noInputHint) {
+      this.noInputHint = hint;
+      this.ui.dirty = true;
+    }
+  }
 
   // ---------------------------------------------------------------- systems
 
@@ -309,7 +325,7 @@ export class ExplodeApp {
       feedback: s.feedback,
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
       tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source } : null,
-      note: tutor?.note ?? null,
+      note: this.noInputHint ? NO_INPUT_HINT : (tutor?.note ?? null),
       consequence: this.predicting() ? null : consequenceText(s, labelOf),
     };
   }

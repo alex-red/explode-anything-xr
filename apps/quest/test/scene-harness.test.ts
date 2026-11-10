@@ -314,6 +314,19 @@ describe('scene harness: pinch presses', () => {
     h.frames(3);
     expect(h.state().explode_factor).toBe(1);
   });
+
+  it('says so when no hand or controller is tracked, and clears the hint when one returns', () => {
+    const h = setup();
+    const { session } = withSession(h);
+    h.frames(72 * 2);
+    expect(h.caption()).not.toMatch(/can't see your hands/);
+    session.inputSources = [];
+    h.frames(72 * 5);
+    expect(h.caption()).toMatch(/can't see your hands/);
+    session.inputSources = [{}];
+    h.frames(30);
+    expect(h.caption()).not.toMatch(/can't see your hands/);
+  });
 });
 
 describe('scene harness: software hero lesson', () => {
