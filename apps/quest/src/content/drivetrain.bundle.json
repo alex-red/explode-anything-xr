@@ -1,0 +1,795 @@
+{
+  "bundle_version": "1",
+  "graph": {
+    "schema_version": "1.0",
+    "system_id": "system:ev-drivetrain",
+    "system_kind": "mechanical",
+    "display_name": "Simplified EV drivetrain (teaching model)",
+    "revision": {
+      "kind": "content_hash",
+      "value": "58bf19329481e660e28899390f09c1b283019ec637af340931f14cf332fe63d7"
+    },
+    "nodes": [
+      {
+        "id": "part:battery",
+        "kind": "component",
+        "label": "Battery pack",
+        "summary": "Stores energy and supplies DC power.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.9
+      },
+      {
+        "id": "part:inverter",
+        "kind": "component",
+        "label": "Inverter",
+        "summary": "Converts the battery's DC into three-phase AC for the motor and controls its speed.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.85
+      },
+      {
+        "id": "part:motor",
+        "kind": "component",
+        "label": "Electric motor",
+        "summary": "Turns AC power into rotation (torque).",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.95
+      },
+      {
+        "id": "part:gearbox",
+        "kind": "component",
+        "label": "Reduction gearbox",
+        "summary": "Trades the motor's high speed for more torque.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.75
+      },
+      {
+        "id": "part:differential",
+        "kind": "component",
+        "label": "Differential",
+        "summary": "Splits torque between the two axles and lets the wheels turn at different speeds in a corner.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.75
+      },
+      {
+        "id": "part:axle-left",
+        "kind": "component",
+        "label": "Left axle",
+        "summary": "Carries torque from the differential to the left wheel.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.5
+      },
+      {
+        "id": "part:axle-right",
+        "kind": "component",
+        "label": "Right axle",
+        "summary": "Carries torque from the differential to the right wheel.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.5
+      },
+      {
+        "id": "part:wheel-left",
+        "kind": "component",
+        "label": "Left wheel",
+        "summary": "Turns the torque into motion on the road.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.7
+      },
+      {
+        "id": "part:wheel-right",
+        "kind": "component",
+        "label": "Right wheel",
+        "summary": "Turns the torque into motion on the road.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.7
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge:powers:part:battery->part:inverter",
+        "source_id": "part:battery",
+        "target_id": "part:inverter",
+        "relation": "powers",
+        "flows": [
+          "electrical"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:battery->part:inverter",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "DC power"
+      },
+      {
+        "id": "edge:powers:part:inverter->part:motor",
+        "source_id": "part:inverter",
+        "target_id": "part:motor",
+        "relation": "powers",
+        "flows": [
+          "electrical"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:inverter->part:motor",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": true,
+        "label": "3-phase AC"
+      },
+      {
+        "id": "edge:transmits:part:motor->part:gearbox",
+        "source_id": "part:motor",
+        "target_id": "part:gearbox",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:motor->part:gearbox",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      },
+      {
+        "id": "edge:transmits:part:gearbox->part:differential",
+        "source_id": "part:gearbox",
+        "target_id": "part:differential",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:gearbox->part:differential",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      },
+      {
+        "id": "edge:transmits:part:differential->part:axle-left",
+        "source_id": "part:differential",
+        "target_id": "part:axle-left",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:differential->part:axle-left",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      },
+      {
+        "id": "edge:transmits:part:differential->part:axle-right",
+        "source_id": "part:differential",
+        "target_id": "part:axle-right",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:differential->part:axle-right",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      },
+      {
+        "id": "edge:transmits:part:axle-left->part:wheel-left",
+        "source_id": "part:axle-left",
+        "target_id": "part:wheel-left",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:axle-left->part:wheel-left",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      },
+      {
+        "id": "edge:transmits:part:axle-right->part:wheel-right",
+        "source_id": "part:axle-right",
+        "target_id": "part:wheel-right",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:axle-right->part:wheel-right",
+          "ev:rule:drivetrain-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "torque"
+      }
+    ],
+    "paths": [
+      {
+        "id": "path:power",
+        "label": "Power to the wheels",
+        "flow": "torque",
+        "node_ids": [
+          "part:battery",
+          "part:inverter",
+          "part:motor",
+          "part:gearbox",
+          "part:differential",
+          "part:axle-left",
+          "part:axle-right",
+          "part:wheel-left",
+          "part:wheel-right"
+        ],
+        "edge_ids": [
+          "edge:powers:part:battery->part:inverter",
+          "edge:powers:part:inverter->part:motor",
+          "edge:transmits:part:motor->part:gearbox",
+          "edge:transmits:part:gearbox->part:differential",
+          "edge:transmits:part:differential->part:axle-left",
+          "edge:transmits:part:differential->part:axle-right",
+          "edge:transmits:part:axle-left->part:wheel-left",
+          "edge:transmits:part:axle-right->part:wheel-right"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:drivetrain-model"
+        ]
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev:license:procedural-geometry",
+      "title": "Geometry: procedural primitives",
+      "summary": "Every part is generated at runtime from simple shapes described in spec.json. No third-party meshes are used.",
+      "kind": "asset_license",
+      "truth_status": "authored_model",
+      "license": {
+        "name": "MIT",
+        "spdx": "MIT",
+        "attribution": "Procedural geometry authored for EXPLODE"
+      }
+    },
+    {
+      "id": "ev:rule:drivetrain-model",
+      "title": "Teaching model: simplified EV drivetrain",
+      "summary": "A simplified, stylized electric-vehicle drivetrain authored for teaching cause and effect. It is not a specific vehicle; parts, proportions, and positions are illustrative.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "A simplified, stylized electric-vehicle drivetrain authored for teaching cause and effect. It is not a specific vehicle; parts, proportions, and positions are illustrative.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:battery->part:inverter",
+      "title": "Model rule: DC power",
+      "summary": "The battery supplies DC power to the inverter.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The battery supplies DC power to the inverter.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:inverter->part:motor",
+      "title": "Model rule: 3-phase AC",
+      "summary": "The inverter drives the motor with three-phase AC. If this cable is disconnected, the motor gets no power and produces no torque.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The inverter drives the motor with three-phase AC. If this cable is disconnected, the motor gets no power and produces no torque.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:axle-left->part:wheel-left",
+      "title": "Model rule: torque",
+      "summary": "The left axle turns the left wheel.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The left axle turns the left wheel.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:axle-right->part:wheel-right",
+      "title": "Model rule: torque",
+      "summary": "The right axle turns the right wheel.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The right axle turns the right wheel.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:differential->part:axle-left",
+      "title": "Model rule: torque",
+      "summary": "The differential turns the left axle.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The differential turns the left axle.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:differential->part:axle-right",
+      "title": "Model rule: torque",
+      "summary": "The differential turns the right axle.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The differential turns the right axle.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:gearbox->part:differential",
+      "title": "Model rule: torque",
+      "summary": "The gearbox output turns the differential.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The gearbox output turns the differential.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:motor->part:gearbox",
+      "title": "Model rule: torque",
+      "summary": "The motor shaft turns the gearbox input.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The motor shaft turns the gearbox input.",
+        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+      }
+    }
+  ],
+  "layout": {
+    "system_id": "system:ev-drivetrain",
+    "anchor_distance": 0.65,
+    "cone_deg": {
+      "horizontal": 60,
+      "vertical": 50
+    },
+    "placements": {
+      "part:battery": {
+        "collapsed": [
+          0,
+          -0.045,
+          -0.02
+        ],
+        "exploded": [
+          -0.27,
+          -0.1,
+          0
+        ],
+        "radius": 0.0327
+      },
+      "part:inverter": {
+        "collapsed": [
+          0,
+          -0.005,
+          0.02
+        ],
+        "exploded": [
+          -0.17,
+          0.03,
+          0.01
+        ],
+        "radius": 0.0315
+      },
+      "part:motor": {
+        "collapsed": [
+          0,
+          0.035,
+          0.03
+        ],
+        "exploded": [
+          -0.07,
+          0.12,
+          0.02
+        ],
+        "radius": 0.0339
+      },
+      "part:gearbox": {
+        "collapsed": [
+          0.045,
+          0.02,
+          0.04
+        ],
+        "exploded": [
+          0.04,
+          0.12,
+          0.03
+        ],
+        "radius": 0.0293
+      },
+      "part:differential": {
+        "collapsed": [
+          0,
+          0,
+          0.05
+        ],
+        "exploded": [
+          0.13,
+          0.03,
+          0.04
+        ],
+        "radius": 0.0293
+      },
+      "part:axle-left": {
+        "collapsed": [
+          -0.055,
+          0,
+          0.05
+        ],
+        "exploded": [
+          0.06,
+          -0.09,
+          0.05
+        ],
+        "radius": 0.0235
+      },
+      "part:axle-right": {
+        "collapsed": [
+          0.055,
+          0,
+          0.05
+        ],
+        "exploded": [
+          0.21,
+          -0.07,
+          0.05
+        ],
+        "radius": 0.0235
+      },
+      "part:wheel-left": {
+        "collapsed": [
+          -0.1,
+          0,
+          0.05
+        ],
+        "exploded": [
+          0.02,
+          -0.2,
+          0.06
+        ],
+        "radius": 0.0281
+      },
+      "part:wheel-right": {
+        "collapsed": [
+          0.1,
+          0,
+          0.05
+        ],
+        "exploded": [
+          0.28,
+          -0.16,
+          0.06
+        ],
+        "radius": 0.0281
+      }
+    }
+  },
+  "lessons": [
+    {
+      "id": "lesson:drivetrain-tutorial",
+      "system_id": "system:ev-drivetrain",
+      "title": "How does power reach the wheels?",
+      "objectives": [
+        "Learn the gestures: explode, trace, unplug, replug, collapse.",
+        "See how one missing connection stops everything after it."
+      ],
+      "break_edge_id": "edge:powers:part:inverter->part:motor",
+      "repair_candidates": [
+        "part:gearbox",
+        "part:motor",
+        "part:battery"
+      ],
+      "misconception_on_wrong_prediction": "assumes-failure-is-local",
+      "steps": [
+        {
+          "id": "step:dt-explode",
+          "kind": "explode",
+          "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Pinch with both hands and pull apart to open it up.",
+          "expect": {
+            "type": "explode_at_least",
+            "factor": 0.8
+          },
+          "on_enter": [],
+          "hint": "Pinch with both hands and pull them apart, or press Explode."
+        },
+        {
+          "id": "step:dt-trace",
+          "kind": "trace",
+          "caption": "Press Trace to follow power from the battery to the wheels.",
+          "expect": {
+            "type": "trace",
+            "path_id": "path:power"
+          },
+          "on_enter": [],
+          "hint": "The Trace button is in the panel next to you."
+        },
+        {
+          "id": "step:dt-unplug",
+          "kind": "break",
+          "caption": "Unplug the cable between the inverter and the motor.",
+          "expect": {
+            "type": "unplug",
+            "edge_id": "edge:powers:part:inverter->part:motor"
+          },
+          "on_enter": [
+            {
+              "type": "highlight",
+              "target_ids": [
+                "part:inverter",
+                "part:motor"
+              ]
+            },
+            {
+              "type": "show_annotation",
+              "target_id": "part:inverter",
+              "text": "This cable carries AC power to the motor."
+            }
+          ],
+          "hint": "Select the highlighted cable, then press Unplug."
+        },
+        {
+          "id": "step:dt-predict",
+          "kind": "predict",
+          "caption": "Before you look: point at the first part that stops.",
+          "expect": {
+            "type": "predict"
+          },
+          "on_enter": [
+            {
+              "type": "ask_prediction",
+              "question": "Which part stops first?"
+            }
+          ],
+          "hint": "Which part was the cable feeding?",
+          "feedback": {
+            "correct": "Right. The motor stops first, and everything after it stops too.",
+            "incorrect": "Not quite. The motor stops first because it lost its power, and everything after it stops too."
+          }
+        },
+        {
+          "id": "step:dt-observe",
+          "kind": "observe",
+          "caption": "No power reaches the motor, so nothing downstream turns. This is the teaching model's rule, not a measurement.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "animate_flow",
+              "path_id": "path:power"
+            }
+          ]
+        },
+        {
+          "id": "step:dt-repair",
+          "kind": "repair",
+          "caption": "Plug the cable back into the right socket.",
+          "expect": {
+            "type": "repair",
+            "edge_id": "edge:powers:part:inverter->part:motor"
+          },
+          "on_enter": [],
+          "hint": "The cable came from the inverter. Which part needs AC power?"
+        },
+        {
+          "id": "step:dt-collapse",
+          "kind": "transition",
+          "caption": "Power flows again. Push your hands together, or press Collapse, to close it up. Next: the same moves on a real codebase.",
+          "expect": {
+            "type": "collapse_below",
+            "factor": 0.1
+          },
+          "on_enter": [],
+          "hint": "Bring your hands together, or press Collapse."
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "parts": {
+      "part:battery": {
+        "shape": "box",
+        "size": [
+          0.2,
+          0.025,
+          0.12
+        ],
+        "color": "#3d6f8e",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:inverter": {
+        "shape": "box",
+        "size": [
+          0.06,
+          0.03,
+          0.05
+        ],
+        "color": "#8a8f98",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:motor": {
+        "shape": "cylinder",
+        "size": [
+          0.06,
+          0.08,
+          0.06
+        ],
+        "color": "#c47f2c",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "part:gearbox": {
+        "shape": "gear",
+        "size": [
+          0.05,
+          0.02,
+          0.05
+        ],
+        "color": "#b8b9bd",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "part:differential": {
+        "shape": "gear",
+        "size": [
+          0.045,
+          0.03,
+          0.045
+        ],
+        "color": "#a4a6ab",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "part:axle-left": {
+        "shape": "cylinder",
+        "size": [
+          0.012,
+          0.08,
+          0.012
+        ],
+        "color": "#6f7178",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "part:axle-right": {
+        "shape": "cylinder",
+        "size": [
+          0.012,
+          0.08,
+          0.012
+        ],
+        "color": "#6f7178",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "part:wheel-left": {
+        "shape": "torus",
+        "size": [
+          0.07,
+          0.022,
+          0.07
+        ],
+        "color": "#2b2d31",
+        "rotation_deg": [
+          0,
+          90,
+          0
+        ],
+        "spin_axis": "x"
+      },
+      "part:wheel-right": {
+        "shape": "torus",
+        "size": [
+          0.07,
+          0.022,
+          0.07
+        ],
+        "color": "#2b2d31",
+        "rotation_deg": [
+          0,
+          90,
+          0
+        ],
+        "spin_axis": "x"
+      }
+    }
+  },
+  "content_hash": "279a738d573223a581c68f65a9750b41ccd7e0a232f8f7c86054aa7333f4cc42",
+  "generated_at": "2026-10-25T04:00:53.189Z",
+  "generator": "explode-content-tools@0.1.0"
+}

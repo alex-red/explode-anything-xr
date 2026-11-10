@@ -1,0 +1,18 @@
+[
+  {
+    "id": "path:login-request",
+    "label": "Login request",
+    "flow": "request",
+    "node_ids": [
+      "route:post:/login",
+      "fn:src/http/middleware.ts#ratelimit",
+      "fn:src/http/middleware.ts#parsejsonbody",
+      "fn:src/routes/login.ts#loginhandler",
+      "fn:src/auth/service.ts#authservice.login",
+      "fn:src/users/repository.ts#userrepository.findbyemail",
+      "fn:src/auth/password.ts#verifypassword",
+      "fn:src/sessions/store.ts#sessionstore.create",
+      "fn:src/auth/tokens.ts#signtoken"
+    ]
+  }
+]

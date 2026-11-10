@@ -1,0 +1,72 @@
+{
+  "id": "lesson:drivetrain-tutorial",
+  "system_id": "system:ev-drivetrain",
+  "title": "How does power reach the wheels?",
+  "objectives": [
+    "Learn the gestures: explode, trace, unplug, replug, collapse.",
+    "See how one missing connection stops everything after it."
+  ],
+  "break_edge_id": "edge:powers:part:inverter->part:motor",
+  "repair_candidates": ["part:gearbox", "part:motor", "part:battery"],
+  "misconception_on_wrong_prediction": "assumes-failure-is-local",
+  "steps": [
+    {
+      "id": "step:dt-explode",
+      "kind": "explode",
+      "caption": "This is a simplified EV drivetrain, a teaching model and not a real car's internals. Pinch with both hands and pull apart to open it up.",
+      "hint": "Pinch with both hands and pull them apart, or press Explode.",
+      "expect": { "type": "explode_at_least", "factor": 0.8 }
+    },
+    {
+      "id": "step:dt-trace",
+      "kind": "trace",
+      "caption": "Press Trace to follow power from the battery to the wheels.",
+      "hint": "The Trace button is in the panel next to you.",
+      "expect": { "type": "trace", "path_id": "path:power" }
+    },
+    {
+      "id": "step:dt-unplug",
+      "kind": "break",
+      "caption": "Unplug the cable between the inverter and the motor.",
+      "hint": "Select the highlighted cable, then press Unplug.",
+      "expect": { "type": "unplug", "edge_id": "edge:powers:part:inverter->part:motor" },
+      "on_enter": [
+        { "type": "highlight", "target_ids": ["part:inverter", "part:motor"] },
+        { "type": "show_annotation", "target_id": "part:inverter", "text": "This cable carries AC power to the motor." }
+      ]
+    },
+    {
+      "id": "step:dt-predict",
+      "kind": "predict",
+      "caption": "Before you look: point at the first part that stops.",
+      "hint": "Which part was the cable feeding?",
+      "expect": { "type": "predict" },
+      "on_enter": [{ "type": "ask_prediction", "question": "Which part stops first?" }],
+      "feedback": {
+        "correct": "Right. The motor stops first, and everything after it stops too.",
+        "incorrect": "Not quite. The motor stops first because it lost its power, and everything after it stops too."
+      }
+    },
+    {
+      "id": "step:dt-observe",
+      "kind": "observe",
+      "caption": "No power reaches the motor, so nothing downstream turns. This is the teaching model's rule, not a measurement.",
+      "expect": { "type": "next" },
+      "on_enter": [{ "type": "animate_flow", "path_id": "path:power" }]
+    },
+    {
+      "id": "step:dt-repair",
+      "kind": "repair",
+      "caption": "Plug the cable back into the right socket.",
+      "hint": "The cable came from the inverter. Which part needs AC power?",
+      "expect": { "type": "repair", "edge_id": "edge:powers:part:inverter->part:motor" }
+    },
+    {
+      "id": "step:dt-collapse",
+      "kind": "transition",
+      "caption": "Power flows again. Push your hands together, or press Collapse, to close it up. Next: the same moves on a real codebase.",
+      "hint": "Bring your hands together, or press Collapse.",
+      "expect": { "type": "collapse_below", "factor": 0.1 }
+    }
+  ]
+}

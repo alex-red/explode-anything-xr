@@ -1,0 +1,381 @@
+{
+  "system_id": "system:ev-drivetrain",
+  "display_name": "Simplified EV drivetrain (teaching model)",
+  "model_statement": "A simplified, stylized electric-vehicle drivetrain authored for teaching cause and effect. It is not a specific vehicle; parts, proportions, and positions are illustrative.",
+  "anchor_distance": 0.65,
+  "parts": [
+    {
+      "id": "part:battery",
+      "label": "Battery pack",
+      "summary": "Stores energy and supplies DC power.",
+      "importance": 0.9,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.2,
+          0.025,
+          0.12
+        ],
+        "color": "#3d6f8e"
+      },
+      "collapsed": [
+        0,
+        -0.045,
+        -0.02
+      ],
+      "exploded": [
+        -0.27,
+        -0.1,
+        0
+      ]
+    },
+    {
+      "id": "part:inverter",
+      "label": "Inverter",
+      "summary": "Converts the battery's DC into three-phase AC for the motor and controls its speed.",
+      "importance": 0.85,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.06,
+          0.03,
+          0.05
+        ],
+        "color": "#8a8f98"
+      },
+      "collapsed": [
+        0,
+        -0.005,
+        0.02
+      ],
+      "exploded": [
+        -0.17,
+        0.03,
+        0.01
+      ]
+    },
+    {
+      "id": "part:motor",
+      "label": "Electric motor",
+      "summary": "Turns AC power into rotation (torque).",
+      "importance": 0.95,
+      "shape": {
+        "shape": "cylinder",
+        "size": [
+          0.06,
+          0.08,
+          0.06
+        ],
+        "color": "#c47f2c",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        0,
+        0.035,
+        0.03
+      ],
+      "exploded": [
+        -0.07,
+        0.12,
+        0.02
+      ]
+    },
+    {
+      "id": "part:gearbox",
+      "label": "Reduction gearbox",
+      "summary": "Trades the motor's high speed for more torque.",
+      "importance": 0.75,
+      "shape": {
+        "shape": "gear",
+        "size": [
+          0.05,
+          0.02,
+          0.05
+        ],
+        "color": "#b8b9bd",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        0.045,
+        0.02,
+        0.04
+      ],
+      "exploded": [
+        0.04,
+        0.12,
+        0.03
+      ]
+    },
+    {
+      "id": "part:differential",
+      "label": "Differential",
+      "summary": "Splits torque between the two axles and lets the wheels turn at different speeds in a corner.",
+      "importance": 0.75,
+      "shape": {
+        "shape": "gear",
+        "size": [
+          0.045,
+          0.03,
+          0.045
+        ],
+        "color": "#a4a6ab",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        0,
+        0,
+        0.05
+      ],
+      "exploded": [
+        0.13,
+        0.03,
+        0.04
+      ]
+    },
+    {
+      "id": "part:axle-left",
+      "label": "Left axle",
+      "summary": "Carries torque from the differential to the left wheel.",
+      "importance": 0.5,
+      "shape": {
+        "shape": "cylinder",
+        "size": [
+          0.012,
+          0.08,
+          0.012
+        ],
+        "color": "#6f7178",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        -0.055,
+        0,
+        0.05
+      ],
+      "exploded": [
+        0.06,
+        -0.09,
+        0.05
+      ]
+    },
+    {
+      "id": "part:axle-right",
+      "label": "Right axle",
+      "summary": "Carries torque from the differential to the right wheel.",
+      "importance": 0.5,
+      "shape": {
+        "shape": "cylinder",
+        "size": [
+          0.012,
+          0.08,
+          0.012
+        ],
+        "color": "#6f7178",
+        "rotation_deg": [
+          0,
+          0,
+          90
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        0.055,
+        0,
+        0.05
+      ],
+      "exploded": [
+        0.21,
+        -0.07,
+        0.05
+      ]
+    },
+    {
+      "id": "part:wheel-left",
+      "label": "Left wheel",
+      "summary": "Turns the torque into motion on the road.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "torus",
+        "size": [
+          0.07,
+          0.022,
+          0.07
+        ],
+        "color": "#2b2d31",
+        "rotation_deg": [
+          0,
+          90,
+          0
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        -0.1,
+        0,
+        0.05
+      ],
+      "exploded": [
+        0.02,
+        -0.2,
+        0.06
+      ]
+    },
+    {
+      "id": "part:wheel-right",
+      "label": "Right wheel",
+      "summary": "Turns the torque into motion on the road.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "torus",
+        "size": [
+          0.07,
+          0.022,
+          0.07
+        ],
+        "color": "#2b2d31",
+        "rotation_deg": [
+          0,
+          90,
+          0
+        ],
+        "spin_axis": "x"
+      },
+      "collapsed": [
+        0.1,
+        0,
+        0.05
+      ],
+      "exploded": [
+        0.28,
+        -0.16,
+        0.06
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "part:battery",
+      "target": "part:inverter",
+      "relation": "powers",
+      "flows": [
+        "electrical"
+      ],
+      "label": "DC power",
+      "mutable": false,
+      "rule": "The battery supplies DC power to the inverter."
+    },
+    {
+      "source": "part:inverter",
+      "target": "part:motor",
+      "relation": "powers",
+      "flows": [
+        "electrical"
+      ],
+      "label": "3-phase AC",
+      "mutable": true,
+      "rule": "The inverter drives the motor with three-phase AC. If this cable is disconnected, the motor gets no power and produces no torque."
+    },
+    {
+      "source": "part:motor",
+      "target": "part:gearbox",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The motor shaft turns the gearbox input."
+    },
+    {
+      "source": "part:gearbox",
+      "target": "part:differential",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The gearbox output turns the differential."
+    },
+    {
+      "source": "part:differential",
+      "target": "part:axle-left",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The differential turns the left axle."
+    },
+    {
+      "source": "part:differential",
+      "target": "part:axle-right",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The differential turns the right axle."
+    },
+    {
+      "source": "part:axle-left",
+      "target": "part:wheel-left",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The left axle turns the left wheel."
+    },
+    {
+      "source": "part:axle-right",
+      "target": "part:wheel-right",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "torque",
+      "mutable": false,
+      "rule": "The right axle turns the right wheel."
+    }
+  ],
+  "path": {
+    "id": "path:power",
+    "label": "Power to the wheels",
+    "flow": "torque",
+    "node_ids": [
+      "part:battery",
+      "part:inverter",
+      "part:motor",
+      "part:gearbox",
+      "part:differential",
+      "part:axle-left",
+      "part:axle-right",
+      "part:wheel-left",
+      "part:wheel-right"
+    ]
+  }
+}

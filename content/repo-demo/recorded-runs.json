@@ -1,0 +1,71 @@
+{
+  "runs": {
+    "baseline": {
+      "inputs_sha256": "965b6d76f14e5a89d685fb03f59598bdaca5639a45880bc787179ef9e49b3c9d",
+      "record": {
+        "command": "node --test --test-concurrency=1 --test-reporter=tap test/*.test.ts",
+        "node_version": "v24.15.0",
+        "recorded_at": "2026-10-25T04:00:54.191Z",
+        "exit_code": 0,
+        "passed": 10,
+        "failed": 0,
+        "failing_tests": [],
+        "output_excerpt": "tests 10 · pass 10 · fail 0",
+        "output_sha256": "1f5bfc8a9f8bb9469acb7717c182a26970e36aa8bf5690173ca444c19537778c"
+      }
+    },
+    "mut:drop-body-parser": {
+      "inputs_sha256": "6074138f6340b02bc1c6ca9629e50aeb2d6a515f797a0ff1071912593fcf6e41",
+      "record": {
+        "command": "node --test --test-concurrency=1 --test-reporter=tap test/*.test.ts",
+        "node_version": "v24.15.0",
+        "recorded_at": "2026-10-25T04:00:55.720Z",
+        "exit_code": 1,
+        "passed": 8,
+        "failed": 2,
+        "failing_tests": [
+          "POST /login through the router returns a token that works for GET /me",
+          "POST /login is rate limited per client"
+        ],
+        "output_excerpt": "tests 10 · pass 8 · fail 2\n✗ POST /login through the router returns a token that works for GET /me\n  Expected values to be strictly equal:\n✗ POST /login is rate limited per client\n  Expected values to be strictly deep-equal:",
+        "output_sha256": "195fee57b6803e74c84524e5207885b3fbd17dab72683177e3132fb5e4b8345b"
+      }
+    },
+    "mut:skip-password-verify": {
+      "inputs_sha256": "5c56685f230738108adf1a8250af80e4aa6279a8fd862baf7f44f5193bab9009",
+      "record": {
+        "command": "node --test --test-concurrency=1 --test-reporter=tap test/*.test.ts",
+        "node_version": "v24.15.0",
+        "recorded_at": "2026-10-25T04:00:55.242Z",
+        "exit_code": 1,
+        "passed": 7,
+        "failed": 3,
+        "failing_tests": [
+          "login succeeds with the right password and returns a token",
+          "a session token validates to its user until logout",
+          "POST /login through the router returns a token that works for GET /me"
+        ],
+        "output_excerpt": "tests 10 · pass 7 · fail 3\n✗ login succeeds with the right password and returns a token\n  Expected values to be strictly equal:\n✗ a session token validates to its user until logout\n  The expression evaluated to a falsy value:\n✗ POST /login through the router returns a token that works for GET /me\n  Expected values to be strictly equal:",
+        "output_sha256": "535c5dbf6d1fcd215e938a4991e81dc4d710db559ba180725548542274753000"
+      }
+    },
+    "mut:skip-session-create": {
+      "inputs_sha256": "82caf9b6f7c701d916d30b1bf8e94be3544924c5ec490edf4fc92fd45802627a",
+      "record": {
+        "command": "node --test --test-concurrency=1 --test-reporter=tap test/*.test.ts",
+        "node_version": "v24.15.0",
+        "recorded_at": "2026-10-25T04:00:54.822Z",
+        "exit_code": 1,
+        "passed": 7,
+        "failed": 3,
+        "failing_tests": [
+          "login succeeds with the right password and returns a token",
+          "a session token validates to its user until logout",
+          "POST /login through the router returns a token that works for GET /me"
+        ],
+        "output_excerpt": "tests 10 · pass 7 · fail 3\n✗ login succeeds with the right password and returns a token\n  \"Cannot read properties of null (reading 'token')\"\n✗ a session token validates to its user until logout\n  \"Cannot read properties of null (reading 'token')\"\n✗ POST /login through the router returns a token that works for GET /me\n  \"Cannot read properties of null (reading 'token')\"",
+        "output_sha256": "c5dc6a68851e38910237edb70323aee59e69805e64a19d9fd23cc036b06d9b71"
+      }
+    }
+  }
+}

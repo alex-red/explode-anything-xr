@@ -1,0 +1,26 @@
+[
+  {
+    "id": "mut:skip-session-create",
+    "edge_id": "edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create",
+    "file": "src/auth/service.ts",
+    "find": "    const session = this.sessions.create(user.id);",
+    "replace": "    const session = null as unknown as { token: string; expiresAt: number }; // mutation: SessionStore.create is never called",
+    "description": "AuthService.login no longer calls SessionStore.create, so no session or signed token is created."
+  },
+  {
+    "id": "mut:skip-password-verify",
+    "edge_id": "edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/auth/password.ts#verifypassword",
+    "file": "src/auth/service.ts",
+    "find": "    const valid = await verifyPassword(password, user.passwordHash);",
+    "replace": "    const valid = false; // mutation: verifyPassword is never called",
+    "description": "AuthService.login no longer calls verifyPassword, so every password is treated as wrong."
+  },
+  {
+    "id": "mut:drop-body-parser",
+    "edge_id": "edge:handles:fn:src/http/middleware.ts#ratelimit->fn:src/http/middleware.ts#parsejsonbody",
+    "file": "src/app/create-app.ts",
+    "find": "  router.post('/login', rateLimit(limiter), parseJsonBody, loginHandler(auth));",
+    "replace": "  router.post('/login', rateLimit(limiter), loginHandler(auth));",
+    "description": "The /login route no longer runs parseJsonBody after rateLimit, so the handler never sees the credentials."
+  }
+]

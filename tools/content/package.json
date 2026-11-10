@@ -1,0 +1,12 @@
+{
+  "name": "@explode/content-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@explode/contracts": "0.1.0",
+    "@explode/indexer": "0.1.0",
+    "@explode/lesson-engine": "0.1.0"
+  }
+}
