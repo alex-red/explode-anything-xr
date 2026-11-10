@@ -4,6 +4,7 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 
 | Doc | What it's for |
 |---|---|
+| [FINAL_PLAN.md](FINAL_PLAN.md) | **Current plan (v3, Nov 9):** actual state, link-based submission, code-review findings, day-by-day to Nov 18. Supersedes PLAN.md's schedule and the APK packaging steps |
 | [REVIEW.md](REVIEW.md) | Review of the original handoff: corrections, gaps, cuts, open **VERIFY** items, traceability |
 | [PRODUCT_SPEC.md](PRODUCT_SPEC.md) | Pitch, defining loop, users, prior art, award strategy, P0/P1/P2 scope, honesty rules |
 | [INTERACTION_SPEC.md](INTERACTION_SPEC.md) | First five minutes, gestures, visual language, panels, tutor persona, accessibility |
