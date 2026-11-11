@@ -4,7 +4,7 @@
  * Presses go through the same handler registry InteractionSystem uses for XR rays and mouse.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventDispatcher, Group, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
+import { EventDispatcher, Group, Matrix4, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
 import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import headsetJson from '../src/content/headset.bundle.json';
@@ -132,9 +132,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown } = {}) {
+function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown } = {}) {
   const w = makeWorld();
-  const app = startApp(w.world as never, opts.bundles ?? bundles, null, debug, (opts.room ?? null) as never);
+  const app = startApp(w.world as never, opts.bundles ?? bundles, null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -922,5 +922,105 @@ describe('scene harness: headset opening lesson', () => {
     h.press(h.button(/^Recenter$/));
     expect(app.placedOn).toBe('air');
     expect(ui.lowestPanelY()).toBeLessThan(-0.3);
+  });
+});
+
+describe('scene harness: the desk spot is remembered across sessions', () => {
+  const DESK = { x: 0.1, y: 0.74, z: -0.35 };
+  const roomWithDesk = () => ({
+    planeCount: 1,
+    onPlaneAdded: null,
+    pickDesk: (_v: unknown, out: { x: number; y: number; z: number; index: number }) => {
+      out.x = DESK.x;
+      out.y = DESK.y;
+      out.z = DESK.z;
+      out.index = 0;
+      return true;
+    },
+  });
+  /** A persistent anchor: `id` null until it is "restored"; `m` is its pose this session. */
+  const anchor = (id: string | null) => {
+    const a = { current: id, m: new Matrix4(), id: () => a.current, matrix: () => a.m };
+    return a;
+  };
+  const enter = (h: ReturnType<typeof setup>) => {
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'alpha-blend', inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+  };
+  const placed = (h: ReturnType<typeof setup>) => h.app as unknown as { placedOn: string; anchor: Object3D };
+
+  it('saves the desk spot against the anchor and, next session, returns to it wherever the anchor now reports', () => {
+    const a1 = anchor('anchor-1');
+    const h = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: a1 });
+    enter(h);
+    expect(placed(h).placedOn).toBe('desk');
+    const first = placed(h).anchor.position.clone();
+    expect(localStorage.getItem('explode:desk:v1')).toContain('anchor-1');
+
+    // Next session: the room picker would choose a different spot, and the reference space has
+    // moved 0.5 m along x, so the same real anchor reports itself there.
+    const a2 = anchor(null);
+    a2.m.makeTranslation(0.5, 0, 0);
+    const room = roomWithDesk();
+    room.pickDesk = (_v, out) => {
+      out.x = -0.4;
+      out.y = 0.7;
+      out.z = -0.2;
+      out.index = 0;
+      return true;
+    };
+    const h2 = setup(false, { bundles: shipped, room, anchors: a2 });
+    enter(h2);
+    expect(placed(h2).placedOn).toBe('desk'); // anchor not restored yet: the usual pick
+    a2.current = 'anchor-1'; // the SDK restores the persistent anchor a moment later
+    h2.frames(5);
+    expect(placed(h2).placedOn).toBe('remembered');
+    expect(placed(h2).anchor.position.x).toBeCloseTo(first.x + 0.5, 5);
+    expect(placed(h2).anchor.position.y).toBeCloseTo(first.y, 5);
+    expect(placed(h2).anchor.position.z).toBeCloseTo(first.z, 5);
+  });
+
+  it('a different anchor, a late anchor, or Recenter means a fresh pick', () => {
+    const h = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-1') });
+    enter(h);
+    expect(localStorage.getItem('explode:desk:v1')).toContain('anchor-1');
+
+    const other = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-2') });
+    enter(other);
+    other.frames(10);
+    expect(placed(other).placedOn).toBe('desk'); // a new anchor: the old spot means nothing
+    expect(localStorage.getItem('explode:desk:v1')).toContain('anchor-2'); // and the new one is remembered
+
+    const late = anchor(null);
+    const h3 = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: late });
+    enter(h3);
+    h3.frames(72 * 7); // past the recall window
+    late.current = 'anchor-2';
+    h3.frames(5);
+    expect(placed(h3).placedOn).toBe('desk'); // too late to move the stage under the viewer
+
+    const a4 = anchor('anchor-2');
+    a4.m.makeTranslation(2, 0, 0);
+    const h4 = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: a4 });
+    enter(h4);
+    expect(placed(h4).placedOn).toBe('remembered');
+    h4.press(h4.button(/^Recenter$/));
+    h4.frames(5);
+    expect(placed(h4).placedOn).toBe('desk'); // the viewer's choice wins, and is remembered instead
+  });
+
+  it('never moves the stage outside mixed reality, and forgetting progress forgets the spot', () => {
+    const h = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-1') });
+    enter(h);
+    expect(localStorage.getItem('explode:desk:v1')).not.toBeNull();
+    for (const fn of keyListeners) fn({ key: '0' });
+    expect(localStorage.getItem('explode:desk:v1')).toBeNull();
+
+    const page = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-1') });
+    page.frames(20);
+    expect(placed(page).placedOn).toBe('air'); // the 2D page has no desk
   });
 });

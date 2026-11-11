@@ -15,7 +15,8 @@
       "features": {
         "handTracking": true,
         "planeDetection": true,
-        "meshDetection": true
+        "meshDetection": true,
+        "anchors": true
       }
     },
     "input": {

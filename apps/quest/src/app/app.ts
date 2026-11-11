@@ -4,6 +4,7 @@ import { currentLesson, currentStep } from '@explode/lesson-engine';
 import { Sfx } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
+import { DeskMemory, type AnchorFrame, type DeskPose } from './desk-memory.ts';
 import { GraphView, STAGE_Y } from './graph-view.ts';
 import type { RoomSystem } from './room.ts';
 import { Store } from './store.ts';
@@ -17,6 +18,7 @@ const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay withi
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
 const DESK_CLEARANCE = 0.005; // m the stage floats above the desk, so it never z-fights the real surface
 const LATE_PLANE_WINDOW = 3; // s after a session starts in which a newly reported desk still moves the stage
+const RECALL_WINDOW = 6; // s after a session starts in which a restored anchor still returns the stage to its remembered spot
 const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
 const VIEW_EASE = 18; // 1/s: how fast the model follows a hand gesture; high enough to feel held
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
@@ -54,8 +56,14 @@ export class ExplodeApp {
   private readonly fwd = new Vector3();
   private readonly viewer: Viewer = { x: 0, y: 0, z: 0, fx: 0, fz: -1 };
   private readonly desk: Placement = { x: 0, y: 0, z: 0, index: -1 };
-  /** Where the last recenter put the stage: on a detected desk, or floating in front of the eyes. */
-  private placedOn: 'desk' | 'air' = 'air';
+  /** Where the stage is: on a detected desk, back on the desk spot remembered from a past session, or floating. */
+  private placedOn: 'desk' | 'remembered' | 'air' = 'air';
+  private readonly deskMemory = new DeskMemory();
+  private readonly recalled: DeskPose = { x: 0, y: 0, z: 0, yaw: 0 };
+  /** A desk placement waiting for the anchor before it can be remembered. */
+  private pendingSave = false;
+  /** This session has settled where the stage goes: recalled, or the viewer chose with Recenter. */
+  private recallSettled = false;
   private sessionAge = 0;
 
   constructor(
@@ -64,6 +72,7 @@ export class ExplodeApp {
     tutorUrl: string | null,
     debug = false,
     private readonly room: RoomSystem | null = null,
+    private readonly anchors: (AnchorFrame & { tick?(): void }) | null = null,
   ) {
     const software = bundles.find((b) => b.graph.system_kind === 'software');
     const tutorials = bundles.filter((b) => b.graph.system_kind === 'mechanical');
@@ -121,6 +130,8 @@ export class ExplodeApp {
     this.syncRoomDim();
     this.ui.dirty = true;
     this.sessionAge = 0;
+    this.pendingSave = false;
+    this.recallSettled = false;
     this.requestRecenter(SESSION_START_SETTLE_FRAMES);
   }
 
@@ -138,6 +149,8 @@ export class ExplodeApp {
     const camera = this.world.camera;
     this.sessionAge += dt;
     if (this.needsRecenter) this.tryRecenter();
+    this.anchors?.tick?.();
+    this.rememberDesk();
     this.backdrop.update(camera, dt);
     this.hands.update();
     this.applyViewPose(dt);
@@ -159,6 +172,37 @@ export class ExplodeApp {
       this.uiRefresh = 0;
       this.ui.render(this.captionModel(), this.openEvidence());
     }
+  }
+
+  /**
+   * Return the stage to the desk spot remembered from an earlier session once the persistent
+   * anchor is back, or remember a new desk placement once there is an anchor to remember it by.
+   */
+  private rememberDesk(): void {
+    if (!this.anchors || !this.world.session || !this.backdrop.passthroughAvailable || this.needsRecenter) return;
+    if (!this.recallSettled && this.sessionAge < RECALL_WINDOW && this.deskMemory.recall(this.anchors, this.recalled)) {
+      const r = this.recalled;
+      this.anchor.position.set(r.x, r.y, r.z);
+      this.anchor.rotation.set(0, r.yaw, 0);
+      this.placedOn = 'remembered';
+      this.ui.setFloor(STAGE_Y);
+      this.hands.gestures.reset();
+      this.recallSettled = true;
+      this.pendingSave = false;
+      if (this.debug.enabled) console.info('[explode:room] remembered desk spot');
+      return;
+    }
+    if (this.pendingSave && this.deskMemory.save(this.anchors, { x: this.anchor.position.x, y: this.anchor.position.y, z: this.anchor.position.z, yaw: this.anchor.rotation.y })) {
+      this.pendingSave = false;
+      this.recallSettled = true; // this session's spot is now the remembered one; never "recall" it
+      if (this.debug.enabled) console.info('[explode:room] desk spot saved');
+    }
+  }
+
+  /** Recenter asked for by the viewer: it re-picks the desk and replaces any remembered spot. */
+  private recenterByUser(): void {
+    this.recallSettled = true;
+    this.requestRecenter();
   }
 
   private uiClock = 1;
@@ -333,7 +377,7 @@ export class ExplodeApp {
     else if (k === 'u') this.store.undo();
     else if (k === 'r') this.store.restart();
     else if (k === 'x') void this.askTutor('explain_selection');
-    else if (k === 'c') this.needsRecenter = true;
+    else if (k === 'c') this.recenterByUser();
     // Equivalents of the hand gestures that move the model (Recenter resets them).
     else if (k === '=' || k === '+') this.hands.gestures.zoomBy(1.25);
     else if (k === '-') this.hands.gestures.zoomBy(0.8);
@@ -372,6 +416,7 @@ export class ExplodeApp {
   /** Testing only: forget saved progress in both systems and start again at the tutorial. */
   private forgetProgress(): void {
     Store.clearSaved();
+    DeskMemory.forget();
     this.loadSystem(this.opening.graph.system_id, false);
   }
 
@@ -431,7 +476,7 @@ export class ExplodeApp {
       { id: 'hint', label: () => 'Hint', enabled: () => step() !== null, onPress: () => void this.askTutor('hint') },
       { id: 'undo', label: () => 'Undo', enabled: () => this.store.log.length > 0, onPress: () => this.store.undo() },
       { id: 'reset', label: () => 'Reset', enabled: () => true, onPress: () => this.store.restart() },
-      { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => (this.needsRecenter = true) },
+      { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => this.recenterByUser() },
       { id: 'guide', label: () => (this.ui.guideVisible ? 'Hide gestures' : 'Gestures'), enabled: () => true, onPress: () => this.ui.toggleGuide() },
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
@@ -534,14 +579,19 @@ export class ExplodeApp {
     if (this.world.session && this.backdrop.passthroughAvailable && this.room?.pickDesk(v, this.desk)) {
       this.anchor.position.set(this.desk.x, this.desk.y - STAGE_Y + DESK_CLEARANCE, this.desk.z);
       this.placedOn = 'desk';
+      this.pendingSave = true; // remembered once the anchor is there (rememberDesk)
     } else {
       this.anchor.position.copy(this.tmp).addScaledVector(this.fwd, ANCHOR_DISTANCE);
       this.anchor.position.y -= ANCHOR_DROP;
       this.placedOn = 'air';
+      this.pendingSave = false;
     }
     // On a desk nothing may sit below the surface, so the toolbar and gesture card rise onto it.
     this.ui.setFloor(this.placedOn === 'desk' ? STAGE_Y : null);
-    if (this.debug.enabled) console.info('[explode:room]', this.placedOn, 'planes', this.room?.planeCount ?? 0);
+    if (this.debug.enabled) {
+      console.info('[explode:room]', this.placedOn, 'planes', this.room?.planeCount ?? 0, 'eye', v.y.toFixed(2));
+      if (this.room) console.info('[explode:surfaces]', JSON.stringify(this.room.describe()));
+    }
     this.anchor.rotation.set(0, Math.atan2(-this.fwd.x, -this.fwd.z), 0);
     this.hands.gestures.reset(); // Recenter also undoes any move, zoom or turn of the model
     this.needsRecenter = false;
@@ -557,8 +607,15 @@ function shortName(b: ContentBundle): string {
 
 let app: ExplodeApp | null = null;
 
-export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false, room: RoomSystem | null = null): ExplodeApp {
-  app = new ExplodeApp(world, bundles, tutorUrl, debug, room);
+export function startApp(
+  world: World,
+  bundles: ContentBundle[],
+  tutorUrl: string | null,
+  debug = false,
+  room: RoomSystem | null = null,
+  anchors: (AnchorFrame & { tick?(): void }) | null = null,
+): ExplodeApp {
+  app = new ExplodeApp(world, bundles, tutorUrl, debug, room, anchors);
   world.registerSystem(AppSystem);
   world.renderer.xr.addEventListener('sessionstart', () => app?.onSessionChange(true));
   world.renderer.xr.addEventListener('sessionend', () => app?.onSessionChange(false));

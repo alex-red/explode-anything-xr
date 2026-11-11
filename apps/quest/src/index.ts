@@ -1,10 +1,11 @@
-import { SessionMode, World } from '@iwsdk/core';
+import { SceneUnderstandingSystem, SessionMode, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { ContentBundle } from '@explode/contracts';
 import drivetrain from './content/drivetrain.bundle.json';
 import headset from './content/headset.bundle.json';
 import repoDemo from './content/repo-demo.bundle.json';
 import { startApp } from './app/app.ts';
+import { SdkAnchorFrame } from './app/desk-memory.ts';
 import { InteractionSystem } from './app/interactions.ts';
 import { RoomSystem } from './app/room.ts';
 
@@ -34,7 +35,9 @@ async function main(): Promise<void> {
   world.registerSystem(RoomSystem);
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
-  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null);
+  // The persistent anchor lets the stage return to the same spot on the desk next session.
+  const anchors = new SdkAnchorFrame(world.getSystem(SceneUnderstandingSystem) ?? null);
+  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors);
   // Dev only: a "Webcam hands" panel to drive the emulated hands from a camera
   // (src/dev/webcam-hands.ts); `?webcam` starts it on load. `import.meta.env.DEV` is false in a
   // build, so this branch and its chunk are dropped.

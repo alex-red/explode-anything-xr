@@ -31,6 +31,20 @@ export class RoomSystem extends createSystem({ planes: { required: [XRPlane] } }
     return this.queries.planes.entities.size;
   }
 
+  /**
+   * Debug only (allocates): every detected surface as `label y=… w×d at (x, z)`, as last read by
+   * pickDesk. On a headset this answers which labels and sizes the room setup really returns.
+   */
+  describe(count = this.planeCount): string[] {
+    const out: string[] = [];
+    for (let i = 0; i < Math.min(count, this.surfaces.length); i++) {
+      const s = this.surfaces[i]!;
+      const f = (v: number) => v.toFixed(2);
+      out.push(`${s.label || '(none)'}${s.horizontal ? '' : ' (vertical)'} y=${f(s.y)} ${f(s.halfW * 2)}×${f(s.halfD * 2)} at (${f(s.x)}, ${f(s.z)})`);
+    }
+    return out;
+  }
+
   /** Writes the desk placement to `out` and returns true, or returns false when there is none. */
   pickDesk(viewer: Viewer, out: Placement): boolean {
     let count = 0;
