@@ -46,7 +46,7 @@
 
 - [ ] Title and tagline (within the form's character limits)
 - [ ] Description: inspiration, how it works, technical implementation, novelty, **known limitations**, future work, target launch date
-- [ ] Discloses: "`auth-service` is a sample service written for this demo"; "drivetrain is a simplified teaching model"; "Observed = recorded at build time"
+- [ ] Discloses: "`auth-service` is a sample service written for this demo"; "the headset and the drivetrain are simplified teaching models, not the devices' actual internals; not affiliated with or endorsed by Meta"; "dimming your room is an illustration"; "Observed = recorded at build time". Draft text: [DEVPOST_DRAFT.md](DEVPOST_DRAFT.md)
 - [ ] Track and division selected
 - [ ] The production URL
 - [ ] Public YouTube/Vimeo video, under the length limit, captions, genuine capture labeled "emulator capture" ([VIDEO_STORYBOARD.md](VIDEO_STORYBOARD.md))

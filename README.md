@@ -1,11 +1,13 @@
 # EXPLODE
 
-**Pull a system apart with your hands. Trace what flows through it. Break one connection, watch the consequence, and fix it yourself.**
+**Pull apart the headset you are wearing, on your own desk. Then do the same to a codebase.**
 
-EXPLODE is a hands-first, passthrough mixed-reality app for Meta Quest 3/3S, built with Meta's Immersive Web SDK (WebXR). The session has two parts:
+EXPLODE is a hands-first, passthrough mixed-reality app for Meta Quest 3/3S, built with Meta's Immersive Web SDK (WebXR). You sit at a desk and use only your hands. The session takes about five minutes and has two parts:
 
-1. **About 90 seconds on a stylized EV drivetrain.** This teaches the gestures and the trace → break → repair loop on a simple teaching model.
+1. **About 90 seconds on a model of a headset, standing on your real desk.** The app finds the desk from your headset's room setup, if you allow it, and remembers the spot for next time. You pull the model apart, trace how the room reaches your eyes, and cut the camera link: the model goes dark and the app dims your real room to show what that link carries. Repair it and the room comes back. This teaches the gestures and the trace → break → repair loop.
 2. **The main lesson, on a real TypeScript auth service.** You trace the login request through its actual call graph, back to the source. Then you disconnect a dependency in a sandbox and see a test failure that was recorded at build time. Finally you reconnect it yourself.
+
+A simplified EV drivetrain, the earlier tutorial, is still one press away under "More". Without a desk, room setup or permission, everything works with the model floating in front of you.
 
 Every claim on screen carries a status: observed, in source, teaching model, hypothesis, or unknown. Nothing is promoted beyond its evidence.
 
@@ -59,8 +61,12 @@ bun run dev                       # IWSDK-managed dev server + emulator browser 
 | C | recenter |
 | D | debug readout (frame rate, draw calls), and log every accepted event; or add `?debug` to the URL |
 | P | log the world position of every button, part and plug |
-| 0 | forget saved progress and restart at the tutorial |
+| 0 | forget saved progress, finished lessons and the remembered desk spot; restart at the tutorial |
 | S | switch between the tutorial and the software system |
+| M | open the next tutorial model ("More": headset ⇄ drivetrain) |
+| G | show or hide the gesture guide |
+| L | switch the layout: wide (Quest 3S) or narrow (glasses-class field of view) |
+| F | draw both field-of-view budgets in the world (testing) |
 | V | start a VR session (tests the fallback used when mixed reality is unavailable) |
 
 - Emulator controls are documented at <https://iwsdk.dev/guides/02-testing-experience.html>.
