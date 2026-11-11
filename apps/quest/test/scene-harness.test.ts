@@ -1336,3 +1336,45 @@ describe('scene harness: part labels never overlap', () => {
     expectNoOverlap(car);
   });
 });
+
+describe('scene harness: render budget for the opening scene', () => {
+  it('the headset on a desk, exploded, cut and dimmed, with the gesture card open, stays inside the draw-call budget', () => {
+    const room = {
+      planeCount: 1,
+      onPlaneAdded: null,
+      pickDesk: (_v: unknown, o: { x: number; y: number; z: number; index: number }) => {
+        o.x = 0;
+        o.y = 0.74;
+        o.z = -0.15;
+        o.index = 0;
+        return true;
+      },
+    };
+    const h = setup(false, { bundles: shipped, room });
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'alpha-blend', inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+    expect((h.app as unknown as { placedOn: string }).placedOn).toBe('desk');
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get('edge:transmits:part:cameras->part:board')!.plug!.mesh);
+    h.press(h.view().nodes.get('part:board')!.mesh); // prediction in: the room dims, the failure shows
+    h.press(h.button(/^Gestures$/));
+    h.frames(60);
+    expect((h.app as unknown as { backdrop: { illustrated: boolean } }).backdrop.illustrated).toBe(true);
+
+    let draws = 0;
+    const walk = (o: Object3D) => {
+      if (!o.visible) return;
+      const m = o as Mesh & { isMesh?: boolean; isLine?: boolean; material?: { visible?: boolean } };
+      if ((m.isMesh || m.isLine) && m.material?.visible !== false) draws++;
+      o.children.forEach(walk);
+    };
+    walk(h.scene);
+    expect(draws).toBeGreaterThan(20);
+    expect(draws, 'draw calls in the opening scene at its busiest').toBeLessThanOrEqual(120); // 50 measured on Nov 11
+  });
+});

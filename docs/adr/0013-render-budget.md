@@ -33,3 +33,8 @@ Simple to build. Draw calls grow with the edge count, which must be measured.
 ## Revisit trigger
 
 G2 fails, or AT-04 fails during polish.
+
+## Note, 2026-11-11
+
+The budget test now also covers the opening scene at its busiest: the headset model on a desk in mixed reality, exploded, its camera link cut and the room dimmed, with the gesture card open. 50 draw calls measured, against the same limit of 120. Frame rate on the Quest 3S is still unmeasured (spike S4).
+
