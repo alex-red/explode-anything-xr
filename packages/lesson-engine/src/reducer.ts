@@ -25,7 +25,10 @@ export function initialState(ctx: EngineContext, lessonId: string | null = first
     misconceptions: [],
     lesson: lessonId && ctx.lessons.has(lessonId) ? { lesson_id: lessonId, step_index: 0, status: 'active' } : null,
   };
-  return enterStep(ctx, base);
+  // An incident drill starts with its edge already cut, exactly as an unplug would cut it.
+  const lesson = lessonId ? ctx.lessons.get(lessonId) : undefined;
+  const start = lesson?.starts_broken && lesson.break_edge_id ? applyEvent(ctx, base, { type: 'unplug', edge_id: lesson.break_edge_id }) : base;
+  return enterStep(ctx, start);
 }
 
 function firstLessonId(ctx: EngineContext): string | null {

@@ -1378,3 +1378,82 @@ describe('scene harness: render budget for the opening scene', () => {
     expect(draws, 'draw calls in the opening scene at its busiest').toBeLessThanOrEqual(120); // 50 measured on Nov 11
   });
 });
+
+describe('scene harness: the incident drill', () => {
+  const DRILL_EDGE = 'edge:handles:fn:src/http/middleware.ts#ratelimit->fn:src/http/middleware.ts#parsejsonbody';
+  const FIRST_STOPPED = 'fn:src/http/middleware.ts#parsejsonbody';
+  /** Finish the codebase lesson by in-world presses (as the hero lesson test does). */
+  function finishLesson(h: ReturnType<typeof setup>) {
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.button(/^Trace/));
+    h.press(h.button(/^Evidence$/));
+    h.press(h.view().nodes.get('fn:src/sessions/store.ts#sessionstore.create')!.mesh);
+    const BREAK = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
+    h.press(h.view().edges.get(BREAK)!.plug!.mesh);
+    h.press(h.button(/^Next/));
+    h.press(h.view().sockets.find((s) => s.targetId === 'fn:src/sessions/store.ts#sessionstore.create')!.mesh);
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.status).toBe('complete');
+  }
+
+  it('follows the lesson, starts broken, hides what the cut stops until the diagnosis, and is solved by repair', () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    const h = setup();
+    finishLesson(h);
+    expect(h.caption()).toMatch(/Ready for an incident/);
+    h.press(h.button(/^Incident drill ▸$/));
+    expect(h.state().lesson?.lesson_id).toBe('lesson:repo-incident');
+    expect(h.state().broken_edge_ids).toEqual([DRILL_EDGE]);
+    expect(h.caption()).toMatch(/Incident: .*2 of 10 tests failed/);
+    expect(h.caption()).not.toMatch(/parseJsonBody/); // the symptom does not name the cut
+
+    // Before the diagnosis: no "stopped" labels, no consequence text, no cascade.
+    const sfx = (h.app as unknown as { sfx: { played: string[] } }).sfx;
+    sfx.played.length = 0; // the lesson's own cascade is earlier in the (capped) log
+    const sinceDrill = () => sfx.played;
+    const stoppedLabels = () => h.panels().filter((p) => /· stopped/.test(p.text) && p.mesh.visible).length;
+    h.press(h.button(/^Next/));
+    expect(h.caption()).not.toMatch(/done before/); // the lesson was finished, the drill was not
+    h.press(h.button(/^Explode$/)); // a fresh start: the model begins collapsed
+    h.frames(60);
+    expect(h.caption()).toMatch(/Find the cut/);
+    expect(stoppedLabels()).toBe(0);
+    expect(h.caption()).not.toMatch(/OBSERVED|HYPOTHESIS/);
+    expect(sinceDrill()).not.toContain('cascade');
+
+    h.press(h.view().nodes.get(FIRST_STOPPED)!.mesh);
+    expect(h.state().prediction).toEqual({ target_id: FIRST_STOPPED, correct: true });
+    h.frames(10);
+    expect(stoppedLabels()).toBeGreaterThan(0); // now the failure shows
+    expect(h.caption()).toMatch(/OBSERVED/);
+    expect(sinceDrill()).toContain('cascade');
+    expect(h.state().evidence_open_id).toBe('ev:run:mut:drop-body-parser');
+
+    h.press(h.button(/^Next/));
+    const sockets = h.view().sockets;
+    expect(sockets).toHaveLength(3);
+    h.press(sockets.find((s) => s.targetId === FIRST_STOPPED)!.mesh);
+    expect(h.state().broken_edge_ids).toEqual([]);
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.status).toBe('complete');
+    expect(h.button(/^Lesson done$/)).toBeDefined(); // the drill is the last lesson
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('Reset brings the incident back, and a relaunch restores the drill where it was', () => {
+    const h = setup();
+    finishLesson(h);
+    h.press(h.button(/^Incident drill ▸$/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Reset$/));
+    expect(h.state().lesson).toEqual({ lesson_id: 'lesson:repo-incident', step_index: 0, status: 'active' });
+    expect(h.state().broken_edge_ids).toEqual([DRILL_EDGE]);
+    h.press(h.button(/^Next/));
+    const before = h.state();
+    const again = setup(); // same storage: a relaunch
+    expect(again.state()).toEqual(before);
+  });
+});

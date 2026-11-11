@@ -170,7 +170,7 @@ export class ExplodeApp {
     const clamped = Math.min(dt, 1 / 30);
     tickHolo(clamped); // one shared clock drives every hologram shader
     if (this.view) {
-      this.view.revealConsequences = !this.predicting();
+      this.view.revealConsequences = !this.consequencesHidden();
       this.view.update(clamped, camera);
     }
     this.trackInput(clamped);
@@ -343,7 +343,7 @@ export class ExplodeApp {
     this.sfx.hum(s.active_path_id !== null && s.broken_edge_ids.length === 0, this.modelAt());
     const c = s.consequences[0];
     if (!c) this.cascadePlayedFor = null;
-    else if (c.edge_id !== this.cascadePlayedFor && !this.predicting()) {
+    else if (c.edge_id !== this.cascadePlayedFor && !this.consequencesHidden()) {
       this.cascadePlayedFor = c.edge_id;
       const points: At[] = [];
       for (const id of c.affected_ids) {
@@ -400,7 +400,7 @@ export class ExplodeApp {
       this.backdrop.passthroughAvailable &&
       this.store.systemId === ROOM_LINK.system &&
       s.broken_edge_ids.includes(ROOM_LINK.edge) &&
-      !this.predicting();
+      !this.consequencesHidden();
     if (dim === this.roomDimmed) return;
     this.roomDimmed = dim;
     this.backdrop.illustrate(dim);
@@ -412,6 +412,23 @@ export class ExplodeApp {
 
   private dispatch(event: EngineEvent): void {
     this.store.dispatch(event);
+  }
+
+  /**
+   * True while what a cut stops must stay hidden: during a prediction step, and in an incident
+   * drill (a lesson that starts broken) until the learner has made their diagnosis.
+   */
+  private consequencesHidden(): boolean {
+    if (this.predicting()) return true;
+    const s = this.store.state;
+    return !!currentLesson(this.store.ctx, s)?.starts_broken && s.lesson?.status === 'active' && s.prediction === null;
+  }
+
+  /** The lesson after the current one in this system's bundle, if any (the codebase's incident drill). */
+  private nextLesson(): { id: string } | null {
+    const lessons = this.store.ctx.bundle.lessons;
+    const i = lessons.findIndex((l) => l.id === this.store.state.lesson?.lesson_id);
+    return i >= 0 ? (lessons[i + 1] ?? null) : null;
   }
 
   private predicting(): boolean {
@@ -530,6 +547,13 @@ export class ExplodeApp {
     const s = this.store.state;
     if (s.lesson && s.lesson.status !== 'active') {
       if (this.onMechanical) this.switchSystem();
+      else {
+        const following = this.nextLesson();
+        if (following) {
+          this.sfx.collapse(this.modelAt());
+          this.store.restart(following.id);
+        }
+      }
       return;
     }
     this.dispatch({ type: 'next' });
@@ -547,8 +571,8 @@ export class ExplodeApp {
     return [
       {
         id: 'next',
-        label: () => (lessonDone() ? (this.onMechanical ? 'Continue: software ▸' : 'Lesson done') : 'Next ▸'),
-        enabled: () => (lessonDone() ? this.onMechanical : step()?.expect.type === 'next'),
+        label: () => (lessonDone() ? (this.onMechanical ? 'Continue: software ▸' : this.nextLesson() ? 'Incident drill ▸' : 'Lesson done') : 'Next ▸'),
+        enabled: () => (lessonDone() ? this.onMechanical || this.nextLesson() !== null : step()?.expect.type === 'next'),
         primary: () => lessonDone() || step()?.expect.type === 'next',
         onPress: () => this.next(),
       },
@@ -642,7 +666,9 @@ export class ExplodeApp {
     else if (s.lesson?.status === 'complete')
       caption = this.onMechanical
         ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
-        : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate. Gestures lists them all.';
+        : this.nextLesson()
+          ? 'Lesson complete. Ready for an incident? Press Incident drill: something will be broken, and only the symptom will tell you where.'
+          : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate. Gestures lists them all.';
     else caption = 'Free exploration. Drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate.';
     const tutor = this.tutorAnswer && this.tutorAnswer.stepKey === this.stepKey() ? this.tutorAnswer : null;
     const graph = this.store.ctx.bundle.graph;
@@ -650,7 +676,7 @@ export class ExplodeApp {
       title: lesson?.title ?? graph.display_name,
       progress:
         lesson && s.lesson?.status === 'active'
-          ? `${s.lesson.step_index + 1}/${lesson.steps.length}${this.doneBefore(this.store.ctx.bundle) ? ' · done before' : ''}`
+          ? `${s.lesson.step_index + 1}/${lesson.steps.length}${this.done.has(s.lesson.lesson_id) ? ' · done before' : ''}`
           : '',
       caption,
       question: s.question,
@@ -658,7 +684,7 @@ export class ExplodeApp {
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
       tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source } : null,
       note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (tutor?.note ?? null),
-      consequence: this.predicting() ? null : consequenceText(s, labelOf),
+      consequence: this.consequencesHidden() ? null : consequenceText(s, labelOf),
     };
   }
 

@@ -75,6 +75,11 @@ export function checkBundleIntegrity(bundle: ContentBundle): string[] {
     if (lesson.system_id !== graph.system_id) problems.push(`lesson ${lesson.id} targets another system`);
     if (lesson.break_edge_id && !edgeIds.has(lesson.break_edge_id)) problems.push(`lesson ${lesson.id} breaks unknown edge`);
     for (const id of lesson.repair_candidates) if (!nodeIds.has(id)) problems.push(`lesson ${lesson.id} offers unknown socket ${id}`);
+    if (lesson.starts_broken) {
+      const edge = graph.edges.find((e) => e.id === lesson.break_edge_id);
+      if (!edge) problems.push(`lesson ${lesson.id} starts broken but has no break edge`);
+      else if (!edge.is_mutable_in_sandbox) problems.push(`lesson ${lesson.id} starts with a non-sandbox edge broken`);
+    }
     for (const step of lesson.steps) {
       const x = step.expect;
       if ('target_id' in x && !nodeIds.has(x.target_id)) problems.push(`step ${step.id} expects unknown node ${x.target_id}`);

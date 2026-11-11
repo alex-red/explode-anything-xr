@@ -141,3 +141,70 @@ describe('lesson robustness', () => {
     expect(s.lesson?.status).toBe('complete');
   });
 });
+
+describe('incident drill (a lesson that starts broken)', () => {
+  /** The mini bundle plus a drill: login → verify starts cut; find what stops first, then repair it. */
+  function drillBundle() {
+    const bundle = miniBundle();
+    bundle.lessons.push({
+      id: 'lesson:drill',
+      system_id: 'sys:mini',
+      title: 'Incident',
+      objectives: ['Find and fix the cut connection.'],
+      break_edge_id: BREAK,
+      starts_broken: true,
+      repair_candidates: ['fn:session', 'fn:verify'],
+      steps: [
+        { id: 'step:d-intro', kind: 'intro', caption: 'Logins fail.', expect: { type: 'next' }, on_enter: [] },
+        { id: 'step:d-find', kind: 'predict', caption: 'What stops first?', expect: { type: 'predict' }, on_enter: [] },
+        { id: 'step:d-repair', kind: 'repair', caption: 'Fix it.', expect: { type: 'repair', edge_id: BREAK }, on_enter: [] },
+      ],
+    });
+    return bundle;
+  }
+
+  it('starts with the edge cut and its consequence computed, exactly as an unplug would', () => {
+    const c = createContext(drillBundle());
+    const s = initialState(c, 'lesson:drill');
+    expect(s.broken_edge_ids).toEqual([BREAK]);
+    expect(s.consequences).toEqual(reduce(c, initialState(c, null), { type: 'unplug', edge_id: BREAK }).consequences);
+    expect(s.lesson).toEqual({ lesson_id: 'lesson:drill', step_index: 0, status: 'active' });
+    // Reset and replay bring the incident back.
+    expect(reduce(c, s, { type: 'reset' }).broken_edge_ids).toEqual([BREAK]);
+    expect(replay(c, [], 'lesson:drill')).toEqual(s);
+  });
+
+  it('is solved by predicting the first stopped part and repairing the right socket', () => {
+    const c = createContext(drillBundle());
+    const s = replay(
+      c,
+      [
+        { type: 'next' },
+        { type: 'predict', target_id: 'fn:verify' },
+        { type: 'plug', edge_id: BREAK, target_id: 'fn:session' }, // wrong socket
+        { type: 'plug', edge_id: BREAK, target_id: 'fn:verify' },
+      ],
+      'lesson:drill',
+    );
+    expect(s.prediction).toEqual({ target_id: 'fn:verify', correct: true });
+    expect(s.misplug_count).toBe(1);
+    expect(s.broken_edge_ids).toEqual([]);
+    expect(s.lesson?.status).toBe('complete');
+  });
+
+  it('other lessons in the same bundle still start whole', () => {
+    const c = createContext(drillBundle());
+    expect(initialState(c, 'lesson:mini').broken_edge_ids).toEqual([]);
+  });
+
+  it('the integrity check rejects a drill with no break edge or one outside the sandbox', () => {
+    const noEdge = drillBundle();
+    delete noEdge.lessons[1]!.break_edge_id;
+    expect(checkBundleIntegrity(noEdge)).toContain('lesson lesson:drill starts broken but has no break edge');
+    const fixed = drillBundle();
+    fixed.lessons[1]!.break_edge_id = 'edge:fn:router->fn:login';
+    expect(fixed.graph.edges.find((e) => e.id === 'edge:fn:router->fn:login')?.is_mutable_in_sandbox).toBe(false);
+    expect(checkBundleIntegrity(fixed)).toContain('lesson lesson:drill starts with a non-sandbox edge broken');
+    expect(checkBundleIntegrity(drillBundle())).toEqual([]);
+  });
+});

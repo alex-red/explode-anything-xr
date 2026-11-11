@@ -4957,10 +4957,107 @@
           ]
         }
       ]
+    },
+    {
+      "id": "lesson:repo-incident",
+      "system_id": "system:auth-service",
+      "title": "Incident: logins are failing",
+      "objectives": [
+        "Find a cut connection from its symptom alone.",
+        "Name what it stops, then repair it."
+      ],
+      "break_edge_id": "edge:handles:fn:src/http/middleware.ts#ratelimit->fn:src/http/middleware.ts#parsejsonbody",
+      "repair_candidates": [
+        "fn:src/routes/login.ts#loginhandler",
+        "fn:src/http/middleware.ts#parsejsonbody",
+        "fn:src/auth/service.ts#authservice.login"
+      ],
+      "starts_broken": true,
+      "misconception_on_wrong_prediction": "assumes-failure-is-local",
+      "steps": [
+        {
+          "id": "step:drill-intro",
+          "kind": "intro",
+          "caption": "Incident: in a test run recorded when this content was built, 2 of 10 tests failed, including “POST /login through the router returns a token that works for GET /me”. One connection in auth-service is cut. Find it.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": []
+        },
+        {
+          "id": "step:drill-explode",
+          "kind": "explode",
+          "caption": "Open it up: press Explode, or pull it apart with both hands.",
+          "expect": {
+            "type": "explode_at_least",
+            "factor": 0.8
+          },
+          "on_enter": [],
+          "hint": "Press Explode. You can also pinch with both hands and pull them apart."
+        },
+        {
+          "id": "step:drill-find",
+          "kind": "predict",
+          "caption": "Find the cut. Which part is the first that never gets the request? Point at it.",
+          "expect": {
+            "type": "predict"
+          },
+          "on_enter": [
+            {
+              "type": "ask_prediction",
+              "question": "Which part is the first to stop?"
+            }
+          ],
+          "hint": "A cut connection shows as a short coral stub, and its plug waits in the tray. Which side of it stops?",
+          "feedback": {
+            "correct": "Right. rateLimit no longer hands the request on, so parseJsonBody and everything after it never run.",
+            "incorrect": "Not quite. The cut is between rateLimit and parseJsonBody: parseJsonBody is the first part that never gets the request."
+          }
+        },
+        {
+          "id": "step:drill-observe",
+          "kind": "observe",
+          "caption": "Observed: with this connection cut, 2 of 10 tests failed in the recorded run. The evidence lists them.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "show_evidence",
+              "evidence_id": "ev:run:mut:drop-body-parser"
+            }
+          ]
+        },
+        {
+          "id": "step:drill-repair",
+          "kind": "repair",
+          "caption": "Plug the connection back into the right socket.",
+          "expect": {
+            "type": "repair",
+            "edge_id": "edge:handles:fn:src/http/middleware.ts#ratelimit->fn:src/http/middleware.ts#parsejsonbody"
+          },
+          "on_enter": [],
+          "hint": "rateLimit hands the request to parseJsonBody."
+        },
+        {
+          "id": "step:drill-reflect",
+          "kind": "reflect",
+          "caption": "Resolved. You found the cut from its symptom, named what it stopped, and restored the flow. With nothing cut, all 10 of 10 tests passed in the recorded baseline run.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "animate_flow",
+              "path_id": "path:login-request"
+            }
+          ]
+        }
+      ]
     }
   ],
   "assets": null,
-  "content_hash": "6c29b7d4e4fb8e0364ecd59f22a8df087c8d21b501339fa130c930bb1d42624e",
-  "generated_at": "2026-11-11T18:53:03.586Z",
+  "content_hash": "49b36fcc4e0a93b74e3d0dd543b4ccc6ee8ebe9b5ef9ed5eec8fad7b52e06fba",
+  "generated_at": "2026-11-11T20:31:33.413Z",
   "generator": "explode-content-tools@0.1.0"
 }

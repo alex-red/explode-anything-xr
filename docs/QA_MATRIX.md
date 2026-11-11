@@ -125,7 +125,7 @@ Each row: date, where it ran, what was checked, the result, and what it does not
 
 | Date | Where | Check | Result | Does not prove |
 |---|---|---|---|---|
-| 2026-11-11 | IWER, Quest 3 profile, `living_room` | `emulator:walkthrough`, controller and hand mode, after each change that day | Pass: headset and software lessons by ray, wrong socket rejected, two-hand pull, no console warnings or errors (98–112 s) | Frame rate, readability, real hand tracking |
+| 2026-11-11 | IWER, Quest 3 profile, `living_room` | `emulator:walkthrough`, controller and hand mode, after each change that day | Pass: headset and software lessons by ray, wrong socket rejected, two-hand pull, no console warnings or errors (98–112 s). From the last run on: the incident drill too (50 presses, 153 s) | Frame rate, readability, real hand tracking |
 | 2026-11-11 | IWER, `living_room` | Plane detection: 17 planes delivered, including four tables (0.45–0.79 m high) | Seated at eye height 1.2 m in front of the 0.79 m table, the stage stands on it, toolbar above the surface. At the default standing height (1.6 m) no desk is picked, by design | Which labels and sizes a real room setup returns (spike S2) |
 | 2026-11-11 | IWER, `living_room` | Desk memory: exit, re-enter standing elsewhere | The stage floats, then returns to the remembered table spot once the anchor is restored | Persistence across real sessions: the emulator restores its anchor in an unchanged reference space |
 | 2026-11-11 | IWER, `living_room` | Narrow layout seated at the table, evidence open | Caption, model, evidence and the button strip inside the narrow frame (key F); evidence readable over the model | Real field of view and legibility on a 3S |

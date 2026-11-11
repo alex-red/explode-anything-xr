@@ -14,6 +14,9 @@ export const REPO_SYSTEM_ID = 'system:auth-service';
 export const LOGIN_PATH_ID = 'path:login-request';
 export const MAIN_MUTATION_ID = 'mut:skip-session-create';
 export const REPO_LESSON_ID = 'lesson:repo-login';
+/** The incident drill (docs/WIN_PLAN.md W9) replays a different recorded mutation from the lesson's. */
+export const DRILL_MUTATION_ID = 'mut:drop-body-parser';
+export const DRILL_LESSON_ID = 'lesson:repo-incident';
 
 /** Top-row clusters follow the login path left to right; supporting clusters below. */
 const CLUSTER_ORDER = [
@@ -53,7 +56,7 @@ export function buildRepoBundle(previous?: ContentBundle | null): ContentBundle 
     graph,
     evidence,
     layout: layoutSoftware(graph, CLUSTER_ORDER),
-    lessons: [repoLesson(graph, recorded)],
+    lessons: [repoLesson(graph, recorded), drillLesson(graph, recorded)],
     assets: null,
   };
   return finalizeBundle(draft, previous);
@@ -178,3 +181,91 @@ function repoLesson(graph: SystemGraph, recorded: RecordedEvidence): Lesson {
     ],
   };
 }
+
+/**
+ * An unguided incident drill: the system starts with a recorded mutation's connection cut. The
+ * learner gets only the symptom (the recorded failing tests), finds the cut, names the first part
+ * that never gets the request, and repairs it. Every figure comes from the recorded runs.
+ */
+function drillLesson(graph: SystemGraph, recorded: RecordedEvidence): Lesson {
+  const drill = recorded.mutations.find((m) => m.mutation.id === DRILL_MUTATION_ID);
+  if (!drill) throw new Error(`missing drill mutation ${DRILL_MUTATION_ID}`);
+  const edge = graph.edges.find((e) => e.id === drill.mutation.edge_id)!;
+  if (!edge.is_mutable_in_sandbox) throw new Error(`drill edge ${edge.id} is not sandbox-mutable`);
+  const loginPath = graph.paths.find((p) => p.id === LOGIN_PATH_ID)!;
+  if (!loginPath.edge_ids.includes(edge.id)) throw new Error(`drill edge ${edge.id} is not on ${LOGIN_PATH_ID}`);
+  const label = (id: string) => graph.nodes.find((n) => n.id === id)!.label;
+  const src = label(edge.source_id);
+  const dst = label(edge.target_id);
+  const total = drill.run.passed + drill.run.failed;
+  const symptom = drill.run.failing_tests[0];
+  if (!symptom) throw new Error(`drill mutation ${DRILL_MUTATION_ID} recorded no failing test`);
+  // Wrong sockets: the two parts just after the right one on the login path.
+  const at = loginPath.node_ids.indexOf(edge.target_id);
+  const wrong = [loginPath.node_ids[at + 1], loginPath.node_ids[at + 2]].filter((id): id is string => !!id);
+  if (wrong.length !== 2) throw new Error('drill needs two wrong sockets after its target on the login path');
+  const baseline = recorded.baseline.run;
+
+  return {
+    id: DRILL_LESSON_ID,
+    system_id: graph.system_id,
+    title: 'Incident: logins are failing',
+    objectives: ['Find a cut connection from its symptom alone.', 'Name what it stops, then repair it.'],
+    break_edge_id: edge.id,
+    starts_broken: true,
+    repair_candidates: [wrong[0]!, edge.target_id, wrong[1]!],
+    misconception_on_wrong_prediction: 'assumes-failure-is-local',
+    steps: [
+      {
+        id: 'step:drill-intro',
+        kind: 'intro',
+        caption: `Incident: in a test run recorded when this content was built, ${drill.run.failed} of ${total} tests failed, including “${symptom}”. One connection in auth-service is cut. Find it.`,
+        expect: { type: 'next' },
+        on_enter: [],
+      },
+      {
+        id: 'step:drill-explode',
+        kind: 'explode',
+        caption: 'Open it up: press Explode, or pull it apart with both hands.',
+        hint: 'Press Explode. You can also pinch with both hands and pull them apart.',
+        expect: { type: 'explode_at_least', factor: 0.8 },
+        on_enter: [],
+      },
+      {
+        id: 'step:drill-find',
+        kind: 'predict',
+        caption: 'Find the cut. Which part is the first that never gets the request? Point at it.',
+        hint: 'A cut connection shows as a short coral stub, and its plug waits in the tray. Which side of it stops?',
+        expect: { type: 'predict' },
+        on_enter: [{ type: 'ask_prediction', question: 'Which part is the first to stop?' }],
+        feedback: {
+          correct: `Right. ${src} no longer hands the request on, so ${dst} and everything after it never run.`,
+          incorrect: `Not quite. The cut is between ${src} and ${dst}: ${dst} is the first part that never gets the request.`,
+        },
+      },
+      {
+        id: 'step:drill-observe',
+        kind: 'observe',
+        caption: `Observed: with this connection cut, ${drill.run.failed} of ${total} tests failed in the recorded run. The evidence lists them.`,
+        expect: { type: 'next' },
+        on_enter: [{ type: 'show_evidence', evidence_id: drill.id }],
+      },
+      {
+        id: 'step:drill-repair',
+        kind: 'repair',
+        caption: 'Plug the connection back into the right socket.',
+        hint: `${src} hands the request to ${dst}.`,
+        expect: { type: 'repair', edge_id: edge.id },
+        on_enter: [],
+      },
+      {
+        id: 'step:drill-reflect',
+        kind: 'reflect',
+        caption: `Resolved. You found the cut from its symptom, named what it stopped, and restored the flow. With nothing cut, all ${baseline.passed} of ${baseline.passed + baseline.failed} tests passed in the recorded baseline run.`,
+        expect: { type: 'next' },
+        on_enter: [{ type: 'animate_flow', path_id: LOGIN_PATH_ID }],
+      },
+    ],
+  };
+}
+

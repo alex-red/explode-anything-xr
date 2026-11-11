@@ -41,6 +41,11 @@ export const Lesson = z.object({
   break_edge_id: Id.optional(),
   /** Candidate sockets offered during repair. Exactly one is the edge's real target. */
   repair_candidates: z.array(Id).max(4).default([]),
+  /**
+   * An incident drill: the lesson starts with `break_edge_id` already cut, and the learner finds
+   * and repairs it. Only the lesson engine cuts it, exactly as an unplug would.
+   */
+  starts_broken: z.boolean().optional(),
   /** Misconception tag recorded when a prediction is wrong. */
   misconception_on_wrong_prediction: z.string().optional(),
   steps: z.array(LessonStep).min(1),

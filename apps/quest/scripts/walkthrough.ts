@@ -142,11 +142,12 @@ function loadBundle(name: string): Bundle {
 
 let pressed = 0;
 
-async function runLesson(mode: Mode, bundle: Bundle): Promise<void> {
-  const lesson = bundle.lessons[0] ?? fail(`${bundle.graph.system_id} has no lesson`);
+async function runLesson(mode: Mode, bundle: Bundle, index = 0): Promise<void> {
+  const lesson = bundle.lessons[index] ?? fail(`${bundle.graph.system_id} has no lesson ${index}`);
   const breakTarget = bundle.graph.edges.find((e) => e.id === lesson.break_edge_id)?.target_id ?? fail('break edge not in graph');
   const wrongSocket = lesson.repair_candidates.find((c) => c !== breakTarget);
-  const say = (i: number, text: string) => console.log(`  [${mode}] ${bundle.graph.system_kind} step ${i + 1}/${lesson.steps.length} ${lesson.steps[i]!.kind}: ${text}`);
+  const name = index === 0 ? bundle.graph.system_kind : lesson.id.replace(/^lesson:/, '');
+  const say = (i: number, text: string) => console.log(`  [${mode}] ${name} step ${i + 1}/${lesson.steps.length} ${lesson.steps[i]!.kind}: ${text}`);
 
   /** Do one press and return the accepted events, failing unless one of them is `type`. */
   const act = async (i: number, pos: Vec | undefined, what: string, type: string) => {
@@ -205,6 +206,18 @@ async function runMode(mode: Mode, mechanical: Bundle, software: Bundle): Promis
   if (!handover.some((e) => e.system.startsWith(software.graph.system_id))) fail('Continue did not switch to the software system');
   await sleep(600);
   await runLesson(mode, software);
+
+  // After the lesson, the same Next button opens the incident drill: it starts broken.
+  const drill = software.lessons[1];
+  if (drill) {
+    await sleep(300);
+    const before = await targets();
+    await press(mode, before.buttons.next, 'the incident drill button');
+    const after = await targets();
+    if (!after.step.includes(drill.id)) fail(`the incident drill did not start: the app reports ${after.step}`);
+    await newEvents();
+    await runLesson(mode, software, 1);
+  }
 
   // Two-hand pull: together collapses, apart explodes, and neither hand selects anything.
   await twoHandPull(mode, 0.08);

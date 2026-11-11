@@ -23,6 +23,7 @@ A hands-first mixed-reality lesson: a model of your headset stands on your real 
 - **The device you are wearing, on the desk in front of you.** The first thing on the desk is a model of a headset like the one on your face. You pull it apart with both hands, trace how the room reaches your eyes, and cut the link from the cameras to the processor. The model goes dark downstream, and the app dims your real room to show what that link carries. Repair it, and the room comes back. A lesson about passthrough that takes your passthrough away would not work on any other platform.
 - **Then the same moves on a system you cannot see:** a real TypeScript auth service. You trace a login request through its actual call graph to the source lines, cut a dependency in a sandbox, predict what fails, and see the test failure that was recorded when the content was built. Then you plug it back in yourself.
 - **Scene understanding and persistent anchors, used for something.** The app reads the headset's room setup to stand the model on your desk, and it remembers the spot through a persistent anchor so the model is there next time.
+- **An incident drill to come back for.** After the lesson, the system starts broken. You get only the symptom, the tests a recorded run saw fail, and you find the cut, name what it stops, and fix it.
 - **Productivity:** understanding an unfamiliar codebase is slow and abstract. Here you hold its structure, follow one request through it, and learn what depends on what by breaking it safely.
 
 ## Experience Design
@@ -74,7 +75,7 @@ Solo, in TypeScript, between [TODO: start date] and Nov 18, 2026. The Immersive 
 ## What's next
 
 - Load your own repository and let the indexer and mutation runs build its lesson.
-- Unguided incident drills: the system starts broken and you find the fault.
+- More incident drills, built from every recorded mutation, so each return brings a new fault to find.
 - Scan real desk objects with your hands and take them apart in place.
 - [TODO: target launch date, as the rules ask.]
 

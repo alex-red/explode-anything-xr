@@ -25,3 +25,8 @@
 ## Revisit trigger
 
 None expected.
+
+## Note, 2026-11-11
+
+A lesson may set `starts_broken`: `initialState` then cuts its `break_edge_id` exactly as an `unplug` event would, so reset and replay bring the incident back. Only the lesson engine does this, and `checkBundleIntegrity` requires the edge to exist and be sandbox-mutable. The codebase's incident drill uses it ([WIN_PLAN.md](../WIN_PLAN.md) W9).
+

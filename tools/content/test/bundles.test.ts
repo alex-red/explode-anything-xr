@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildDrivetrainBundle } from '../src/drivetrain.ts';
 import { buildHeadsetBundle } from '../src/headset.ts';
-import { layoutProblems, targetOverlaps, verifyBundle } from '../src/index.ts';
+import { layoutProblems, targetOverlaps, verifyBundle, DRILL_LESSON_ID, DRILL_MUTATION_ID } from '../src/index.ts';
 import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, REPO_BUNDLE_PATH, REPO_DEMO_DIR } from '../src/paths.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8')) as ContentBundle;
@@ -171,5 +171,29 @@ describe('lessons replay to completion', () => {
     ]);
     expect(s.prediction?.correct).toBe(false);
     expect(s.misconceptions).toEqual(['assumes-failure-is-local']);
+  });
+});
+
+describe('the incident drill', () => {
+  it('starts with a recorded mutation cut, and every figure it states comes from the recorded runs', () => {
+    const drill = repo.lessons.find((l) => l.id === DRILL_LESSON_ID)!;
+    expect(drill.starts_broken).toBe(true);
+    const run = repo.evidence.find((e) => e.kind === 'mutation_run' && e.mutation.id === DRILL_MUTATION_ID);
+    expect(run?.kind).toBe('mutation_run');
+    if (run?.kind !== 'mutation_run') return;
+    expect(run.truth_status).toBe('observed');
+    expect(drill.break_edge_id).toBe(run.mutation.edge_id);
+    expect(drill.break_edge_id).not.toBe(repo.lessons[0]!.break_edge_id); // a different incident from the lesson's
+    const edge = repo.graph.edges.find((e) => e.id === drill.break_edge_id)!;
+    expect(edge.is_mutable_in_sandbox).toBe(true);
+    expect(drill.repair_candidates).toContain(edge.target_id);
+    expect(drill.repair_candidates).toHaveLength(3);
+    const intro = drill.steps[0]!.caption;
+    expect(intro).toContain(`${run.run.failed} of ${run.run.passed + run.run.failed} tests failed`);
+    expect(intro).toContain(run.run.failing_tests[0]!);
+    // The symptom names no part of the cut connection: finding it is the exercise.
+    const label = (id: string) => repo.graph.nodes.find((n) => n.id === id)!.label;
+    expect(intro).not.toContain(label(edge.target_id));
+    expect(drill.steps.some((s) => s.on_enter.some((a) => a.type === 'show_evidence' && a.evidence_id === run.id))).toBe(true);
   });
 });
