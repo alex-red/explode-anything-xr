@@ -22,3 +22,7 @@ The layout is Glasses-safe for free, but limits how many nodes can be visible at
 ## Revisit trigger
 
 The Glasses become a declared platform (P2).
+
+## Note, 2026-11-11
+
+The panels now have field-of-view budgets too (`apps/quest/src/app/fov.ts`), measured like a view frustum around the gaze at the model. **Wide** (default, Quest 3S): model, caption and toolbar within ±46° × ±43°, with evidence and gestures a glance aside. **Narrow** (glasses-class): every panel within ±33° × ±31°, placed by angle from the measured eye, the toolbar reduced to the lesson's buttons. A "Layout" button switches them. The software layout is also spread at build time so no two ray targets overlap (`tools/content/src/layout.ts`), and part labels that would overlap a more important one move up or hide.

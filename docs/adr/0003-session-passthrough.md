@@ -25,3 +25,7 @@
 ## Revisit trigger
 
 Passthrough is missing from captures (Oct 26), or AR mode triggers a space-setup prompt that breaks cold start.
+
+## Note, 2026-11-11
+
+Scene understanding is now on: plane detection, mesh detection and anchors are requested as optional features, so a refusal still starts the session. The stage stands on a detected desk and remembers its spot, with the floating placement as the fallback ([ADR-0023](0023-room-anchoring.md)). The backdrop also serves the headset lesson's dimming illustration ([ADR-0024](0024-headset-model-and-dimming.md)).

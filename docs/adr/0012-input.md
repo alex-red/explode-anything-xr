@@ -23,3 +23,7 @@ Robust on hands and controllers alike, at the cost of less "physical" grabbing t
 ## Revisit trigger
 
 The Oct 29 device test (K3), or enabling `useHandPinchForGrab` proves reliable for plug handles.
+
+## Note, 2026-11-11
+
+Room anchoring changes no input. The headset lesson's model shows hand tracking downstream of the cut camera link, but the user's real hands keep working, and the caption says so ([ADR-0024](0024-headset-model-and-dimming.md)). On a desk the stage stands 0.65 m from the eyes, so its parts stay within the same seated reach as the floating placement.
