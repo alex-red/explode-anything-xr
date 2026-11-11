@@ -92,7 +92,7 @@ Status tags used below:
 9. **Asset licensing on the web.** Every asset in a PWA can be downloaded by anyone. Many licenses forbid redistributing the raw files. **Resolution:** build the mechanical tutorial from **procedural primitives** ([ADR-0019](adr/0019-assets.md)).
 10. **Protecting the LLM proxy from abuse.** Its URL is effectively public. Add a rate limit, a daily spend cap, and a remote kill flag ([ADR-0004](adr/0004-backend.md)).
 11. **Capture plan.** On Day 3, check that recordings include passthrough and that capture resolution can be raised (MQDH, scrcpy, adb). Profile while recording, since recording costs frame time. Tidy the room, because passthrough footage shows it.
-12. **Missing project basics:** git repo, CI, budget, risk register, and an agent workflow. IWSDK is young and coding agents know it poorly, so pin versions and doc links in [CLAUDE.md](../CLAUDE.md).
+12. **Missing project basics:** git repo, CI, budget, risk register, and an agent workflow. IWSDK is young and coding agents know it poorly, so pin versions and doc links in [AGENTS.md](../AGENTS.md).
 13. **Playtests come too late.** The only one was on Nov 14–15. **Resolution:** three playtests, on Nov 1, Nov 8, and Nov 14.
 14. **WebXR-specific risks the handoff didn't anticipate** (all in the [PLAN.md risk register](PLAN.md#risk-register)):
     - In three.js, every mesh is a draw call, and WebGL lines are always 1 px wide.
@@ -149,7 +149,7 @@ Status tags used below:
 | §19 Submission | [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) | PWA items added |
 | §20 Open questions | Resolved in ADRs; leftovers in §6 above | — |
 | §21 Work packages | [PLAN.md § Work packages](PLAN.md#work-packages) | Re-cut for one person plus agents |
-| §22 Agent instructions | [CLAUDE.md](../CLAUDE.md) | Rewritten |
+| §22 Agent instructions | [AGENTS.md](../AGENTS.md) | Rewritten |
 | §23 Roadmap and research | [PRODUCT_SPEC.md §9](PRODUCT_SPEC.md#9-beyond-the-hackathon) | Kept as prose |
 | §24 Sources | Sources below, [DATA_PROVENANCE.md](DATA_PROVENANCE.md) | Updated |
 | §25 Final directive | [PRODUCT_SPEC.md §1](PRODUCT_SPEC.md#1-pitch) | Kept in spirit |

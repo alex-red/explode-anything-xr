@@ -10,6 +10,7 @@
     "apps/*"
   ],
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "dev": "bun run --cwd apps/quest dev",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && bun run --cwd apps/quest typecheck",

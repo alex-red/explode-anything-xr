@@ -90,7 +90,7 @@ Owners: **H** = human (needs the headset or accounts), **A** = background agent 
 | `services/tutor-proxy` and its tests | Playtests, video capture and edit, Devpost text |
 | Playwright + IWER end-to-end scripts; docs updates | Final scope calls at every gate |
 
-Agents follow [CLAUDE.md](../CLAUDE.md). They never start a dev server or run a build unless told.
+Agents follow [AGENTS.md](../AGENTS.md). They never start a dev server or run a build unless told.
 
 ## Risk register
 

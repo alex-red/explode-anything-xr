@@ -10,7 +10,7 @@
  * the button and return it to `normal`, from where IWSDK moves it back to hover by itself.
  *
  * This reaches into private fields, so it checks every one and does nothing if the shape differs
- * (the version is pinned; see CLAUDE.md). It allocates only when it actually fixes something.
+ * (the version is pinned; see AGENTS.md). It allocates only when it actually fixes something.
  */
 interface RayPointerLike {
   getButtonsDown?: () => { has(button: number): boolean };

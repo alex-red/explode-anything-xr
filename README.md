@@ -9,7 +9,7 @@ EXPLODE is a hands-first, passthrough mixed-reality app for Meta Quest 3/3S, bui
 
 Every claim on screen carries a status: observed, in source, teaching model, hypothesis, or unknown. Nothing is promoted beyond its evidence.
 
-Product, architecture, plan and decisions are in [`docs/`](docs/README.md). Agent rules are in [`CLAUDE.md`](CLAUDE.md).
+Product, architecture, plan and decisions are in [`docs/`](docs/README.md). Agent rules are in [`AGENTS.md`](AGENTS.md).
 
 ## Repository
 
