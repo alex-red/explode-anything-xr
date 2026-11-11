@@ -38,9 +38,9 @@ bun run dev                                  # IWSDK dev server + emulator brows
 bun run test                                 # vitest: all packages, tools, proxy
 bunx tsc -p tsconfig.json --noEmit           # node-side typecheck
 bun run --cwd apps/quest typecheck           # app typecheck (run before any device test)
-bun run content:generate                     # rebuild both bundles (runs the fixture's tests, mutations)
+bun run content:generate                     # rebuild all three bundles (runs the fixture's tests, mutations)
 bun run content:check                        # re-validate committed bundles + hashes
-bun run emulator:walkthrough                 # both lessons in the IWER emulator (needs the dev server; `-- --start` runs one)
+bun run emulator:walkthrough                 # headset tutorial, codebase lesson and incident drill in the IWER emulator (needs the dev server; `-- --start` runs one)
 bun run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
 bun run release:manifest                     # hash a finished build into release/manifest.json (does not build)
 bun run release:verify -- <url>              # compare a deployed site with that manifest
@@ -62,4 +62,4 @@ Node ≥ 24: workspace packages are consumed as `.ts` source through native type
 
 ## Done means
 
-Tests green (this includes `apps/quest/test/scene-harness.test.ts`, which drives the real app code headless through both lessons), both typechecks green, `content:check` green. For anything that changes how the app looks or feels, also say what was checked in the emulator and what stays unknown without a headset. Never state or imply that something was verified on a device.
+Tests green (this includes `apps/quest/test/scene-harness.test.ts`, which drives the real app code headless through every lesson), both typechecks green, `content:check` green. For anything that changes how the app looks or feels, also say what was checked in the emulator and what stays unknown without a headset. Never state or imply that something was verified on a device.
