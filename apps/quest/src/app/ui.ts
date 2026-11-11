@@ -1,5 +1,6 @@
-import { Group, type Entity, type Vector3, type World } from '@iwsdk/core';
+import { Group, Vector3, type Entity, type World } from '@iwsdk/core';
 import type { Evidence, SceneState, TruthStatus } from '@explode/contracts';
+import { placeFacing, type LayoutMode } from './fov.ts';
 import { makeInteractive } from './interactions.ts';
 import { CSS, TRUTH_BADGE } from './palette.ts';
 import { TextPanel, type TextLine } from './text.ts';
@@ -45,6 +46,21 @@ const EVIDENCE_H = 0.3;
 const SMALL = 34;
 const CODE = 32;
 const CODE_LINES = 8;
+/** The buttons a lesson needs; the narrow layout shows only these (docs/WIN_PLAN.md W7). */
+const NARROW_BUTTONS = new Set(['next', 'explode', 'trace', 'evidence', 'hint', 'undo', 'recenter', 'layout']);
+const NARROW_COLUMNS = 4;
+/** Where the eye is assumed to be, in the anchor's frame, until the app reports it (floating placement). */
+const DEFAULT_EYE = new Vector3(0, 0.14, 0.7);
+/**
+ * Narrow layout, as [right°, up°, distance m] from the eye around its gaze at the model. Each
+ * panel's angular half-size plus its offset stays inside FOV_BUDGET.narrow (tested).
+ */
+const NARROW = {
+  controls: [0, -26, 0.45],
+  caption: [0, 23, 0.75],
+  evidence: [16, -1, 0.6], // between the caption above and the toolbar strip below, its Close button clear of both
+  guide: [-12, 0, 0.5],
+} as const;
 
 /**
  * Spatial UI: control panel (left), caption panel (top), evidence panel (right).
@@ -52,7 +68,7 @@ const CODE_LINES = 8;
  */
 export class SpatialUI {
   readonly group = new Group();
-  private readonly buttons: Array<{ def: ButtonDef; panel: TextPanel; hovered: boolean; entity: Entity }> = [];
+  private readonly buttons: Array<{ def: ButtonDef; panel: TextPanel; hovered: boolean; hidden: boolean; entity: Entity }> = [];
   private readonly caption: TextPanel;
   private readonly evidence: TextPanel;
   private readonly evidenceClose: TextPanel;
@@ -60,7 +76,10 @@ export class SpatialUI {
   private readonly evidenceGroup = new Group();
   private readonly guide: TextPanel;
   private guideDrawn = false;
-  private readonly controlsHalfHeight: number;
+  private controlsHalfHeight = 0;
+  private mode: LayoutMode = 'wide';
+  private floor: number | null = null;
+  private readonly eye = DEFAULT_EYE.clone();
   /** True when something a panel shows may have changed; render() is skipped otherwise. */
   dirty = true;
 
@@ -68,19 +87,13 @@ export class SpatialUI {
     const groupEntity = world.createTransformEntity(this.group, { parent });
 
     // Controls: two columns, tilted toward the user, lower-left.
-    this.controls.position.set(-0.31, CONTROLS_Y, 0.16);
-    this.controls.rotation.set(-0.25, 0.5, 0);
     const controlsEntity = world.createTransformEntity(this.controls, { parent: groupEntity });
-    const rows = Math.ceil(defs.length / 2);
-    this.controlsHalfHeight = (rows * BTN_H + (rows - 1) * GAP) / 2;
-    defs.forEach((def, i) => {
+    defs.forEach((def) => {
       const panel = new TextPanel({ width: BTN_W, height: BTN_H, pxPerMeter: PPM, padding: 10, radius: 22, align: 'center' });
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      panel.mesh.position.set((col - 0.5) * (BTN_W + GAP), ((rows - 1) / 2 - row) * (BTN_H + GAP), 0);
-      const entry = { def, panel, hovered: false, entity: null as unknown as Entity };
+      const entry = { def, panel, hovered: false, hidden: false, entity: null as unknown as Entity };
       entry.entity = makeInteractive(world, panel.mesh, controlsEntity, {
         press: () => {
+          if (entry.hidden) return; // not in this layout: a ray can still reach the hidden mesh
           if (def.enabled()) def.onPress();
           this.dirty = true;
         },
@@ -96,20 +109,14 @@ export class SpatialUI {
     // Gesture guide: a wide card below the model, tipped up toward the eyes, hidden until asked
     // for (the Gestures button). It sits just under the lowest parts and left of the sandbox tray.
     this.guide = new TextPanel({ width: GUIDE_W, height: GUIDE_H, pxPerMeter: PPM, padding: 24, radius: 24 });
-    this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
-    this.guide.mesh.rotation.x = GUIDE_TILT;
     this.guide.mesh.visible = false;
     world.createTransformEntity(this.guide.mesh, { parent: groupEntity });
 
     // Captions: above the system.
     this.caption = new TextPanel({ width: 0.52, height: 0.19, pxPerMeter: PPM, padding: 36, radius: 30 });
-    this.caption.mesh.position.set(0, 0.335, -0.02); // clear of the tallest exploded layout and its labels
-    this.caption.mesh.rotation.x = 0.12;
     world.createTransformEntity(this.caption.mesh, { parent: groupEntity });
 
-    // Evidence: right side, tilted toward the user.
-    this.evidenceGroup.position.set(0.43, 0.04, 0.14);
-    this.evidenceGroup.rotation.set(0, -0.62, 0);
+    // Evidence: right side, tilted toward the user (positions: applyLayout).
     const evEntity = world.createTransformEntity(this.evidenceGroup, { parent: groupEntity });
     this.evidence = new TextPanel({ width: EVIDENCE_W, height: EVIDENCE_H, pxPerMeter: PPM, padding: 34, radius: 26 });
     world.createTransformEntity(this.evidence.mesh, { parent: evEntity });
@@ -118,6 +125,88 @@ export class SpatialUI {
     this.evidenceClose.mesh.position.set(EVIDENCE_W / 2 - 0.045, -EVIDENCE_H / 2 - 0.022, 0.002);
     makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence, ui: true });
     this.evidenceGroup.visible = false;
+    // Panels you open to read draw over the model: in the narrow layout they sit across it, and
+    // parts at the same depth would otherwise cut through the text.
+    for (const [panel, order] of [
+      [this.guide, 20],
+      [this.evidence, 20],
+      [this.evidenceClose, 21],
+    ] as const) {
+      panel.mesh.material.depthTest = false;
+      panel.mesh.renderOrder = order;
+    }
+    this.applyLayout();
+  }
+
+  get layout(): LayoutMode {
+    return this.mode;
+  }
+
+  /** Switch between the wide (Quest 3S) and narrow (glasses-class) layouts. */
+  setLayout(mode: LayoutMode): void {
+    this.mode = mode;
+    this.applyLayout();
+  }
+
+  /** Where the eye is in the anchor's frame, measured at each recenter; the narrow layout aims from it. */
+  setEye(eye: Vector3): void {
+    this.eye.copy(eye);
+    this.applyLayout();
+  }
+
+  /** Lay the buttons out on a grid of `cols` columns, showing only those `show` accepts. */
+  private layoutButtons(cols: number, show: (id: string) => boolean): void {
+    const shown = this.buttons.filter((b) => show(b.def.id));
+    const rows = Math.ceil(shown.length / cols);
+    this.controlsHalfHeight = (rows * BTN_H + (rows - 1) * GAP) / 2;
+    for (const b of this.buttons) {
+      b.hidden = !show(b.def.id);
+      b.panel.mesh.visible = !b.hidden;
+      // A hidden mesh still takes ray hits, so it also shrinks to nothing.
+      b.panel.mesh.scale.setScalar(b.hidden ? 1e-4 : 1);
+    }
+    shown.forEach((b, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      b.panel.mesh.position.set((col - (cols - 1) / 2) * (BTN_W + GAP), ((rows - 1) / 2 - row) * (BTN_H + GAP), 0);
+    });
+  }
+
+  private applyLayout(): void {
+    if (this.mode === 'narrow') {
+      this.layoutButtons(NARROW_COLUMNS, (id) => NARROW_BUTTONS.has(id));
+      placeFacing(this.controls, this.eye, ...NARROW.controls);
+      placeFacing(this.caption.mesh, this.eye, ...NARROW.caption);
+      placeFacing(this.evidenceGroup, this.eye, ...NARROW.evidence);
+      placeFacing(this.guide.mesh, this.eye, ...NARROW.guide);
+      this.syncEvidence();
+      this.dirty = true;
+      return;
+    }
+    this.layoutButtons(2, () => true);
+    this.controls.rotation.order = 'XYZ';
+    this.controls.position.set(-0.31, CONTROLS_Y, 0.16);
+    this.controls.rotation.set(-0.25, 0.5, 0);
+    this.caption.mesh.rotation.order = 'XYZ';
+    this.caption.mesh.position.set(0, 0.335, -0.02); // clear of the tallest exploded layout and its labels
+    this.caption.mesh.rotation.set(0.12, 0, 0);
+    this.evidenceGroup.rotation.order = 'XYZ';
+    this.evidenceGroup.position.set(0.43, 0.04, 0.14);
+    this.evidenceGroup.rotation.set(0, -0.62, 0);
+    this.guide.mesh.rotation.order = 'XYZ';
+    this.guide.mesh.rotation.set(GUIDE_TILT, 0, 0);
+    this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
+    this.syncEvidence();
+    if (this.floor !== null) {
+      // On a desk nothing may sit below the surface: the toolbar rises so its lowest button
+      // clears it, and the gesture card lies on the desk tipped up toward the eyes.
+      const reach = this.controlsHalfHeight * Math.cos(this.controls.rotation.x);
+      this.controls.position.y = Math.max(CONTROLS_Y, this.floor + reach + FLOOR_MARGIN);
+      this.guide.mesh.rotation.x = GUIDE_DESK_TILT;
+      // A card tipped back by the tilt rises |cos(tilt)| × half its height above its centre.
+      this.guide.mesh.position.set(-0.02, this.floor + (GUIDE_H / 2) * Math.abs(Math.cos(GUIDE_DESK_TILT)) + FLOOR_MARGIN, 0.2);
+    }
+    this.dirty = true;
   }
 
   /**
@@ -126,18 +215,8 @@ export class SpatialUI {
    * clears the surface, and the gesture card lies on the desk tipped up toward the eyes.
    */
   setFloor(floor: number | null): void {
-    if (floor === null) {
-      this.controls.position.y = CONTROLS_Y;
-      this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
-      this.guide.mesh.rotation.x = GUIDE_TILT;
-    } else {
-      const reach = this.controlsHalfHeight * Math.cos(this.controls.rotation.x);
-      this.controls.position.y = Math.max(CONTROLS_Y, floor + reach + FLOOR_MARGIN);
-      this.guide.mesh.rotation.x = GUIDE_DESK_TILT;
-      // A card tipped back by the tilt rises |cos(tilt)| × half its height above its centre.
-      this.guide.mesh.position.set(-0.02, floor + (GUIDE_H / 2) * Math.abs(Math.cos(GUIDE_DESK_TILT)) + FLOOR_MARGIN, 0.2);
-    }
-    this.dirty = true;
+    this.floor = floor;
+    this.applyLayout();
   }
 
   /** Lowest point of the toolbar and the gesture card, in the anchor's frame (tests). */
@@ -158,6 +237,7 @@ export class SpatialUI {
       this.guide.draw(GUIDE_LINES);
     }
     this.guide.mesh.visible = !this.guide.mesh.visible;
+    this.syncEvidence();
     this.dirty = true;
   }
 
@@ -171,6 +251,7 @@ export class SpatialUI {
   render(model: CaptionModel, evidence: Evidence | null): void {
     this.dirty = false;
     for (const b of this.buttons) {
+      if (b.hidden) continue; // not drawn, not scaled: stays shrunk out of reach
       const enabled = b.def.enabled();
       const primary = enabled && (b.def.primary?.() ?? false);
       const bg = !enabled ? CSS.buttonDisabled : primary ? CSS.buttonPrimary : b.hovered ? CSS.buttonHover : CSS.buttonBg;
@@ -196,8 +277,22 @@ export class SpatialUI {
     if (model.note) lines.push({ text: model.note, size: SMALL, color: CSS.muted });
     this.caption.draw(lines);
 
-    this.evidenceGroup.visible = evidence !== null;
+    this.evidenceShown = evidence !== null;
+    this.syncEvidence();
     if (evidence) this.evidence.draw(evidenceLines(evidence));
+  }
+
+  private evidenceShown = false;
+
+  /**
+   * Show the evidence panel when it is open, except that in the narrow layout the gesture card
+   * takes its place while shown (the two do not fit side by side). Hidden, it also shrinks to
+   * nothing: rays hit invisible objects, and its Close button must not be pressable then.
+   */
+  private syncEvidence(): void {
+    const show = this.evidenceShown && !(this.mode === 'narrow' && this.guide.mesh.visible);
+    this.evidenceGroup.visible = show;
+    this.evidenceGroup.scale.setScalar(show ? 1 : 1e-4);
   }
 }
 

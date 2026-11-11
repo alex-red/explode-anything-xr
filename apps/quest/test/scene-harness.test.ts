@@ -4,7 +4,7 @@
  * Presses go through the same handler registry InteractionSystem uses for XR rays and mouse.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventDispatcher, Group, Matrix4, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
+import { Euler, EventDispatcher, Group, Matrix4, Mesh, Quaternion, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
 import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import headsetJson from '../src/content/headset.bundle.json';
@@ -13,6 +13,7 @@ import { startApp, type ExplodeApp } from '../src/app/app.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
 import { FakeAudioContext } from './fake-audio.ts';
+import { FOV_BUDGET } from '../src/app/fov.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
 /** The shipped set (src/index.ts): the headset opens, the drivetrain is under "More". */
@@ -159,7 +160,7 @@ function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown;
     });
     return out;
   };
-  const button = (label: RegExp) => panels().find((p) => isInteractive(p.mesh) && label.test(p.text))?.mesh;
+  const button = (label: RegExp) => panels().find((p) => isInteractive(p.mesh) && p.mesh.visible && label.test(p.text))?.mesh;
   const caption = () => panels().map((p) => p.text).find((t) => /\d+\/\d+|Lesson complete|Tutorial complete|Free exploration/.test(t)) ?? '';
   const internals = app as unknown as {
     store: ExplodeApp extends never ? never : { state: import('@explode/contracts').SceneState; systemId: string; log: unknown[] };
@@ -1088,5 +1089,182 @@ describe('scene harness: sound follows the lesson', () => {
     h.press(h.button(/^Sound: quiet$/));
     expect(h.button(/^Sound: off$/)).toBeDefined();
     expect(localStorage.getItem('explode:sound:v1')).toBe('off');
+  });
+});
+
+describe('scene harness: finished lessons are remembered', () => {
+  /** Run the headset lesson to the end on the 2D page. */
+  const finishHeadset = (h: ReturnType<typeof setup>) => {
+    const LINK = 'edge:transmits:part:cameras->part:board';
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get(LINK)!.plug!.mesh);
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    h.press(h.button(/^Next/));
+    h.press(h.view().sockets.find((sk) => sk.targetId === 'part:board')!.mesh);
+    h.press(h.button(/^Collapse$/));
+    h.frames(60);
+    expect(h.state().lesson?.status).toBe('complete');
+  };
+
+  it('a finished tutorial stays finished through Reset, and a replay says so', () => {
+    const h = setup(false, { bundles: shipped });
+    expect(h.button(/^Skip tutorial$/)).toBeDefined();
+    finishHeadset(h);
+    h.press(h.button(/^Reset$/));
+    expect(h.state().lesson?.status).toBe('active'); // the lesson starts again...
+    expect(h.button(/^Software ▸$/)).toBeDefined(); // ...but it is not a tutorial to skip any more
+    expect(h.caption()).toMatch(/1\/7 · done before/);
+  });
+
+  it('More marks a finished lesson, and the reset key forgets every finished lesson', () => {
+    const h = setup(false, { bundles: shipped });
+    finishHeadset(h);
+    h.press(h.button(/^More: Drivetrain$/)); // the drivetrain is not finished
+    expect(h.button(/^More: Headset ✓$/)).toBeDefined();
+
+    const again = setup(false, { bundles: shipped }); // relaunch: remembered
+    expect(again.button(/^More: Headset ✓$/)).toBeDefined();
+    keyListeners.at(-1)!({ key: '0' });
+    again.frames(5);
+    expect(again.state().system_id).toBe('system:mr-headset');
+    expect(again.button(/^Skip tutorial$/)).toBeDefined();
+    expect(again.button(/^More: Drivetrain$/)).toBeDefined();
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+});
+
+describe('scene harness: field-of-view layouts', () => {
+  type Extent = { name: string; h: [number, number]; v: [number, number] };
+  /** Angular extent of every visible panel in the UI, around the gaze from the eye to the model. */
+  function extents(h: ReturnType<typeof setup>): Extent[] {
+    const ui = (h.app as unknown as { ui: { group: Object3D } }).ui.group;
+    const anchor = (h.app as unknown as { anchor: Object3D }).anchor;
+    h.scene.updateMatrixWorld(true);
+    const eye = h.camera.getWorldPosition(new Vector3());
+    // The view frustum of a viewer looking at the model: rotate into the gaze, then tangent angles.
+    const g = anchor.getWorldPosition(new Vector3()).sub(eye);
+    const toGaze = new Quaternion().setFromEuler(new Euler(Math.asin(g.y / g.length()), -Math.atan2(g.x, -g.z), 0, 'YXZ')).invert();
+    const out: Extent[] = [];
+    ui.traverse((o) => {
+      const m = o as Mesh & { geometry?: { parameters?: { width: number; height: number } } };
+      const p = m.geometry?.parameters;
+      if (!p?.width) return;
+      for (let a: Object3D | null = o; a; a = a.parent) if (!a.visible) return;
+      if (o.getWorldScale(new Vector3()).x < 0.01) return; // a hidden button, shrunk out of reach
+      const e: Extent = { name: (canvasText.get((m.material as unknown as { map: { image: object } }).map.image) ?? []).join(' ').slice(0, 24), h: [99, -99], v: [99, -99] };
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
+        const c = new Vector3((sx * p.width) / 2, (sy * p.height) / 2, 0).applyMatrix4(o.matrixWorld).sub(eye).applyQuaternion(toGaze);
+        const hh = MathUtils.radToDeg(Math.atan2(c.x, -c.z));
+        const vv = MathUtils.radToDeg(Math.atan2(c.y, -c.z));
+        e.h = [Math.min(e.h[0], hh), Math.max(e.h[1], hh)];
+        e.v = [Math.min(e.v[0], vv), Math.max(e.v[1], vv)];
+      }
+      out.push(e);
+    });
+    return out;
+  }
+
+  const DESK_Y = 0.74;
+  function scene(layout: 'wide' | 'narrow', onDesk: boolean) {
+    localStorage.setItem('explode:layout:v1', layout);
+    const room = {
+      planeCount: 1,
+      onPlaneAdded: null,
+      pickDesk: (_v: unknown, o: { x: number; y: number; z: number; index: number }) => {
+        o.x = 0;
+        o.y = DESK_Y;
+        o.z = -0.15;
+        o.index = 0;
+        return onDesk;
+      },
+    };
+    const h = setup(false, { bundles: shipped, room });
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'alpha-blend', inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+    expect((h.app as unknown as { placedOn: string }).placedOn).toBe(onDesk ? 'desk' : 'air');
+    return h;
+  }
+
+  /** The software lesson's busiest moment: exploded, traced, evidence open, gesture card shown. */
+  function busiest(h: ReturnType<typeof setup>) {
+    h.press(h.button(/^Next/)); // headset intro is an explode step; go straight to software via keys
+    keyListeners.at(-1)!({ key: 's' });
+    h.frames(5);
+    keyListeners.at(-1)!({ key: 'n' });
+    keyListeners.at(-1)!({ key: 'e' });
+    h.frames(60);
+    keyListeners.at(-1)!({ key: 't' });
+    h.press(h.button(/^Evidence$/));
+    keyListeners.at(-1)!({ key: 'g' });
+    h.frames(20);
+    expect((h.app as unknown as { ui: { guideVisible: boolean } }).ui.guideVisible).toBe(true);
+  }
+
+  for (const onDesk of [false, true]) {
+    const where = onDesk ? 'on a desk' : 'floating';
+    it(`narrow, ${where}: every panel, evidence and gestures included, fits the glasses-class budget`, () => {
+      const h = scene('narrow', onDesk);
+      busiest(h);
+      const b = FOV_BUDGET.narrow;
+      const all = extents(h);
+      const check = (list: Extent[]) => {
+        for (const e of list) {
+          expect(Math.max(-e.h[0], e.h[1]), `${e.name}: horizontal`).toBeLessThanOrEqual(b.h);
+          expect(Math.max(-e.v[0], e.v[1]), `${e.name}: vertical`).toBeLessThanOrEqual(b.v);
+        }
+        // No two panels may overlap: an overlap hides text and puts two targets in one place.
+        for (let i = 0; i < list.length; i++)
+          for (let j = i + 1; j < list.length; j++) {
+            const [p, q] = [list[i]!, list[j]!];
+            const overlap = Math.min(p.h[1], q.h[1]) - Math.max(p.h[0], q.h[0]) > 0.5 && Math.min(p.v[1], q.v[1]) - Math.max(p.v[0], q.v[0]) > 0.5;
+            expect(overlap, `${p.name} ${JSON.stringify([p.h, p.v].map((r) => r.map(Math.round)))} overlaps ${q.name} ${JSON.stringify([q.h, q.v].map((r) => r.map(Math.round)))}`).toBe(false);
+          }
+      };
+      // The gesture card is shown: it takes the evidence panel's place.
+      expect(all.some((e) => /^HAND GESTURES/.test(e.name))).toBe(true);
+      expect(all.some((e) => /^EVIDENCE/.test(e.name))).toBe(false);
+      check(all);
+      // Hide it, and the evidence panel is back, also inside the budget and clear of everything.
+      keyListeners.at(-1)!({ key: 'g' });
+      h.frames(20);
+      const withEvidence = extents(h);
+      expect(withEvidence.some((e) => /^EVIDENCE/.test(e.name))).toBe(true);
+      check(withEvidence);
+      // Only the lesson's buttons are shown, and a hidden one cannot be pressed.
+      expect(h.button(/^Live AI/)).toBeUndefined();
+      expect(TextPanel.clipEvents).toEqual([]);
+    });
+
+    it(`wide, ${where}: caption and toolbar fit the Quest 3S budget; nothing sits under the desk`, () => {
+      const h = scene('wide', onDesk);
+      busiest(h);
+      const b = FOV_BUDGET.wide;
+      for (const e of extents(h).filter((x) => !/^EVIDENCE|^HAND GESTURES|^Close/.test(x.name))) {
+        expect(Math.max(-e.h[0], e.h[1]), `${e.name}: horizontal`).toBeLessThanOrEqual(b.h);
+        expect(Math.max(-e.v[0], e.v[1]), `${e.name}: vertical`).toBeLessThanOrEqual(b.v);
+      }
+      if (onDesk) {
+        const ui = (h.app as unknown as { ui: { lowestPanelY(): number } }).ui;
+        const anchor = (h.app as unknown as { anchor: Object3D }).anchor;
+        expect(anchor.position.y + ui.lowestPanelY()).toBeGreaterThan(DESK_Y);
+      }
+    });
+  }
+
+  it('the Layout button switches layouts, and the choice is remembered', () => {
+    const h = setup(false, { bundles: shipped });
+    h.press(h.button(/^Layout: wide$/));
+    expect(localStorage.getItem('explode:layout:v1')).toBe('narrow');
+    expect(h.button(/^Layout: narrow$/)).toBeDefined();
+    expect(h.button(/^Skip tutorial$/)).toBeUndefined(); // not a lesson button: hidden in narrow
+    const again = setup(false, { bundles: shipped });
+    expect(again.button(/^Layout: narrow$/)).toBeDefined();
+    again.press(again.button(/^Layout: narrow$/));
+    expect(again.button(/^Skip tutorial$/)).toBeDefined();
   });
 });

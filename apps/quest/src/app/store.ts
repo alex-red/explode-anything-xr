@@ -5,6 +5,8 @@ import { createContext, reduce, replay, undo, type EngineContext } from '@explod
 type Listener = (state: SceneState, event: EngineEvent | null) => void;
 
 const STORAGE_KEY = 'explode:session:v1';
+/** Lessons finished at least once, kept apart from the event logs so Reset and Undo never erase them. */
+const DONE_KEY = 'explode:done:v1';
 
 interface Persisted {
   active_system: string;
@@ -85,8 +87,32 @@ export class Store {
   static clearSaved(): void {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(DONE_KEY);
     } catch {
       // Storage unavailable: there is nothing saved to clear.
+    }
+  }
+
+  /** Record that a lesson was finished. */
+  static markDone(lessonId: string): void {
+    const done = Store.doneLessons();
+    if (done.has(lessonId)) return;
+    done.add(lessonId);
+    try {
+      localStorage.setItem(DONE_KEY, JSON.stringify([...done].sort()));
+    } catch {
+      // Storage unavailable: finishing still works, it is just not remembered.
+    }
+  }
+
+  /** Every lesson finished at least once, on this device. */
+  static doneLessons(): Set<string> {
+    try {
+      const raw = localStorage.getItem(DONE_KEY);
+      const list = raw ? (JSON.parse(raw) as unknown) : [];
+      return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []);
+    } catch {
+      return new Set();
     }
   }
 

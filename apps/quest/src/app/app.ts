@@ -5,6 +5,7 @@ import { Sfx, type At } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
 import { DeskMemory, type AnchorFrame, type DeskPose } from './desk-memory.ts';
+import { FovMask, type LayoutMode } from './fov.ts';
 import { GraphView, STAGE_Y } from './graph-view.ts';
 import type { RoomSystem } from './room.ts';
 import { Store } from './store.ts';
@@ -21,6 +22,7 @@ const LATE_PLANE_WINDOW = 3; // s after a session starts in which a newly report
 const RECALL_WINDOW = 6; // s after a session starts in which a restored anchor still returns the stage to its remembered spot
 const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
 const VIEW_EASE = 18; // 1/s: how fast the model follows a hand gesture; high enough to feel held
+const LAYOUT_KEY = 'explode:layout:v1';
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 /**
@@ -42,6 +44,8 @@ export class ExplodeApp {
   private readonly hands: HandGestures;
   private readonly backdrop: Backdrop;
   private readonly debug: DebugReadout;
+  private readonly fovMask = new FovMask();
+  private readonly eyeLocal = new Vector3();
   private readonly sfx = new Sfx();
   private readonly software: ContentBundle;
   /** Tutorial systems in the order given; the first is the opening lesson, the rest are under "More". */
@@ -89,6 +93,8 @@ export class ExplodeApp {
     this.debug = new DebugReadout(world, this.anchorEntity);
     this.debug.enabled = debug;
     this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
+    this.ui.setLayout(readLayout());
+    world.createTransformEntity(this.fovMask.group, { parent: this.anchorEntity });
     this.hands = new HandGestures(
       world,
       this.anchor,
@@ -191,6 +197,7 @@ export class ExplodeApp {
       this.anchor.rotation.set(0, r.yaw, 0);
       this.placedOn = 'remembered';
       this.ui.setFloor(STAGE_Y);
+      this.measureEye();
       this.hands.gestures.reset();
       this.recallSettled = true;
       this.pendingSave = false;
@@ -202,6 +209,26 @@ export class ExplodeApp {
       this.recallSettled = true; // this session's spot is now the remembered one; never "recall" it
       if (this.debug.enabled) console.info('[explode:room] desk spot saved');
     }
+  }
+
+  /** Wide (Quest 3S) ⇄ narrow (glasses-class field of view), remembered between visits. */
+  private toggleLayout(): void {
+    const next: LayoutMode = this.ui.layout === 'wide' ? 'narrow' : 'wide';
+    this.ui.setLayout(next);
+    try {
+      localStorage.setItem(LAYOUT_KEY, next);
+    } catch {
+      // Storage unavailable: the layout holds for this visit only.
+    }
+  }
+
+  /** Tell the UI (and the debug mask) where the eye is now, in the anchor's frame. */
+  private measureEye(): void {
+    this.anchor.updateMatrixWorld(true);
+    this.world.camera.getWorldPosition(this.eyeLocal);
+    this.anchor.worldToLocal(this.eyeLocal);
+    this.ui.setEye(this.eyeLocal);
+    this.fovMask.update(this.eyeLocal);
   }
 
   /** Recenter asked for by the viewer: it re-picks the desk and replaces any remembered spot. */
@@ -246,6 +273,12 @@ export class ExplodeApp {
     this.hands.gestures.reset();
     this.cascadePlayedFor = this.store.state.broken_edge_ids[0] ?? null; // a restored break is not news
     this.lessonWasComplete = this.store.state.lesson?.status === 'complete';
+    // Progress saved before finished lessons were recorded still counts.
+    const restored = this.store.state.lesson;
+    if (restored?.status === 'complete' && !this.done.has(restored.lesson_id)) {
+      Store.markDone(restored.lesson_id);
+      this.done.add(restored.lesson_id);
+    }
     this.sfx.hum(false);
     this.sfx.boot(this.modelAt());
     // ZXY: spin about the model's vertical, then tilt, then roll about the viewer's line of sight.
@@ -320,9 +353,25 @@ export class ExplodeApp {
       this.sfx.cascade(points);
     }
     const complete = s.lesson?.status === 'complete';
-    if (complete && !this.lessonWasComplete) this.sfx.complete();
+    if (complete && !this.lessonWasComplete) {
+      this.sfx.complete();
+      if (s.lesson) {
+        Store.markDone(s.lesson.lesson_id);
+        this.done.add(s.lesson.lesson_id);
+        this.ui.dirty = true;
+      }
+    }
     this.lessonWasComplete = complete;
   }
+
+  /** True when this bundle's first lesson has been finished before, on this device. */
+  private doneBefore(b: ContentBundle): boolean {
+    const id = b.lessons[0]?.id;
+    return !!id && this.done.has(id);
+  }
+
+  /** Finished lessons, read once and kept in step with Store.markDone (no storage reads per frame). */
+  private readonly done = Store.doneLessons();
 
   /** Where a part is right now, for placing its sound (allocates; events only). */
   private nodeAt(id: string | null | undefined): At | null {
@@ -441,6 +490,8 @@ export class ExplodeApp {
     else if (k === 'pageup') this.hands.gestures.tiltBy(-Math.PI / 12);
     else if (k === 'pagedown') this.hands.gestures.tiltBy(Math.PI / 12);
     else if (k === 'g') this.ui.toggleGuide();
+    else if (k === 'l') this.toggleLayout();
+    else if (k === 'f') this.fovMask.group.visible = !this.fovMask.group.visible; // testing: show the FoV budgets
     else if (k === 'arrowleft') this.hands.gestures.panBy(-0.05, 0, 0);
     else if (k === 'arrowright') this.hands.gestures.panBy(0.05, 0, 0);
     else if (k === 'arrowup') this.hands.gestures.panBy(0, 0.05, 0);
@@ -469,6 +520,7 @@ export class ExplodeApp {
   /** Testing only: forget saved progress in both systems and start again at the tutorial. */
   private forgetProgress(): void {
     Store.clearSaved();
+    this.done.clear();
     DeskMemory.forget();
     this.loadSystem(this.opening.graph.system_id, false);
     this.recenterByUser(); // a forgotten spot must not keep the stage: place it afresh
@@ -533,10 +585,11 @@ export class ExplodeApp {
       { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => this.recenterByUser() },
       { id: 'guide', label: () => (this.ui.guideVisible ? 'Hide gestures' : 'Gestures'), enabled: () => true, onPress: () => this.ui.toggleGuide() },
       { id: 'sound', label: () => `Sound: ${this.sfx.level}`, enabled: () => true, onPress: () => this.sfx.cycleLevel() },
+      { id: 'layout', label: () => `Layout: ${this.ui.layout}`, enabled: () => true, onPress: () => this.toggleLayout() },
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
-        label: () => (this.onMechanical ? (lessonDone() ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
+        label: () => (this.onMechanical ? (lessonDone() || this.doneBefore(this.store.ctx.bundle) ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
         enabled: () => true,
         onPress: () => this.switchSystem(),
       },
@@ -544,7 +597,7 @@ export class ExplodeApp {
         id: 'more',
         label: () => {
           const t = this.moreTarget();
-          return t ? `More: ${shortName(t)}` : 'More: n/a';
+          return t ? `More: ${shortName(t)}${this.doneBefore(t) ? ' ✓' : ''}` : 'More: n/a';
         },
         enabled: () => this.moreTarget() !== null,
         onPress: () => this.openMore(),
@@ -595,7 +648,10 @@ export class ExplodeApp {
     const graph = this.store.ctx.bundle.graph;
     return {
       title: lesson?.title ?? graph.display_name,
-      progress: lesson && s.lesson?.status === 'active' ? `${s.lesson.step_index + 1}/${lesson.steps.length}` : '',
+      progress:
+        lesson && s.lesson?.status === 'active'
+          ? `${s.lesson.step_index + 1}/${lesson.steps.length}${this.doneBefore(this.store.ctx.bundle) ? ' · done before' : ''}`
+          : '',
       caption,
       question: s.question,
       feedback: s.feedback,
@@ -648,6 +704,7 @@ export class ExplodeApp {
       if (this.room) console.info('[explode:surfaces]', JSON.stringify(this.room.describe()));
     }
     this.anchor.rotation.set(0, Math.atan2(-this.fwd.x, -this.fwd.z), 0);
+    this.measureEye();
     this.hands.gestures.reset(); // Recenter also undoes any move, zoom or turn of the model
     this.needsRecenter = false;
     if (this.world.session) this.recenteredInXR = true;
@@ -658,6 +715,14 @@ export class ExplodeApp {
 function shortName(b: ContentBundle): string {
   const word = b.graph.display_name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function readLayout(): LayoutMode {
+  try {
+    return localStorage.getItem(LAYOUT_KEY) === 'narrow' ? 'narrow' : 'wide';
+  } catch {
+    return 'wide';
+  }
 }
 
 let app: ExplodeApp | null = null;
