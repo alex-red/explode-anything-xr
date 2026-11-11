@@ -215,7 +215,8 @@ function advanceLesson(ctx: EngineContext, before: SceneState, after: SceneState
 function completeStepsFrom(ctx: EngineContext, lesson: Lesson, s: SceneState, index: number): SceneState {
   let out = s;
   for (let i = index; ; i++) {
-    if (i >= lesson.steps.length) return { ...out, lesson: { ...out.lesson!, status: 'complete' }, question: null };
+    // A finished lesson keeps no step's prompt or pointer: its question and annotation go with it.
+    if (i >= lesson.steps.length) return { ...out, lesson: { ...out.lesson!, status: 'complete' }, question: null, annotation: null };
     out = enterStep(ctx, { ...out, lesson: { ...out.lesson!, step_index: i }, question: null });
     if (!alreadySatisfied(lesson.steps[i]!.expect, out)) return out;
   }

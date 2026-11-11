@@ -51,6 +51,18 @@ describe('reducer', () => {
     expect(s.prediction).toEqual({ target_id: 'fn:session', correct: true });
   });
 
+  it('drops a step\'s annotation when the lesson completes', () => {
+    const bundle = miniBundle();
+    const breakStep = bundle.lessons[0]!.steps.find((st) => st.id === 'step:break')!;
+    breakStep.on_enter = [{ type: 'show_annotation', target_id: 'fn:auth', text: 'This link carries the login.' }];
+    const annotated = createContext(bundle);
+    const midway = replay(annotated, fullRun.slice(0, 5));
+    expect(midway.annotation?.text).toBe('This link carries the login.'); // still shown while the lesson runs
+    const done = replay(annotated, fullRun);
+    expect(done.lesson?.status).toBe('complete');
+    expect(done.annotation).toBeNull();
+  });
+
   it('does not advance on the wrong action', () => {
     let s = initialState(ctx);
     s = reduce(ctx, s, { type: 'set_explode', factor: 1 }); // step 0 expects Next

@@ -12,6 +12,7 @@ import repoJson from '../src/content/repo-demo.bundle.json';
 import { startApp, type ExplodeApp } from '../src/app/app.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
+import { FakeAudioContext } from './fake-audio.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
 /** The shipped set (src/index.ts): the headset opens, the drivetrain is under "More". */
@@ -1012,15 +1013,80 @@ describe('scene harness: the desk spot is remembered across sessions', () => {
     expect(placed(h4).placedOn).toBe('desk'); // the viewer's choice wins, and is remembered instead
   });
 
-  it('never moves the stage outside mixed reality, and forgetting progress forgets the spot', () => {
+  it('never moves the stage outside mixed reality, and forgetting progress forgets the spot and leaves it', () => {
     const h = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-1') });
     enter(h);
     expect(localStorage.getItem('explode:desk:v1')).not.toBeNull();
-    for (const fn of keyListeners) fn({ key: '0' });
+
+    // Next session the stage is back on the remembered spot; the viewer is now elsewhere.
+    const moved = anchor('anchor-1');
+    moved.m.makeTranslation(1.5, 0, 0);
+    const standing = roomWithDesk();
+    standing.pickDesk = () => false;
+    const h2 = setup(false, { bundles: shipped, room: standing, anchors: moved });
+    enter(h2);
+    expect(placed(h2).placedOn).toBe('remembered');
+    keyListeners.at(-1)!({ key: '0' });
+    h2.frames(5);
     expect(localStorage.getItem('explode:desk:v1')).toBeNull();
+    expect(placed(h2).placedOn).toBe('air'); // placed afresh in front of the viewer
 
     const page = setup(false, { bundles: shipped, room: roomWithDesk(), anchors: anchor('anchor-1') });
     page.frames(20);
     expect(placed(page).placedOn).toBe('air'); // the 2D page has no desk
+  });
+});
+
+describe('scene harness: sound follows the lesson', () => {
+  it('each beat of the headset lesson has its sound, in order, placed where it happens', () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    const h = setup(false, { bundles: shipped });
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'alpha-blend', inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+    const sfx = (h.app as unknown as { sfx: { played: string[] } }).sfx;
+    expect(sfx.played).toEqual([]); // nothing before the first press: no audio before a gesture
+
+    // Only sounds that start are recorded; the hum stopping is not.
+    let seen = 0;
+    const since = () => {
+      const out = sfx.played.slice(seen);
+      seen = sfx.played.length;
+      return out;
+    };
+    const LINK = 'edge:transmits:part:cameras->part:board';
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    expect(since()).toEqual(['explode', 'step']);
+    h.press(h.button(/^Trace/));
+    expect(since()).toEqual(['click', 'step', 'hum']); // the traced flow hums
+    h.press(h.view().edges.get(LINK)!.plug!.mesh);
+    expect(since()).toEqual(['unplug', 'step']); // the hum cuts out; no cascade before the prediction
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    expect(since()).toEqual(['click', 'step', 'dim', 'cascade']);
+    h.press(h.button(/^Next/));
+    since();
+    h.press(h.view().sockets.find((sk) => sk.targetId === 'part:display')!.mesh); // wrong socket
+    expect(since()).toEqual(['reject']);
+    h.press(h.view().sockets.find((sk) => sk.targetId === 'part:board')!.mesh);
+    expect(since()).toEqual(['repair', 'step', 'undim', 'hum']);
+    h.press(h.button(/^Collapse$/));
+    h.frames(60);
+    expect(since()).toEqual(['collapse', 'complete']);
+
+    // Placed sounds: the cascade's voices sit at the parts the failure reached.
+    const ctx = FakeAudioContext.instances[0]!;
+    const panned = ctx.nodes.filter((n) => n.kind === 'panner');
+    expect(panned.length).toBeGreaterThan(5);
+  });
+
+  it('the Sound button cycles on, quiet and off', () => {
+    const h = setup(false, { bundles: shipped });
+    h.press(h.button(/^Sound: on$/));
+    h.press(h.button(/^Sound: quiet$/));
+    expect(h.button(/^Sound: off$/)).toBeDefined();
+    expect(localStorage.getItem('explode:sound:v1')).toBe('off');
   });
 });

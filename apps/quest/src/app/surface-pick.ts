@@ -61,7 +61,7 @@ export interface PickConfig {
 }
 
 export const DEFAULT_PICK: PickConfig = {
-  reach: 0.55,
+  reach: 0.65, // close to the floating placement (0.7 m), so the toolbar beside the stage stays near the centre of view
   minBelowEye: 0.25,
   maxBelowEye: 0.65,
   minHalf: 0.15,

@@ -1,7 +1,7 @@
 import { createSystem, Group, SessionMode, Vector3, VisibilityState, type Entity, type World } from '@iwsdk/core';
 import type { ContentBundle, EngineEvent, Evidence, TutorTrigger } from '@explode/contracts';
 import { currentLesson, currentStep } from '@explode/lesson-engine';
-import { Sfx } from './audio.ts';
+import { Sfx, type At } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
 import { DeskMemory, type AnchorFrame, type DeskPose } from './desk-memory.ts';
@@ -47,6 +47,9 @@ export class ExplodeApp {
   /** Tutorial systems in the order given; the first is the opening lesson, the rest are under "More". */
   private readonly tutorials: ContentBundle[];
   private roomDimmed = false;
+  /** The broken edge whose spreading failure has already been played, so it plays once. */
+  private cascadePlayedFor: string | null = null;
+  private lessonWasComplete = false;
   private tutorAnswer: (TutorAnswer & { stepKey: string }) | null = null;
   private liveAllowed = true;
   private paused = false;
@@ -100,6 +103,7 @@ export class ExplodeApp {
       this.ui.dirty = true;
       this.onEvent(event);
       this.syncRoomDim();
+      this.syncSound();
     });
     const last = Store.lastActiveSystem();
     this.loadSystem(last && bundles.some((b) => b.graph.system_id === last) ? last : this.opening.graph.system_id);
@@ -152,6 +156,7 @@ export class ExplodeApp {
     this.anchors?.tick?.();
     this.rememberDesk();
     this.backdrop.update(camera, dt);
+    this.sfx.updateListener(camera);
     this.hands.update();
     this.applyViewPose(dt);
     this.debug.update(dt);
@@ -239,6 +244,10 @@ export class ExplodeApp {
     );
     this.view.displayFactor = this.store.state.explode_factor;
     this.hands.gestures.reset();
+    this.cascadePlayedFor = this.store.state.broken_edge_ids[0] ?? null; // a restored break is not news
+    this.lessonWasComplete = this.store.state.lesson?.status === 'complete';
+    this.sfx.hum(false);
+    this.sfx.boot(this.modelAt());
     // ZXY: spin about the model's vertical, then tilt, then roll about the viewer's line of sight.
     this.view.root.rotation.order = 'ZXY';
     this.applyViewPose(Infinity);
@@ -274,7 +283,7 @@ export class ExplodeApp {
 
   /** Tutorial ⇄ software. From the software system it goes back to the opening tutorial. */
   private switchSystem(): void {
-    this.sfx.collapse();
+    this.sfx.collapse(this.modelAt());
     this.loadSystem(this.onMechanical ? this.software.graph.system_id : this.opening.graph.system_id);
   }
 
@@ -288,9 +297,48 @@ export class ExplodeApp {
   private openMore(): void {
     const target = this.moreTarget();
     if (!target) return;
-    this.sfx.collapse();
+    this.sfx.collapse(this.modelAt());
     this.loadSystem(target.graph.system_id);
   }
+
+  /**
+   * Sounds that follow state rather than one event: the hum of a traced, intact flow; the
+   * failure spreading part by part once its consequence is shown; the lesson's last chime.
+   */
+  private syncSound(): void {
+    const s = this.store.state;
+    this.sfx.hum(s.active_path_id !== null && s.broken_edge_ids.length === 0, this.modelAt());
+    const c = s.consequences[0];
+    if (!c) this.cascadePlayedFor = null;
+    else if (c.edge_id !== this.cascadePlayedFor && !this.predicting()) {
+      this.cascadePlayedFor = c.edge_id;
+      const points: At[] = [];
+      for (const id of c.affected_ids) {
+        const p = this.nodeAt(id);
+        if (p) points.push(p);
+      }
+      this.sfx.cascade(points);
+    }
+    const complete = s.lesson?.status === 'complete';
+    if (complete && !this.lessonWasComplete) this.sfx.complete();
+    this.lessonWasComplete = complete;
+  }
+
+  /** Where a part is right now, for placing its sound (allocates; events only). */
+  private nodeAt(id: string | null | undefined): At | null {
+    if (!id || !this.view) return null;
+    const p = this.view.nodeWorldPosition(id, this.soundTmp);
+    return p ? { x: p.x, y: p.y, z: p.z } : null;
+  }
+
+  /** The model's centre, for sounds of the whole model (allocates; events only). */
+  private modelAt(): At | null {
+    if (!this.view) return null;
+    const p = this.view.root.getWorldPosition(this.soundTmp);
+    return { x: p.x, y: p.y, z: p.z };
+  }
+
+  private readonly soundTmp = new Vector3();
 
   /**
    * Dim the real room while the headset model's camera link is cut and its consequence is shown.
@@ -307,6 +355,7 @@ export class ExplodeApp {
     if (dim === this.roomDimmed) return;
     this.roomDimmed = dim;
     this.backdrop.illustrate(dim);
+    this.sfx.dim(dim);
     this.ui.dirty = true;
   }
 
@@ -340,15 +389,19 @@ export class ExplodeApp {
     if (!event) return;
     switch (event.type) {
       case 'set_explode':
-        if (event.factor > 0.5) this.sfx.explode();
-        else this.sfx.collapse();
+        if (event.factor > 0.5) this.sfx.explode(this.modelAt());
+        else this.sfx.collapse(this.modelAt());
         break;
       case 'unplug':
-        this.sfx.unplug();
+        this.sfx.unplug(this.nodeAt(this.store.ctx.edges.get(event.edge_id)?.target_id));
         break;
       case 'plug':
-        if (this.store.state.broken_edge_ids.includes(event.edge_id)) this.sfx.reject();
-        else this.sfx.plug();
+        if (this.store.state.broken_edge_ids.includes(event.edge_id)) this.sfx.reject(this.nodeAt(event.target_id));
+        else this.sfx.repair(this.nodeAt(event.target_id));
+        break;
+      case 'select':
+      case 'predict':
+        this.sfx.click(this.nodeAt(event.target_id));
         break;
       default:
         this.sfx.click();
@@ -356,7 +409,7 @@ export class ExplodeApp {
     const key = this.stepKey();
     if (key !== this.lastStepKey) {
       this.lastStepKey = key;
-      this.sfx.step();
+      if (this.store.state.lesson?.status !== 'complete') this.sfx.step();
     }
   }
 
@@ -418,6 +471,7 @@ export class ExplodeApp {
     Store.clearSaved();
     DeskMemory.forget();
     this.loadSystem(this.opening.graph.system_id, false);
+    this.recenterByUser(); // a forgotten spot must not keep the stage: place it afresh
   }
 
   private next(): void {
@@ -478,6 +532,7 @@ export class ExplodeApp {
       { id: 'reset', label: () => 'Reset', enabled: () => true, onPress: () => this.store.restart() },
       { id: 'recenter', label: () => 'Recenter', enabled: () => true, onPress: () => this.recenterByUser() },
       { id: 'guide', label: () => (this.ui.guideVisible ? 'Hide gestures' : 'Gestures'), enabled: () => true, onPress: () => this.ui.toggleGuide() },
+      { id: 'sound', label: () => `Sound: ${this.sfx.level}`, enabled: () => true, onPress: () => this.sfx.cycleLevel() },
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
