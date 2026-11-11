@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { verifyBundle } from './bundle.ts';
-import { DRIVETRAIN_BUNDLE_PATH, REPO_BUNDLE_PATH } from './paths.ts';
+import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, REPO_BUNDLE_PATH } from './paths.ts';
 
 let failed = false;
-for (const path of [DRIVETRAIN_BUNDLE_PATH, REPO_BUNDLE_PATH]) {
+for (const path of [DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, REPO_BUNDLE_PATH]) {
   if (!existsSync(path)) {
     console.error(`missing ${path} (run bun run content:generate)`);
     failed = true;

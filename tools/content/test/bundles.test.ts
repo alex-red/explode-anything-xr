@@ -5,12 +5,15 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildDrivetrainBundle } from '../src/drivetrain.ts';
-import { layoutProblems, verifyBundle } from '../src/index.ts';
-import { DRIVETRAIN_BUNDLE_PATH, REPO_BUNDLE_PATH, REPO_DEMO_DIR } from '../src/paths.ts';
+import { buildHeadsetBundle } from '../src/headset.ts';
+import { layoutProblems, targetOverlaps, verifyBundle } from '../src/index.ts';
+import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, REPO_BUNDLE_PATH, REPO_DEMO_DIR } from '../src/paths.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8')) as ContentBundle;
 const repo = load(REPO_BUNDLE_PATH);
 const drivetrain = load(DRIVETRAIN_BUNDLE_PATH);
+const headset = load(HEADSET_BUNDLE_PATH);
+const HS_EDGE = 'edge:transmits:part:cameras->part:board';
 const MAIN_EDGE = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
 const CREATE = 'fn:src/sessions/store.ts#sessionstore.create';
 const DT_EDGE = 'edge:powers:part:inverter->part:motor';
@@ -19,12 +22,15 @@ describe('generated bundles', () => {
   it('pass schema, integrity, layout and hash checks', () => {
     expect(verifyBundle(repo)).toEqual([]);
     expect(verifyBundle(drivetrain)).toEqual([]);
+    expect(verifyBundle(headset)).toEqual([]);
     expect(layoutProblems(repo.layout)).toEqual([]);
+    expect(targetOverlaps(repo.graph, repo.layout), 'a ray aimed at one part must not land on its neighbour').toEqual([]);
   });
 
   it('are up to date with their sources', () => {
     expect(repo.graph.revision.value).toBe(hashTree(resolve(REPO_DEMO_DIR, 'fixture')));
     expect(buildDrivetrainBundle(drivetrain).content_hash).toBe(drivetrain.content_hash);
+    expect(buildHeadsetBundle(headset).content_hash).toBe(headset.content_hash);
   });
 
   it('marks only mutated edges as sandbox-mutable and never marks an edge observed', () => {
@@ -90,6 +96,49 @@ describe('lessons replay to completion', () => {
     s = reduce(ctx, s, { type: 'plug', edge_id: DT_EDGE, target_id: 'part:gearbox' });
     expect(s.broken_edge_ids).toEqual([DT_EDGE]);
     expect(s.misplug_count).toBe(1);
+  });
+
+  it('headset tutorial', () => {
+    const ctx = createContext(headset);
+    const s = replay(ctx, [
+      { type: 'set_explode', factor: 1 },
+      { type: 'trace', path_id: 'path:room-to-eye' },
+      { type: 'unplug', edge_id: HS_EDGE },
+      { type: 'predict', target_id: 'part:board' },
+      { type: 'next' },
+      { type: 'plug', edge_id: HS_EDGE, target_id: 'part:board' },
+      { type: 'set_explode', factor: 0 },
+    ]);
+    expect(s.lesson?.status).toBe('complete');
+    expect(s.prediction?.correct).toBe(true);
+    expect(s.broken_edge_ids).toEqual([]);
+  });
+
+  it('headset: cutting the camera link darkens the display and lenses, as a teaching-model claim only', () => {
+    const ctx = createContext(headset);
+    let s = replay(ctx, [
+      { type: 'set_explode', factor: 1 },
+      { type: 'trace', path_id: 'path:room-to-eye' },
+      { type: 'unplug', edge_id: HS_EDGE },
+    ]);
+    const c = s.consequences[0];
+    expect(c?.truth_status).toBe('authored_model');
+    expect(c?.affected_ids).toEqual(expect.arrayContaining(['part:board', 'part:display', 'part:lens-left', 'part:lens-right']));
+    // Sound and power are different flows; the camera link does not carry them.
+    expect(c?.affected_ids).not.toContain('part:speakers');
+    expect(c?.affected_ids).not.toContain('part:battery');
+    s = reduce(ctx, s, { type: 'plug', edge_id: HS_EDGE, target_id: 'part:display' });
+    expect(s.broken_edge_ids).toEqual([HS_EDGE]);
+    expect(s.misplug_count).toBe(1);
+  });
+
+  it('every headset claim is an authored model, and the model says what it is not', () => {
+    for (const n of headset.graph.nodes) expect(n.truth_status).toBe('authored_model');
+    for (const e of headset.graph.edges) expect(e.truth_status).toBe('authored_model');
+    for (const ev of headset.evidence) expect(ev.truth_status).toBe('authored_model');
+    const model = headset.evidence.find((ev) => ev.id === 'ev:rule:headset-model');
+    expect(model?.summary).toMatch(/not the device's actual internals/);
+    expect(model?.summary).toMatch(/Not affiliated with or endorsed by Meta/);
   });
 
   it('repo hero lesson', () => {

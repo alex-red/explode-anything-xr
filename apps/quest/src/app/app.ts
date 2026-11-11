@@ -4,8 +4,10 @@ import { currentLesson, currentStep } from '@explode/lesson-engine';
 import { Sfx } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
-import { GraphView } from './graph-view.ts';
+import { GraphView, STAGE_Y } from './graph-view.ts';
+import type { RoomSystem } from './room.ts';
 import { Store } from './store.ts';
+import type { Placement, Viewer } from './surface-pick.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
 import { HandGestures } from './hand-gestures.ts';
 import { tickHolo } from './holo.ts';
@@ -13,10 +15,19 @@ import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from '.
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
+const DESK_CLEARANCE = 0.005; // m the stage floats above the desk, so it never z-fights the real surface
+const LATE_PLANE_WINDOW = 3; // s after a session starts in which a newly reported desk still moves the stage
 const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
 const VIEW_EASE = 18; // 1/s: how fast the model follows a hand gesture; high enough to feel held
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
+/**
+ * The headset lesson's break: cutting the camera link dims the real room (WIN_PLAN W3). It is an
+ * illustration of what the link carries, said so at the moment it happens; the headset is not
+ * changed, and the user's real hand tracking keeps working.
+ */
+const ROOM_LINK = { system: 'system:mr-headset', edge: 'edge:transmits:part:cameras->part:board' };
+const ROOM_DIM_NOTE = 'We dimmed your view of the room to show what this link carries. Your headset is fine, and your hands still work.';
 
 /** Top-level controller: owns the store, view, UI, tutor, and input glue. */
 export class ExplodeApp {
@@ -31,7 +42,9 @@ export class ExplodeApp {
   private readonly debug: DebugReadout;
   private readonly sfx = new Sfx();
   private readonly software: ContentBundle;
-  private readonly mechanical: ContentBundle;
+  /** Tutorial systems in the order given; the first is the opening lesson, the rest are under "More". */
+  private readonly tutorials: ContentBundle[];
+  private roomDimmed = false;
   private tutorAnswer: (TutorAnswer & { stepKey: string }) | null = null;
   private liveAllowed = true;
   private paused = false;
@@ -39,18 +52,24 @@ export class ExplodeApp {
   private lastStepKey = '';
   private readonly tmp = new Vector3();
   private readonly fwd = new Vector3();
+  private readonly viewer: Viewer = { x: 0, y: 0, z: 0, fx: 0, fz: -1 };
+  private readonly desk: Placement = { x: 0, y: 0, z: 0, index: -1 };
+  /** Where the last recenter put the stage: on a detected desk, or floating in front of the eyes. */
+  private placedOn: 'desk' | 'air' = 'air';
+  private sessionAge = 0;
 
   constructor(
     private readonly world: World,
     bundles: ContentBundle[],
     tutorUrl: string | null,
     debug = false,
+    private readonly room: RoomSystem | null = null,
   ) {
     const software = bundles.find((b) => b.graph.system_kind === 'software');
-    const mechanical = bundles.find((b) => b.graph.system_kind === 'mechanical');
-    if (!software || !mechanical) throw new Error('expected one software and one mechanical bundle');
+    const tutorials = bundles.filter((b) => b.graph.system_kind === 'mechanical');
+    if (!software || tutorials.length === 0) throw new Error('expected one software bundle and at least one mechanical bundle');
     this.software = software;
-    this.mechanical = mechanical;
+    this.tutorials = tutorials;
     this.store = new Store(new Map(bundles.map((b) => [b.graph.system_id, b])));
     this.tutor = new TutorClient(tutorUrl);
     this.anchorEntity = world.createTransformEntity(this.anchor);
@@ -71,9 +90,10 @@ export class ExplodeApp {
     this.store.subscribe((_, event) => {
       this.ui.dirty = true;
       this.onEvent(event);
+      this.syncRoomDim();
     });
     const last = Store.lastActiveSystem();
-    this.loadSystem(last && [software.graph.system_id, mechanical.graph.system_id].includes(last) ? last : mechanical.graph.system_id);
+    this.loadSystem(last && bundles.some((b) => b.graph.system_id === last) ? last : this.opening.graph.system_id);
 
     world.visibilityState.subscribe((v) => {
       this.paused = v === VisibilityState.Hidden || v === VisibilityState.VisibleBlurred;
@@ -81,6 +101,13 @@ export class ExplodeApp {
       if (v === VisibilityState.Visible) this.needsRecenter ||= !this.recenteredInXR;
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
+    // Planes can arrive a moment after the session starts. If the stage is still floating and
+    // the viewer has barely begun, move it onto the desk; later than that it stays where it is.
+    if (room) {
+      room.onPlaneAdded = () => {
+        if (this.world.session && this.placedOn === 'air' && this.sessionAge < LATE_PLANE_WINDOW) this.requestRecenter();
+      };
+    }
   }
 
   private recenteredInXR = false;
@@ -91,7 +118,9 @@ export class ExplodeApp {
   onSessionChange(active: boolean): void {
     if (active) this.backdrop.onSessionStart(this.world.renderer.xr.getSession()?.environmentBlendMode);
     else this.backdrop.onSessionEnd();
+    this.syncRoomDim();
     this.ui.dirty = true;
+    this.sessionAge = 0;
     this.requestRecenter(SESSION_START_SETTLE_FRAMES);
   }
 
@@ -107,8 +136,9 @@ export class ExplodeApp {
 
   update(dt: number): void {
     const camera = this.world.camera;
+    this.sessionAge += dt;
     if (this.needsRecenter) this.tryRecenter();
-    this.backdrop.update(camera);
+    this.backdrop.update(camera, dt);
     this.hands.update();
     this.applyViewPose(dt);
     this.debug.update(dt);
@@ -190,13 +220,50 @@ export class ExplodeApp {
     root.scale.setScalar(root.scale.x + (pose.zoom - root.scale.x) * a);
   }
 
-  private get onMechanical(): boolean {
-    return this.store.systemId === this.mechanical.graph.system_id;
+  private get opening(): ContentBundle {
+    return this.tutorials[0]!;
   }
 
+  private get onMechanical(): boolean {
+    return this.store.systemId !== this.software.graph.system_id;
+  }
+
+  /** Tutorial ⇄ software. From the software system it goes back to the opening tutorial. */
   private switchSystem(): void {
     this.sfx.collapse();
-    this.loadSystem(this.onMechanical ? this.software.graph.system_id : this.mechanical.graph.system_id);
+    this.loadSystem(this.onMechanical ? this.software.graph.system_id : this.opening.graph.system_id);
+  }
+
+  /** The tutorial that "More" opens next: the one after the current tutorial, or the second when on software. */
+  private moreTarget(): ContentBundle | null {
+    if (this.tutorials.length < 2) return null;
+    const i = this.tutorials.findIndex((b) => b.graph.system_id === this.store.systemId);
+    return this.tutorials[i < 0 ? 1 : (i + 1) % this.tutorials.length]!;
+  }
+
+  private openMore(): void {
+    const target = this.moreTarget();
+    if (!target) return;
+    this.sfx.collapse();
+    this.loadSystem(target.graph.system_id);
+  }
+
+  /**
+   * Dim the real room while the headset model's camera link is cut and its consequence is shown.
+   * Not during the prediction step: dimming then would give the answer away.
+   */
+  private syncRoomDim(): void {
+    const s = this.store.state;
+    const dim =
+      !!this.world.session &&
+      this.backdrop.passthroughAvailable &&
+      this.store.systemId === ROOM_LINK.system &&
+      s.broken_edge_ids.includes(ROOM_LINK.edge) &&
+      !this.predicting();
+    if (dim === this.roomDimmed) return;
+    this.roomDimmed = dim;
+    this.backdrop.illustrate(dim);
+    this.ui.dirty = true;
   }
 
   // ---------------------------------------------------------------- input
@@ -285,6 +352,7 @@ export class ExplodeApp {
     else if (k === 'p') this.logTargets();
     else if (k === '0') this.forgetProgress();
     else if (k === 's') this.switchSystem();
+    else if (k === 'm') this.openMore();
     else if (k === 'v') this.world.launchXR({ sessionMode: SessionMode.ImmersiveVR }); // testing: the VR fallback path
   }
 
@@ -297,14 +365,14 @@ export class ExplodeApp {
     // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
     // own content; inside the emulator it also counts the emulated room and controllers.
     const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
-    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, placedOn: this.placedOn, planes: this.room?.planeCount ?? 0, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 
   /** Testing only: forget saved progress in both systems and start again at the tutorial. */
   private forgetProgress(): void {
     Store.clearSaved();
-    this.loadSystem(this.mechanical.graph.system_id, false);
+    this.loadSystem(this.opening.graph.system_id, false);
   }
 
   private next(): void {
@@ -368,9 +436,18 @@ export class ExplodeApp {
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
-        label: () => (this.onMechanical ? (lessonDone() ? 'Software ▸' : 'Skip tutorial') : '◂ Car'),
+        label: () => (this.onMechanical ? (lessonDone() ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
         enabled: () => true,
         onPress: () => this.switchSystem(),
+      },
+      {
+        id: 'more',
+        label: () => {
+          const t = this.moreTarget();
+          return t ? `More: ${shortName(t)}` : 'More: n/a';
+        },
+        enabled: () => this.moreTarget() !== null,
+        onPress: () => this.openMore(),
       },
       {
         id: 'live',
@@ -424,14 +501,17 @@ export class ExplodeApp {
       feedback: s.feedback,
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
       tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source } : null,
-      note: this.noInputHint ? NO_INPUT_HINT : (tutor?.note ?? null),
+      note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (tutor?.note ?? null),
       consequence: this.predicting() ? null : consequenceText(s, labelOf),
     };
   }
 
   // ---------------------------------------------------------------- comfort
 
-  /** Place the system in front of and slightly below the eyes, facing the viewer, yaw only. */
+  /**
+   * Place the system facing the viewer, yaw only: with its stage standing on the desk in front
+   * of them when the headset has detected one, otherwise in front of and slightly below the eyes.
+   */
   private tryRecenter(): void {
     if (this.recenterWait > 0) {
       this.recenterWait--;
@@ -443,8 +523,25 @@ export class ExplodeApp {
     this.fwd.y = 0;
     if (this.fwd.lengthSq() < 1e-6) this.fwd.set(0, 0, -1);
     this.fwd.normalize();
-    this.anchor.position.copy(this.tmp).addScaledVector(this.fwd, ANCHOR_DISTANCE);
-    this.anchor.position.y -= ANCHOR_DROP;
+    const v = this.viewer;
+    v.x = this.tmp.x;
+    v.y = this.tmp.y;
+    v.z = this.tmp.z;
+    v.fx = this.fwd.x;
+    v.fz = this.fwd.z;
+    // Only a mixed-reality session has a real desk to stand on; the 2D page and the virtual
+    // backdrop keep the floating placement.
+    if (this.world.session && this.backdrop.passthroughAvailable && this.room?.pickDesk(v, this.desk)) {
+      this.anchor.position.set(this.desk.x, this.desk.y - STAGE_Y + DESK_CLEARANCE, this.desk.z);
+      this.placedOn = 'desk';
+    } else {
+      this.anchor.position.copy(this.tmp).addScaledVector(this.fwd, ANCHOR_DISTANCE);
+      this.anchor.position.y -= ANCHOR_DROP;
+      this.placedOn = 'air';
+    }
+    // On a desk nothing may sit below the surface, so the toolbar and gesture card rise onto it.
+    this.ui.setFloor(this.placedOn === 'desk' ? STAGE_Y : null);
+    if (this.debug.enabled) console.info('[explode:room]', this.placedOn, 'planes', this.room?.planeCount ?? 0);
     this.anchor.rotation.set(0, Math.atan2(-this.fwd.x, -this.fwd.z), 0);
     this.hands.gestures.reset(); // Recenter also undoes any move, zoom or turn of the model
     this.needsRecenter = false;
@@ -452,10 +549,16 @@ export class ExplodeApp {
   }
 }
 
+/** A button-sized name: the last word of the display name before its qualifier ("… headset (teaching model)" → "Headset"). */
+function shortName(b: ContentBundle): string {
+  const word = b.graph.display_name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 let app: ExplodeApp | null = null;
 
-export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false): ExplodeApp {
-  app = new ExplodeApp(world, bundles, tutorUrl, debug);
+export function startApp(world: World, bundles: ContentBundle[], tutorUrl: string | null, debug = false, room: RoomSystem | null = null): ExplodeApp {
+  app = new ExplodeApp(world, bundles, tutorUrl, debug, room);
   world.registerSystem(AppSystem);
   world.renderer.xr.addEventListener('sessionstart', () => app?.onSessionChange(true));
   world.renderer.xr.addEventListener('sessionend', () => app?.onSessionChange(false));

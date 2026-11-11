@@ -224,7 +224,7 @@ async function main(): Promise<void> {
   const start = args.includes('--start');
   const modeArg = args[args.indexOf('--mode') + 1];
   const modes: Mode[] = args.includes('--mode') && (modeArg === 'controller' || modeArg === 'hand') ? [modeArg] : ['controller', 'hand'];
-  const mechanical = loadBundle('drivetrain');
+  const mechanical = loadBundle('headset'); // the opening tutorial; the drivetrain is under "More"
   const software = loadBundle('repo-demo');
 
   let started = false;

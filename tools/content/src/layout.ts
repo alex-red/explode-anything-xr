@@ -11,6 +11,30 @@ const COLUMN_SPAN = 0.22;
 const ROW_SPAN = 0.12;
 const ARC_DEPTH = 0.08;
 
+/**
+ * Smallest ray target radius the app gives a part (apps/quest graph-view MIN_HIT_RADIUS): every
+ * part is at least 4 cm across to a ray. The app's hit sphere is max(drawn radius, this).
+ */
+export const MIN_HIT_RADIUS = 0.02;
+/** m of clear space kept between the hit spheres of any two parts in the exploded layout. */
+export const TARGET_GAP = 0.004;
+const SPREAD_ITERATIONS = 300;
+/** m kept inside the cone edge, so rounding never puts a spread part just outside it. */
+const CONE_MARGIN = 0.002;
+/**
+ * Where the app puts the eyes relative to a floating model (apps/quest app.ts ANCHOR_DISTANCE
+ * and ANCHOR_DROP): 0.7 m away and 0.14 m above its centre. Spreading keeps every part inside
+ * the cone as seen from there too, since a part nearer the viewer subtends a steeper angle.
+ */
+const VIEW = { distance: 0.7, drop: 0.14 } as const;
+/** Exploded clusters are drawn at a quarter of their radius (graph-view), so they need less room. */
+const CLUSTER_EXPLODED_SCALE = 0.25;
+
+/** The radius a ray can hit in the exploded layout (mirrors graph-view). */
+export function hitRadius(kind: string, radius: number): number {
+  return kind === 'cluster' ? radius * CLUSTER_EXPLODED_SCALE : Math.max(radius, MIN_HIT_RADIUS);
+}
+
 export function radiusFor(importance: number): number {
   return round(0.012 + 0.023 * Math.min(1, Math.max(0, importance)));
 }
@@ -80,14 +104,18 @@ export function layoutSoftware(graph: SystemGraph, clusterOrder: readonly string
     collapsed.set(n.id, [r * ring * Math.cos(theta), r * y, r * ring * Math.sin(theta)]);
   });
 
+  const sorted = [...graph.nodes].sort((a, b) => (a.id < b.id ? -1 : 1));
+  const spread = spreadApart(
+    sorted.map((n) => ({ at: clampExploded(exploded.get(n.id) ?? [0, 0, 0]), reach: hitRadius(n.kind, radiusFor(n.importance)) })),
+  );
   const placements: Record<string, NodePlacement> = {};
-  for (const n of [...graph.nodes].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+  sorted.forEach((n, i) => {
     placements[n.id] = {
       collapsed: vec(collapsed.get(n.id)!),
-      exploded: clampExploded(exploded.get(n.id) ?? [0, 0, 0]),
+      exploded: vec(spread[i]!),
       radius: radiusFor(n.importance),
     };
-  }
+  });
   return { system_id: graph.system_id, anchor_distance: ANCHOR_DISTANCE, cone_deg: { ...CONE_DEG }, placements };
 }
 
@@ -107,6 +135,82 @@ export function layoutProblems(layout: Layout): string[] {
     const depth = layout.anchor_distance - p.exploded[2];
     if (Math.abs(Math.atan2(p.exploded[0], depth)) > halfH) out.push(`${id} outside horizontal cone`);
     if (Math.abs(Math.atan2(p.exploded[1], depth)) > halfV) out.push(`${id} outside vertical cone`);
+  }
+  return out;
+}
+
+/**
+ * Push apart, across the viewer's x/y plane, any two parts whose ray targets would overlap, so a
+ * ray aimed at one part never lands on its neighbour. Rings around a class can put its methods
+ * a couple of centimetres apart while each is at least 4 cm across. Deterministic: a fixed
+ * number of passes over the pairs in id order, and parts stay inside the cone bounds. Depth (z)
+ * is left alone, since rays come from in front and depth does not separate targets for them.
+ */
+function spreadApart(items: Array<{ at: Vec3; reach: number }>): Vec3[] {
+  const pos = items.map((it) => [...it.at] as [number, number, number]);
+  // Spreading never grows the layout: parts stay inside the outline the rings gave them, which
+  // the app's own framing (the model sits below eye level) and the cone tests were tuned for.
+  const lowX = Math.min(...pos.map((p) => p[0]));
+  const highX = Math.max(...pos.map((p) => p[0]));
+  const lowY = Math.min(...pos.map((p) => p[1]));
+  const highY = Math.max(...pos.map((p) => p[1]));
+  for (let pass = 0; pass < SPREAD_ITERATIONS; pass++) {
+    let moved = false;
+    for (let i = 0; i < pos.length; i++) {
+      for (let j = i + 1; j < pos.length; j++) {
+        const a = pos[i]!;
+        const b = pos[j]!;
+        const need = items[i]!.reach + items[j]!.reach + TARGET_GAP;
+        let dx = b[0] - a[0];
+        let dy = b[1] - a[1];
+        let d = Math.hypot(dx, dy);
+        if (d >= need) continue;
+        if (d < 1e-6) {
+          // Same spot: separate along a direction fixed by the pair's indices.
+          const angle = ((i * 7 + j * 13) % 360) * (Math.PI / 180);
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          d = 1;
+        }
+        const push = ((need - Math.hypot(b[0] - a[0], b[1] - a[1])) / 2) * 1.01;
+        a[0] -= (dx / d) * push;
+        a[1] -= (dy / d) * push;
+        b[0] += (dx / d) * push;
+        b[1] += (dy / d) * push;
+        moved = true;
+      }
+    }
+    for (const p of pos) {
+      // Inside the box bounds and the glasses-safe cone as seen from the anchor distance.
+      const depth = ANCHOR_DISTANCE - p[2];
+      const coneX = Math.min(BOUNDS.x, depth * Math.tan(((CONE_DEG.horizontal / 2) * Math.PI) / 180) - CONE_MARGIN);
+      const coneY = Math.min(BOUNDS.y, depth * Math.tan(((CONE_DEG.vertical / 2) * Math.PI) / 180) - CONE_MARGIN);
+      const tanV = Math.tan(((CONE_DEG.vertical / 2) * Math.PI) / 180);
+      const viewDepth = VIEW.distance - p[2];
+      const viewLow = VIEW.drop - viewDepth * tanV + CONE_MARGIN;
+      const viewHigh = VIEW.drop + viewDepth * tanV - CONE_MARGIN;
+      p[0] = Math.max(Math.max(-coneX, lowX), Math.min(Math.min(coneX, highX), p[0]));
+      p[1] = Math.max(Math.max(-coneY, lowY, viewLow), Math.min(Math.min(coneY, highY, viewHigh), p[1]));
+    }
+    if (!moved) break;
+  }
+  return pos;
+}
+
+/** Pairs of parts whose ray targets overlap in the exploded layout (see spreadApart). */
+export function targetOverlaps(graph: SystemGraph, layout: Layout): string[] {
+  const out: string[] = [];
+  const nodes = [...graph.nodes].sort((a, b) => (a.id < b.id ? -1 : 1));
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i]!;
+      const b = nodes[j]!;
+      const pa = layout.placements[a.id]!;
+      const pb = layout.placements[b.id]!;
+      const d = Math.hypot(pa.exploded[0] - pb.exploded[0], pa.exploded[1] - pb.exploded[1]);
+      const need = hitRadius(a.kind, pa.radius) + hitRadius(b.kind, pb.radius);
+      if (d < need - 1e-4) out.push(`${a.id} and ${b.id}: ${(d * 100).toFixed(1)} cm apart, targets need ${(need * 100).toFixed(1)} cm`);
+    }
   }
   return out;
 }

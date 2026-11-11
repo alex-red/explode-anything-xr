@@ -1,0 +1,323 @@
+{
+  "system_id": "system:mr-headset",
+  "display_name": "Mixed-reality headset (teaching model)",
+  "model_statement": "A simplified, stylized teaching model of a standalone mixed-reality headset like the Meta Quest 3S, authored to show how the room reaches your eyes. It is not the device's actual internals; parts, proportions, positions and connections are illustrative. Not affiliated with or endorsed by Meta.",
+  "anchor_distance": 0.65,
+  "parts": [
+    {
+      "id": "part:cameras",
+      "label": "Front cameras",
+      "summary": "See the room and your hands.",
+      "importance": 0.9,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.12,
+          0.02,
+          0.012
+        ],
+        "color": "#3d6f8e"
+      },
+      "collapsed": [
+        0,
+        0.01,
+        0.052
+      ],
+      "exploded": [
+        -0.24,
+        0.1,
+        0.06
+      ]
+    },
+    {
+      "id": "part:board",
+      "label": "Processor board",
+      "summary": "Builds every frame from what the cameras see.",
+      "importance": 0.95,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.11,
+          0.06,
+          0.008
+        ],
+        "color": "#2f7d5b"
+      },
+      "collapsed": [
+        0,
+        0.005,
+        0.02
+      ],
+      "exploded": [
+        -0.08,
+        0.12,
+        0.04
+      ]
+    },
+    {
+      "id": "part:battery",
+      "label": "Battery",
+      "summary": "Powers the processor board.",
+      "importance": 0.75,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.07,
+          0.035,
+          0.014
+        ],
+        "color": "#8a8f98"
+      },
+      "collapsed": [
+        0,
+        -0.02,
+        0.004
+      ],
+      "exploded": [
+        -0.2,
+        -0.08,
+        0.03
+      ]
+    },
+    {
+      "id": "part:display",
+      "label": "Display",
+      "summary": "Shows the frame the processor built.",
+      "importance": 0.85,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.15,
+          0.07,
+          0.006
+        ],
+        "color": "#c47f2c"
+      },
+      "collapsed": [
+        0,
+        0,
+        -0.01
+      ],
+      "exploded": [
+        0.08,
+        0.1,
+        0.02
+      ]
+    },
+    {
+      "id": "part:lens-left",
+      "label": "Left lens",
+      "summary": "Focuses the display for your left eye.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "cylinder",
+        "size": [
+          0.045,
+          0.008,
+          0.045
+        ],
+        "color": "#b8b9bd",
+        "rotation_deg": [
+          90,
+          0,
+          0
+        ]
+      },
+      "collapsed": [
+        -0.035,
+        0,
+        -0.026
+      ],
+      "exploded": [
+        0.2,
+        0.14,
+        0
+      ]
+    },
+    {
+      "id": "part:lens-right",
+      "label": "Right lens",
+      "summary": "Focuses the display for your right eye.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "cylinder",
+        "size": [
+          0.045,
+          0.008,
+          0.045
+        ],
+        "color": "#b8b9bd",
+        "rotation_deg": [
+          90,
+          0,
+          0
+        ]
+      },
+      "collapsed": [
+        0.035,
+        0,
+        -0.026
+      ],
+      "exploded": [
+        0.26,
+        0.02,
+        0
+      ]
+    },
+    {
+      "id": "part:speakers",
+      "label": "Speakers",
+      "summary": "Play sound beside your ears.",
+      "importance": 0.5,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.02,
+          0.012,
+          0.03
+        ],
+        "color": "#6b5b95"
+      },
+      "collapsed": [
+        0.085,
+        0.02,
+        -0.03
+      ],
+      "exploded": [
+        0.06,
+        -0.1,
+        0.02
+      ]
+    },
+    {
+      "id": "part:shell",
+      "label": "Front shell",
+      "summary": "Holds the cameras and protects everything behind it.",
+      "importance": 0.55,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.18,
+          0.09,
+          0.02
+        ],
+        "color": "#d9dce1"
+      },
+      "collapsed": [
+        0,
+        0,
+        0.04
+      ],
+      "exploded": [
+        0,
+        -0.16,
+        0.1
+      ]
+    },
+    {
+      "id": "part:facial",
+      "label": "Facial interface",
+      "summary": "Rests on your face and blocks stray light.",
+      "importance": 0.45,
+      "shape": {
+        "shape": "box",
+        "size": [
+          0.17,
+          0.08,
+          0.012
+        ],
+        "color": "#2b2d31"
+      },
+      "collapsed": [
+        0,
+        0,
+        -0.045
+      ],
+      "exploded": [
+        0.22,
+        -0.14,
+        -0.02
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "part:battery",
+      "target": "part:board",
+      "relation": "powers",
+      "flows": [
+        "electrical"
+      ],
+      "label": "power",
+      "mutable": false,
+      "rule": "The battery powers the processor board."
+    },
+    {
+      "source": "part:cameras",
+      "target": "part:board",
+      "relation": "transmits",
+      "flows": [
+        "data"
+      ],
+      "label": "camera images",
+      "mutable": true,
+      "rule": "The front cameras send images of the room to the processor. If this link is disconnected, the processor has no view of the room to show."
+    },
+    {
+      "source": "part:board",
+      "target": "part:display",
+      "relation": "transmits",
+      "flows": [
+        "data"
+      ],
+      "label": "frames",
+      "mutable": false,
+      "rule": "The processor sends each finished frame to the display."
+    },
+    {
+      "source": "part:display",
+      "target": "part:lens-left",
+      "relation": "transmits",
+      "flows": [
+        "data"
+      ],
+      "label": "image light",
+      "mutable": false,
+      "rule": "Light from the display passes through the left lens to the left eye."
+    },
+    {
+      "source": "part:display",
+      "target": "part:lens-right",
+      "relation": "transmits",
+      "flows": [
+        "data"
+      ],
+      "label": "image light",
+      "mutable": false,
+      "rule": "Light from the display passes through the right lens to the right eye."
+    },
+    {
+      "source": "part:board",
+      "target": "part:speakers",
+      "relation": "transmits",
+      "flows": [
+        "control"
+      ],
+      "label": "audio",
+      "mutable": false,
+      "rule": "The processor drives the speakers."
+    }
+  ],
+  "path": {
+    "id": "path:room-to-eye",
+    "label": "Room to your eyes",
+    "flow": "data",
+    "node_ids": [
+      "part:cameras",
+      "part:board",
+      "part:display",
+      "part:lens-left",
+      "part:lens-right"
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "id": "lesson:headset-tutorial",
+  "system_id": "system:mr-headset",
+  "title": "How does the room reach your eyes?",
+  "objectives": [
+    "Learn the gestures: explode, trace, unplug, replug, collapse.",
+    "See how one missing connection darkens everything after it."
+  ],
+  "break_edge_id": "edge:transmits:part:cameras->part:board",
+  "repair_candidates": [
+    "part:display",
+    "part:board",
+    "part:battery"
+  ],
+  "misconception_on_wrong_prediction": "assumes-failure-is-local",
+  "steps": [
+    {
+      "id": "step:hs-explode",
+      "kind": "explode",
+      "caption": "This is a simplified model of a headset like the one you're wearing. It is a teaching model, not the device's actual internals. Press Explode to open it up, or pinch with both hands and pull apart.",
+      "hint": "Press Explode. You can also pinch with both hands and pull them apart.",
+      "expect": {
+        "type": "explode_at_least",
+        "factor": 0.8
+      }
+    },
+    {
+      "id": "step:hs-trace",
+      "kind": "trace",
+      "caption": "Press Trace to follow the room from the front cameras to your eyes.",
+      "hint": "The Trace button is in the panel next to you.",
+      "expect": {
+        "type": "trace",
+        "path_id": "path:room-to-eye"
+      }
+    },
+    {
+      "id": "step:hs-unplug",
+      "kind": "break",
+      "caption": "Unplug the link between the front cameras and the processor board.",
+      "hint": "Select the highlighted link, then press Unplug.",
+      "expect": {
+        "type": "unplug",
+        "edge_id": "edge:transmits:part:cameras->part:board"
+      },
+      "on_enter": [
+        {
+          "type": "highlight",
+          "target_ids": [
+            "part:cameras",
+            "part:board"
+          ]
+        },
+        {
+          "type": "show_annotation",
+          "target_id": "part:cameras",
+          "text": "This link carries what the cameras see."
+        }
+      ]
+    },
+    {
+      "id": "step:hs-predict",
+      "kind": "predict",
+      "caption": "Before you look: point at the first part that loses what it needs.",
+      "hint": "Which part was the link feeding?",
+      "expect": {
+        "type": "predict"
+      },
+      "on_enter": [
+        {
+          "type": "ask_prediction",
+          "question": "Which part loses its input first?"
+        }
+      ],
+      "feedback": {
+        "correct": "Right. The processor gets no camera images, so the display and lenses after it have no room to show.",
+        "incorrect": "Not quite. The processor loses its camera images first, so the display and lenses after it have no room to show."
+      }
+    },
+    {
+      "id": "step:hs-observe",
+      "kind": "observe",
+      "caption": "With no camera images, nothing of the room reaches the display or the lenses. This is the teaching model's rule, not a measurement of your headset.",
+      "expect": {
+        "type": "next"
+      },
+      "on_enter": [
+        {
+          "type": "animate_flow",
+          "path_id": "path:room-to-eye"
+        }
+      ]
+    },
+    {
+      "id": "step:hs-repair",
+      "kind": "repair",
+      "caption": "Plug the link back into the right socket.",
+      "hint": "The link came from the cameras. Which part needs to see the room?",
+      "expect": {
+        "type": "repair",
+        "edge_id": "edge:transmits:part:cameras->part:board"
+      }
+    },
+    {
+      "id": "step:hs-collapse",
+      "kind": "transition",
+      "caption": "The room reaches your eyes again. Press Collapse to close it up, or push your hands together. Next: the same moves on a real codebase.",
+      "hint": "Press Collapse. You can also bring your hands together.",
+      "expect": {
+        "type": "collapse_below",
+        "factor": 0.1
+      }
+    }
+  ]
+}

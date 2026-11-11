@@ -2,9 +2,11 @@ import { SessionMode, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { ContentBundle } from '@explode/contracts';
 import drivetrain from './content/drivetrain.bundle.json';
+import headset from './content/headset.bundle.json';
 import repoDemo from './content/repo-demo.bundle.json';
 import { startApp } from './app/app.ts';
 import { InteractionSystem } from './app/interactions.ts';
+import { RoomSystem } from './app/room.ts';
 
 const status = document.getElementById('status');
 const landing = document.getElementById('landing');
@@ -23,13 +25,16 @@ const setEnter = (label: string, enabled: boolean) => {
 const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace, N next, U undo, R reset, X explain, D debug readout.';
 
 async function main(): Promise<void> {
-  // Bundles are imported statically, so they ship inside the build.
-  const bundles = [ContentBundle.parse(drivetrain), ContentBundle.parse(repoDemo)];
+  // Bundles are imported statically, so they ship inside the build. The first tutorial is the
+  // opening lesson (the headset); the drivetrain stays reachable from the toolbar's "More".
+  const bundles = [ContentBundle.parse(headset), ContentBundle.parse(drivetrain), ContentBundle.parse(repoDemo)];
   const world = await World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions);
   world.registerSystem(InteractionSystem);
+  // Reads the planes the headset detected, so the stage can stand on the real desk.
+  world.registerSystem(RoomSystem);
   const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
-  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'));
+  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null);
   // Dev only: a "Webcam hands" panel to drive the emulated hands from a camera
   // (src/dev/webcam-hands.ts); `?webcam` starts it on load. `import.meta.env.DEV` is false in a
   // build, so this branch and its chunk are dropped.

@@ -30,6 +30,13 @@ const BTN_H = 0.034;
 const GAP = 0.006;
 const GUIDE_W = 0.38;
 const GUIDE_H = 0.166;
+const CONTROLS_Y = -0.06;
+const GUIDE_Y = -0.27;
+const GUIDE_TILT = -0.45;
+/** On a desk the gesture card lies mostly flat, tipped about 30° up toward the eyes. */
+const GUIDE_DESK_TILT = -1.05;
+/** m every panel keeps above a real surface. */
+const FLOOR_MARGIN = 0.012;
 const EVIDENCE_W = 0.36;
 const EVIDENCE_H = 0.3;
 // Text sizes are px at PPM. At the 0.7 m anchor distance 1° of visual angle is about 12 mm,
@@ -53,6 +60,7 @@ export class SpatialUI {
   private readonly evidenceGroup = new Group();
   private readonly guide: TextPanel;
   private guideDrawn = false;
+  private readonly controlsHalfHeight: number;
   /** True when something a panel shows may have changed; render() is skipped otherwise. */
   dirty = true;
 
@@ -60,10 +68,11 @@ export class SpatialUI {
     const groupEntity = world.createTransformEntity(this.group, { parent });
 
     // Controls: two columns, tilted toward the user, lower-left.
-    this.controls.position.set(-0.31, -0.06, 0.16);
+    this.controls.position.set(-0.31, CONTROLS_Y, 0.16);
     this.controls.rotation.set(-0.25, 0.5, 0);
     const controlsEntity = world.createTransformEntity(this.controls, { parent: groupEntity });
     const rows = Math.ceil(defs.length / 2);
+    this.controlsHalfHeight = (rows * BTN_H + (rows - 1) * GAP) / 2;
     defs.forEach((def, i) => {
       const panel = new TextPanel({ width: BTN_W, height: BTN_H, pxPerMeter: PPM, padding: 10, radius: 22, align: 'center' });
       const col = i % 2;
@@ -87,8 +96,8 @@ export class SpatialUI {
     // Gesture guide: a wide card below the model, tipped up toward the eyes, hidden until asked
     // for (the Gestures button). It sits just under the lowest parts and left of the sandbox tray.
     this.guide = new TextPanel({ width: GUIDE_W, height: GUIDE_H, pxPerMeter: PPM, padding: 24, radius: 24 });
-    this.guide.mesh.position.set(-0.02, -0.27, 0.17);
-    this.guide.mesh.rotation.x = -0.45;
+    this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
+    this.guide.mesh.rotation.x = GUIDE_TILT;
     this.guide.mesh.visible = false;
     world.createTransformEntity(this.guide.mesh, { parent: groupEntity });
 
@@ -109,6 +118,33 @@ export class SpatialUI {
     this.evidenceClose.mesh.position.set(EVIDENCE_W / 2 - 0.045, -EVIDENCE_H / 2 - 0.022, 0.002);
     makeInteractive(world, this.evidenceClose.mesh, evEntity, { press: onCloseEvidence, ui: true });
     this.evidenceGroup.visible = false;
+  }
+
+  /**
+   * Keep panels above a real surface at local height `floor` (the desk under the stage), or
+   * restore the floating layout with `null`. On a desk the toolbar rises so its lowest button
+   * clears the surface, and the gesture card lies on the desk tipped up toward the eyes.
+   */
+  setFloor(floor: number | null): void {
+    if (floor === null) {
+      this.controls.position.y = CONTROLS_Y;
+      this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
+      this.guide.mesh.rotation.x = GUIDE_TILT;
+    } else {
+      const reach = this.controlsHalfHeight * Math.cos(this.controls.rotation.x);
+      this.controls.position.y = Math.max(CONTROLS_Y, floor + reach + FLOOR_MARGIN);
+      this.guide.mesh.rotation.x = GUIDE_DESK_TILT;
+      // A card tipped back by the tilt rises |cos(tilt)| × half its height above its centre.
+      this.guide.mesh.position.set(-0.02, floor + (GUIDE_H / 2) * Math.abs(Math.cos(GUIDE_DESK_TILT)) + FLOOR_MARGIN, 0.2);
+    }
+    this.dirty = true;
+  }
+
+  /** Lowest point of the toolbar and the gesture card, in the anchor's frame (tests). */
+  lowestPanelY(): number {
+    const c = this.controls.position.y - this.controlsHalfHeight * Math.cos(this.controls.rotation.x);
+    const g = this.guide.mesh.position.y - (GUIDE_H / 2) * Math.abs(Math.cos(this.guide.mesh.rotation.x));
+    return Math.min(c, g);
   }
 
   get guideVisible(): boolean {

@@ -77,7 +77,7 @@ const MAX_LABELS = 18;
 const PARTICLES = 8;
 // Rays from a real hand wobble, so anything pressable is at least 4 cm across to the ray,
 // whatever size it is drawn.
-const MIN_HIT_RADIUS = 0.02;
+const MIN_HIT_RADIUS = 0.02; // mirrored in tools/content layout.ts
 const PLUG_HIT_RADIUS = 0.025;
 const IDENTITY = new Quaternion();
 const WHITE = new Color(0xffffff);
@@ -92,7 +92,7 @@ const HALO_FAULT = 0.6;
 const PARTICLE_HALO = 0.07; // metres across
 // The projector stage sits just under the lowest parts.
 const STAGE_RADIUS = 0.27;
-const STAGE_Y = -0.2;
+export const STAGE_Y = -0.2;
 // Boot-up: the scan front climbs this far above the stage in this many seconds.
 const BOOT_SECONDS = 1.3;
 const BOOT_HEIGHT = 0.9;
@@ -253,8 +253,10 @@ export class GraphView {
           m.emissive.setHex(selected ? 0x445566 : 0x000000);
         }
       } else if (v.batch) {
-        // Software node: the hit volume stays generous, the drawn instance carries the state.
-        v.mesh.scale.setScalar(v.node.kind === 'cluster' ? scale : Math.max(v.radius * 1.3, MIN_HIT_RADIUS));
+        // Software node: the hit volume is the drawn size, never under 4 cm across, and steady
+        // while the drawn instance carries the state. The layout keeps these volumes from
+        // overlapping (tools/content layout.ts hitRadius), so a ray lands on the part it aims at.
+        v.mesh.scale.setScalar(v.node.kind === 'cluster' ? scale : Math.max(v.radius, MIN_HIT_RADIUS));
         const c = this.tmpColor;
         if (affected.has(v.node.id)) c.copy(NODE_FAULT).multiplyScalar(0.8 + 0.2 * Math.sin(this.time * 4));
         else if (highlighted.has(v.node.id)) c.copy(NODE_PATH);

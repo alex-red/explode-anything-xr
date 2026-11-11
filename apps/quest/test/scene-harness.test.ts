@@ -7,12 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventDispatcher, Group, Mesh, MathUtils, Object3D, PerspectiveCamera, Scene, Vector3, VisibilityState, signal, type SphereGeometry } from '@iwsdk/core';
 import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
+import headsetJson from '../src/content/headset.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
 import { startApp, type ExplodeApp } from '../src/app/app.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
+/** The shipped set (src/index.ts): the headset opens, the drivetrain is under "More". */
+const shipped = [ContentBundle.parse(headsetJson), ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
 
 // ---------------------------------------------------------------- DOM stubs
 
@@ -129,9 +132,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup(debug = false) {
+function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown } = {}) {
   const w = makeWorld();
-  const app = startApp(w.world as never, bundles, null, debug);
+  const app = startApp(w.world as never, opts.bundles ?? bundles, null, debug, (opts.room ?? null) as never);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -801,8 +804,123 @@ describe('scene harness: software hero lesson', () => {
     const h = setup();
     const before = h.entities.size;
     h.press(h.button(/Skip tutorial/));
-    h.press(h.button(/◂ Car/));
+    h.press(h.button(/◂ Drivetrain/));
     h.frames(5);
     expect(h.entities.size).toBe(before);
+  });
+});
+
+describe('scene harness: headset opening lesson', () => {
+  const CAMERA_LINK = 'edge:transmits:part:cameras->part:board';
+  type BackdropView = { mode: string; illustrated: boolean; targetOpacity: number };
+  const backdrop = (h: ReturnType<typeof setup>) => (h.app as unknown as { backdrop: BackdropView }).backdrop;
+  const mixedReality = (h: ReturnType<typeof setup>) => {
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'alpha-blend', inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+  };
+  /** Explode → trace → unplug the camera link: the lesson is then at its prediction step. */
+  const toPrediction = (h: ReturnType<typeof setup>) => {
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get(CAMERA_LINK)!.plug!.mesh);
+    expect(h.state().broken_edge_ids).toEqual([CAMERA_LINK]);
+  };
+
+  it('opens on the headset model, and the drivetrain is one press away under More', () => {
+    const h = setup(false, { bundles: shipped });
+    expect(h.state().system_id).toBe('system:mr-headset');
+    expect(h.caption()).toMatch(/headset like the one you're wearing/);
+    expect(h.caption()).toMatch(/not the device's actual internals/);
+    h.press(h.button(/^More: Drivetrain$/));
+    expect(h.state().system_id).toBe('system:ev-drivetrain');
+    h.press(h.button(/^More: Headset$/));
+    expect(h.state().system_id).toBe('system:mr-headset');
+    h.press(h.button(/Skip tutorial/));
+    expect(h.state().system_id).toBe('system:auth-service');
+    h.press(h.button(/◂ Headset/));
+    expect(h.state().system_id).toBe('system:mr-headset');
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('runs the whole lesson in mixed reality: the room dims only once the prediction is in, and returns on repair', () => {
+    const h = setup(false, { bundles: shipped });
+    mixedReality(h);
+    toPrediction(h);
+    // Predicting: dimming now would give the answer away.
+    expect(backdrop(h).illustrated).toBe(false);
+    expect(h.caption()).not.toMatch(/We dimmed your view/);
+
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    expect(h.state().prediction).toEqual({ target_id: 'part:board', correct: true });
+    expect(backdrop(h).illustrated).toBe(true);
+    expect(backdrop(h).targetOpacity).toBeGreaterThan(0.8);
+    expect(backdrop(h).mode).toBe('passthrough'); // the viewer's own choice is untouched
+    expect(h.caption()).toMatch(/We dimmed your view of the room/);
+    expect(h.caption()).toMatch(/Your headset is fine/);
+
+    h.press(h.button(/^Next/)); // observe → repair
+    h.press(h.view().sockets.find((s) => s.targetId === 'part:board')!.mesh);
+    expect(h.state().broken_edge_ids).toEqual([]);
+    expect(backdrop(h).illustrated).toBe(false);
+    expect(backdrop(h).targetOpacity).toBe(0);
+    expect(h.caption()).not.toMatch(/We dimmed your view/);
+
+    h.press(h.button(/^Collapse$/));
+    h.frames(60);
+    expect(h.state().lesson?.status).toBe('complete');
+    h.press(h.button(/Continue: software/));
+    expect(h.state().system_id).toBe('system:auth-service');
+    expectFinite(h.scene);
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('never dims outside mixed reality: not on the 2D page, not over the virtual backdrop', () => {
+    const page = setup(false, { bundles: shipped });
+    toPrediction(page);
+    page.press(page.view().nodes.get('part:board')!.mesh);
+    expect(backdrop(page).illustrated).toBe(false);
+
+    // Relaunch on the same saved progress (link cut, prediction made) inside an opaque session.
+    const vr = setup(false, { bundles: shipped });
+    (vr.xr as unknown as { session: unknown }).session = { environmentBlendMode: 'opaque', addEventListener: () => undefined };
+    vr.world.session = (vr.xr as unknown as { session: unknown }).session;
+    vr.xr.dispatchEvent({ type: 'sessionstart' });
+    vr.frames(20);
+    expect(vr.state().broken_edge_ids).toEqual([CAMERA_LINK]);
+    expect(backdrop(vr).mode).toBe('virtual');
+    expect(backdrop(vr).illustrated).toBe(false);
+  });
+
+  it('keeps the toolbar and the gesture card above the desk when the stage stands on one', () => {
+    const DESK_Y = 0.74;
+    const room = {
+      planeCount: 1,
+      onPlaneAdded: null,
+      pickDesk: (_v: unknown, out: { x: number; y: number; z: number; index: number }) => {
+        out.x = 0;
+        out.y = DESK_Y;
+        out.z = -0.3;
+        out.index = 0;
+        return true;
+      },
+    };
+    const h = setup(false, { bundles: shipped, room });
+    mixedReality(h);
+    const ui = (h.app as unknown as { ui: { lowestPanelY(): number } }).ui;
+    const app = h.app as unknown as { placedOn: string; anchor: Object3D };
+    expect(app.placedOn).toBe('desk');
+    h.press(h.button(/^Gestures$/));
+    // lowestPanelY is in the anchor's frame; the anchor stands the stage on the desk.
+    expect(app.anchor.position.y + ui.lowestPanelY()).toBeGreaterThan(DESK_Y);
+
+    // Floating again (the desk is gone): the original layout comes back.
+    room.pickDesk = () => false;
+    h.press(h.button(/^Recenter$/));
+    expect(app.placedOn).toBe('air');
+    expect(ui.lowestPanelY()).toBeLessThan(-0.3);
   });
 });
