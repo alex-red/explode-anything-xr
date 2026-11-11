@@ -61,3 +61,7 @@ IWSDK's ray pointer goes from hover to select when a pinch starts on a target. I
 ## Revisit trigger
 
 A device test, or any SDK upgrade.
+
+## Note, 2026-11-11
+
+On the codebase, a quick one-hand sideways flick on empty space (at least 12 cm within 350 ms of the pinch) is read as a request for fewer or more parts instead of a turn, and the turn it began is undone ([EXPLORE_PLAN.md](../EXPLORE_PLAN.md) W11). On the mechanical models a quick drag is still a turn. Whether real hand tracking keeps the two apart is unknown without a headset; the Detail button and the shelf do the same thing without the gesture.

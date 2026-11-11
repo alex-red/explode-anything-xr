@@ -90,9 +90,12 @@ describe('view gestures: one hand', () => {
     expect(r.g.pose.pitch).toBeCloseTo(-0.05 * CFG.tiltGain); // the top tips away
     expect(r.g.pose.x).toBe(0); // turning does not move it
     expect(r.g.pose.y).toBe(0);
+    r.g.flickEnabled = true;
+    r.step(400); // held, as a deliberate turn is: not a flick
     r.pinch(r.right, false);
     r.step();
     expect(r.g.mode).toBe('idle');
+    expect(r.g.flick).toBe(0);
     expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain); // stays turned
   });
 
@@ -456,5 +459,65 @@ describe('view gestures: reset and equivalents', () => {
     expect(r.g.mode).toBe('idle');
     expect(r.g.preview).toBeNull();
     expect(r.g.commit).toBeNull();
+  });
+});
+
+describe('view gestures: flick (EXPLORE_PLAN W11)', () => {
+  /** One hand pinches empty space at x0, moves to x1 (and y1) in `ms`, and lets go. */
+  function swipe(x0: number, x1: number, ms: number, y1 = 0, on: PinchTarget = 'space') {
+    const r = rig();
+    r.g.flickEnabled = true;
+    r.s.on = on;
+    r.place(r.right, x0, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    const steps = Math.max(1, Math.round(ms / 16));
+    for (let i = 1; i <= steps; i++) {
+      r.place(r.right, x0 + ((x1 - x0) * i) / steps, (y1 * i) / steps, 0.3);
+      r.step(16);
+    }
+    r.pinch(r.right, false);
+    r.step();
+    return r;
+  }
+
+  it('a quick right-to-left flick on empty space asks for fewer parts and undoes the turn it began', () => {
+    const r = swipe(0.1, -0.06, 160);
+    expect(r.g.flick).toBe(-1);
+    expect(r.g.pose.yaw).toBe(0);
+    expect(r.g.pose.pitch).toBe(0);
+    r.step();
+    expect(r.g.flick, 'reported for one update only').toBe(0);
+  });
+
+  it('a quick left-to-right flick asks for more', () => {
+    expect(swipe(-0.06, 0.1, 160).g.flick).toBe(1);
+  });
+
+  it('a slow drag stays a turn, a short or mostly vertical one is no flick, and a part drag never flicks', () => {
+    const slow = swipe(0.1, -0.06, 600);
+    expect(slow.g.flick).toBe(0);
+    expect(slow.g.pose.yaw).not.toBe(0);
+    expect(swipe(0.1, 0.02, 120).g.flick).toBe(0); // 8 cm
+    expect(swipe(0.1, -0.02, 160, 0.1).g.flick).toBe(0); // as much up as across
+    const part = swipe(0.1, -0.06, 160, 0, 'part');
+    expect(part.g.flick).toBe(0);
+    expect(CFG.flickMs).toBeLessThan(400);
+  });
+
+  it('is off unless enabled: a quick drag on a mechanical model stays a turn', () => {
+    const r = rig();
+    r.s.on = 'space';
+    r.place(r.right, 0.1, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0.05, 0, 0.3); // the drag starts here
+    r.step();
+    r.place(r.right, -0.1, 0, 0.3);
+    r.step();
+    r.pinch(r.right, false);
+    r.step();
+    expect(r.g.flick).toBe(0);
+    expect(r.g.pose.yaw).not.toBe(0);
   });
 });

@@ -1,6 +1,6 @@
 import { createSystem, Group, SessionMode, Vector3, VisibilityState, type Entity, type World } from '@iwsdk/core';
 import type { ContentBundle, EngineEvent, Evidence, TutorTrigger } from '@explode/contracts';
-import { currentLesson, currentStep } from '@explode/lesson-engine';
+import { currentLesson, currentStep, DETAIL_LEVELS, stepDetail, type DetailLevel } from '@explode/lesson-engine';
 import { Sfx, type At } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
@@ -23,6 +23,11 @@ const RECALL_WINDOW = 6; // s after a session starts in which a restored anchor 
 const SESSION_START_SETTLE_FRAMES = 10; // frames to wait for a real head pose before recentering
 const VIEW_EASE = 18; // 1/s: how fast the model follows a hand gesture; high enough to feel held
 const LAYOUT_KEY = 'explode:layout:v1';
+const DETAIL_KEY = 'explode:detail:v1';
+/** What the codebase opens on: key and supporting parts, the extras on the shelf (EXPLORE_PLAN W11). */
+const DEFAULT_DETAIL: DetailLevel = 'supporting';
+/** Button-sized names for the detail levels. */
+const DETAIL_NAME: Record<DetailLevel, string> = { key: 'key', supporting: 'more', all: 'all' };
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 /**
@@ -56,6 +61,8 @@ export class ExplodeApp {
   private lessonWasComplete = false;
   private tutorAnswer: (TutorAnswer & { stepKey: string }) | null = null;
   private liveAllowed = true;
+  /** How much of the codebase is shown; per viewer, remembered. Mechanical models always show every part. */
+  private detail: DetailLevel = readDetail();
   private paused = false;
   private needsRecenter = true;
   private lastStepKey = '';
@@ -164,6 +171,8 @@ export class ExplodeApp {
     this.backdrop.update(camera, dt);
     this.sfx.updateListener(camera);
     this.hands.update();
+    // A flick on empty space swipes the codebase's extras away, or brings them back (EXPLORE_PLAN W11).
+    if (this.hands.gestures.flick !== 0) this.setDetail(stepDetail(this.detail, this.hands.gestures.flick));
     this.applyViewPose(dt);
     this.debug.update(dt);
     if (this.paused) return; // pause animation while blurred/hidden; state is already persisted
@@ -222,6 +231,26 @@ export class ExplodeApp {
     }
   }
 
+  /** Show more or fewer of the codebase's parts. A no-op on a mechanical model, and at either end. */
+  setDetail(level: DetailLevel): void {
+    if (this.onMechanical || level === this.detail) return;
+    this.detail = level;
+    if (this.view) this.view.detail = level;
+    this.sfx.click(this.modelAt());
+    this.ui.dirty = true;
+    try {
+      localStorage.setItem(DETAIL_KEY, level);
+    } catch {
+      // Storage unavailable: the level holds for this visit only.
+    }
+  }
+
+  /** Key → more → all → key (the toolbar button and the K key). */
+  private cycleDetail(): void {
+    const i = DETAIL_LEVELS.indexOf(this.detail);
+    this.setDetail(DETAIL_LEVELS[(i + 1) % DETAIL_LEVELS.length]!);
+  }
+
   /** Tell the UI (and the debug mask) where the eye is now, in the anchor's frame. */
   private measureEye(): void {
     this.anchor.updateMatrixWorld(true);
@@ -266,9 +295,12 @@ export class ExplodeApp {
         onNodePressed: (id) => this.onNodePressed(id),
         onPlugPressed: (edgeId) => this.dispatch({ type: 'unplug', edge_id: edgeId }),
         onSocketPressed: (edgeId, targetId) => this.dispatch({ type: 'plug', edge_id: edgeId, target_id: targetId }),
+        onShelfPressed: () => this.setDetail(stepDetail(this.detail, 1)),
       },
       this.anchorEntity,
     );
+    this.view.detail = this.detail;
+    this.hands.gestures.flickEnabled = !this.onMechanical;
     this.view.displayFactor = this.store.state.explode_factor;
     this.hands.gestures.reset();
     this.cascadePlayedFor = this.store.state.broken_edge_ids[0] ?? null; // a restored break is not news
@@ -508,6 +540,7 @@ export class ExplodeApp {
     else if (k === 'pagedown') this.hands.gestures.tiltBy(Math.PI / 12);
     else if (k === 'g') this.ui.toggleGuide();
     else if (k === 'l') this.toggleLayout();
+    else if (k === 'k') this.cycleDetail();
     else if (k === 'f') this.fovMask.group.visible = !this.fovMask.group.visible; // testing: show the FoV budgets
     else if (k === 'arrowleft') this.hands.gestures.panBy(-0.05, 0, 0);
     else if (k === 'arrowright') this.hands.gestures.panBy(0.05, 0, 0);
@@ -592,6 +625,12 @@ export class ExplodeApp {
         enabled: () => this.store.ctx.bundle.graph.paths.length > 0,
         primary: () => step()?.expect.type === 'trace',
         onPress: () => this.trace(),
+      },
+      {
+        id: 'detail',
+        label: () => (this.onMechanical ? 'Detail: all' : `Detail: ${DETAIL_NAME[this.detail]}`),
+        enabled: () => !this.onMechanical,
+        onPress: () => this.cycleDetail(),
       },
       {
         id: 'evidence',
@@ -682,7 +721,7 @@ export class ExplodeApp {
       question: s.question,
       feedback: s.feedback,
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
-      tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source } : null,
+      tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source, model: tutor.model } : null,
       note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (tutor?.note ?? null),
       consequence: this.consequencesHidden() ? null : consequenceText(s, labelOf),
     };
@@ -741,6 +780,15 @@ export class ExplodeApp {
 function shortName(b: ContentBundle): string {
   const word = b.graph.display_name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function readDetail(): DetailLevel {
+  try {
+    const v = localStorage.getItem(DETAIL_KEY);
+    return (DETAIL_LEVELS as readonly string[]).includes(v ?? '') ? (v as DetailLevel) : DEFAULT_DETAIL;
+  } catch {
+    return DEFAULT_DETAIL;
+  }
 }
 
 function readLayout(): LayoutMode {

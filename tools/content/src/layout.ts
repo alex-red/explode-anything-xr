@@ -1,4 +1,5 @@
 import type { Layout, NodePlacement, SystemGraph, Vec3 } from '@explode/contracts';
+import { detailTier, type DetailTier } from '@explode/lesson-engine';
 
 /** Glasses-safe angular budget and anchor distance (ADR-0014). */
 export const CONE_DEG = { horizontal: 60, vertical: 50 } as const;
@@ -10,6 +11,9 @@ const COLUMNS: number = 4;
 const COLUMN_SPAN = 0.22;
 const ROW_SPAN = 0.12;
 const ARC_DEPTH = 0.08;
+/** m toward (+) or away from (−) the viewer by tier: key parts in front, extras behind (EXPLORE_PLAN W11). */
+const TIER_DEPTH: Record<DetailTier, number> = { key: 0.02, supporting: 0, extra: -0.03 };
+const TIER_RANK: Record<DetailTier, number> = { key: 0, supporting: 1, extra: 2 };
 
 /**
  * Smallest ray target radius the app gives a part (apps/quest graph-view MIN_HIT_RADIUS): every
@@ -42,6 +46,8 @@ export function radiusFor(importance: number): number {
 /**
  * Deterministic precomputed layout for a software graph.
  * Exploded: top-level clusters on a shallow arc (2 rows), children in rings around their parent.
+ * Within a ring, children go key first (from the top, in flow-path order), then supporting, then
+ * extras, and key parts sit nearest the viewer, so hiding extras leaves a clean reading order.
  * Collapsed: every node packed inside a small sphere (volume-uniform Fibonacci spiral).
  */
 export function layoutSoftware(graph: SystemGraph, clusterOrder: readonly string[] = []): Layout {
@@ -51,7 +57,13 @@ export function layoutSoftware(graph: SystemGraph, clusterOrder: readonly string
     list.push(n.id);
     children.set(n.parent_id, list);
   }
-  for (const list of children.values()) list.sort();
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  const pathOrder = new Map<string, number>();
+  graph.paths.forEach((p, pi) => p.node_ids.forEach((id, i) => pathOrder.has(id) || pathOrder.set(id, pi * 1000 + i)));
+  const tierOf = (id: string): DetailTier => detailTier(byId.get(id)!);
+  const order = (a: string, b: string) =>
+    TIER_RANK[tierOf(a)] - TIER_RANK[tierOf(b)] || (pathOrder.get(a) ?? Infinity) - (pathOrder.get(b) ?? Infinity) || (a < b ? -1 : a > b ? 1 : 0);
+  for (const list of children.values()) list.sort(order);
 
   const roots = [...(children.get(null) ?? [])].sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1));
   function rank(id: string) {
@@ -78,7 +90,7 @@ export function layoutSoftware(graph: SystemGraph, clusterOrder: readonly string
     kids.forEach((kid, i) => {
       const angle = Math.PI / 2 + (2 * Math.PI * i) / kids.length;
       const rr = kids.length === 1 ? r * 0.6 : r;
-      exploded.set(kid, [px + rr * Math.cos(angle), py + rr * 0.8 * Math.sin(angle), pz + 0.012 * depth]);
+      exploded.set(kid, [px + rr * Math.cos(angle), py + rr * 0.8 * Math.sin(angle), pz + 0.012 * depth + TIER_DEPTH[tierOf(kid)]]);
       placeChildren(kid, depth + 1);
     });
   }

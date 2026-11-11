@@ -1,6 +1,6 @@
 import type { ContentBundle, EngineEvent } from '@explode/contracts';
 import { hashTree } from '@explode/indexer';
-import { computeConsequence, createContext, reduce, replay } from '@explode/lesson-engine';
+import { computeConsequence, createContext, detailTier, reduce, replay } from '@explode/lesson-engine';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -195,5 +195,25 @@ describe('the incident drill', () => {
     const label = (id: string) => repo.graph.nodes.find((n) => n.id === id)!.label;
     expect(intro).not.toContain(label(edge.target_id));
     expect(drill.steps.some((s) => s.on_enter.some((a) => a.type === 'show_evidence' && a.evidence_id === run.id))).toBe(true);
+  });
+});
+
+describe('repo detail tiers (docs/EXPLORE_PLAN.md W11)', () => {
+  const tiers = (t: string) => repo.graph.nodes.filter((n) => detailTier(n) === t);
+
+  it('splits the sample into key, supporting and extra parts', () => {
+    expect([tiers('key').length, tiers('supporting').length, tiers('extra').length]).toEqual([19, 25, 23]);
+    for (const id of repo.graph.paths.flatMap((p) => p.node_ids)) expect(detailTier(repo.graph.nodes.find((n) => n.id === id)!), id).toBe('key');
+    for (const n of repo.graph.nodes) if (n.kind === 'cluster' || n.kind === 'route') expect(detailTier(n), n.id).toBe('key');
+  });
+
+  it('puts key parts in front of their siblings, and extras behind', () => {
+    const z = (id: string) => repo.layout.placements[id]!.exploded[2];
+    for (const parent of repo.graph.nodes) {
+      const kids = repo.graph.nodes.filter((n) => n.parent_id === parent.id);
+      const key = kids.filter((n) => detailTier(n) === 'key').map((n) => z(n.id));
+      const extra = kids.filter((n) => detailTier(n) === 'extra').map((n) => z(n.id));
+      if (key.length && extra.length) expect(Math.min(...key), parent.id).toBeGreaterThan(Math.max(...extra));
+    }
   });
 });

@@ -4,7 +4,10 @@ compatibility_date = "2026-10-01"
 # No nodejs_compat needed: only fetch, URL, TextEncoder, AbortController and timers are used.
 
 [vars]
+# "anthropic" (default) or "meta" (Meta's Model API, docs/EXPLORE_PLAN.md W12).
+TUTOR_PROVIDER = "anthropic"
 TUTOR_MODEL = "claude-haiku-5-5"
+META_MODEL = "muse-ember-1.0"
 # Comma-separated origins of the hosted PWA (no trailing slash).
 ALLOWED_ORIGINS = "https://REPLACE-WITH-PWA-ORIGIN"
 DAILY_TOKEN_CAP = "2000000"
@@ -17,5 +20,6 @@ KILL_SWITCH = "0"
 binding = "TUTOR_KV"
 id = "REPLACE-WITH-KV-NAMESPACE-ID"
 
-# Secret (never put it in this file):
+# Secrets (never put them in this file), one for the provider in use:
 #   bunx wrangler secret put ANTHROPIC_API_KEY
+#   bunx wrangler secret put META_API_KEY

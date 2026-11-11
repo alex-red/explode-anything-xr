@@ -1,4 +1,5 @@
 export * from './context.ts';
+export * from './detail.ts';
 export * from './propagation.ts';
 export * from './reducer.ts';
 export * from './validate.ts';

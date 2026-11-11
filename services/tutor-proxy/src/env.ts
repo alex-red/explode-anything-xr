@@ -7,8 +7,14 @@ export interface KVLike {
 export interface Env {
   /** Secret (`wrangler secret put ANTHROPIC_API_KEY`). Never logged. Absent → scripted only. */
   ANTHROPIC_API_KEY?: string;
-  /** Defaults to claude-haiku-5-5. */
+  /** Defaults to claude-haiku-5-5. Used when the provider is anthropic. */
   TUTOR_MODEL?: string;
+  /** Which model API answers live turns: "anthropic" (default) or "meta" (docs/EXPLORE_PLAN.md W12). */
+  TUTOR_PROVIDER?: string;
+  /** Secret (`wrangler secret put META_API_KEY`). Never logged. Absent with provider meta → scripted only. */
+  META_API_KEY?: string;
+  /** Defaults to muse-ember-1.0. Used when the provider is meta. */
+  META_MODEL?: string;
   /** Comma-separated list of origins allowed to call the proxy, e.g. "https://explode.example". */
   ALLOWED_ORIGINS?: string;
   /** Estimated tokens per UTC day before the proxy goes scripted-only. Default 2,000,000. */
@@ -20,4 +26,4 @@ export interface Env {
 }
 
 export const DEFAULT_MODEL = 'claude-haiku-5-5';
-export const PROXY_VERSION = '0.1.0';
+export const PROXY_VERSION = '0.2.0';

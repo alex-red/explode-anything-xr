@@ -22,6 +22,10 @@
 - The core experience never depends on the network.
 - Proxy outages degrade to the scripted tutor ([ADR-0011](0011-tutor.md)).
 
+## Note, 2026-11-11
+
+`TUTOR_PROVIDER = "meta"` switches the upstream to Meta's Model API (OpenAI-compatible Chat Completions, default model `muse-ember-1.0`, key in the `META_API_KEY` secret). Everything above, including the limits, validation and fallback, applies unchanged. Anthropic stays the default until the latency spike in [EXPLORE_PLAN.md](../EXPLORE_PLAN.md) W12 passes.
+
 ## Revisit trigger
 
 User-imported repos (P2+), which would need server-side indexing.

@@ -14,6 +14,9 @@
  * - Two hands, push away or pull closer: tilt the model about the viewer's left-right axis.
  * - Two hands, move sideways or up and down: carry the model. Zoom and turn happen about the
  *   model's own centre.
+ * - One hand, a quick sideways flick on empty space: `flick` is -1 (right to left: show fewer
+ *   parts) or +1 (left to right: show more) for one update, and the turn it began is undone
+ *   (EXPLORE_PLAN W11). A slow drag is still a turn.
  *
  * Nothing here allocates per update.
  */
@@ -60,6 +63,12 @@ export interface GestureConfig {
   twistDeadzone: number;
   /** Twist counts fully once the hands are twice this far apart, and not at all below it (m). */
   twistMinDist: number;
+  /** A flick: at least this much sideways hand travel (m), */
+  flickDistance: number;
+  /** from pinch to release within this long (ms), */
+  flickMs: number;
+  /** with vertical travel at most this fraction of the sideways travel. */
+  flickSlope: number;
   /** How far the model may be moved from home, per axis (m). */
   minX: number;
   maxX: number;
@@ -87,6 +96,9 @@ export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
   // bearing between them (by about 10° from 24 cm apart to 50 cm), so a turn has to be deliberate.
   twistDeadzone: (10 * Math.PI) / 180,
   twistMinDist: 0.12,
+  flickDistance: 0.12,
+  flickMs: 350,
+  flickSlope: 0.5,
   minX: -0.45,
   maxX: 0.45,
   minY: -0.3,
@@ -136,6 +148,10 @@ export class ViewGestures {
   preview: number | null = null;
   /** Set for the one update in which a two-hand gesture ended with a changed factor. */
   commit: number | null = null;
+  /** Set for the one update in which a one-hand flick on empty space ended: -1 fewer, +1 more. */
+  flick: -1 | 1 | 0 = 0;
+  /** Flicks are only read where they mean something (the codebase); elsewhere a quick drag is a turn. */
+  flickEnabled = false;
 
   private readonly cfg: GestureConfig;
   // Where each current pinch started, to measure drag travel.
@@ -166,6 +182,12 @@ export class ViewGestures {
   private spread0 = 0;
   private factor0 = 0;
   private factor = 0;
+  // The turn in progress: when its pinch began, where it began, and the hand's last position.
+  private turnStartedAt = 0;
+  private turnFromX = 0;
+  private turnFromY = 0;
+  private turnLastX = 0;
+  private turnLastY = 0;
 
   constructor(cfg: GestureConfig = DEFAULT_GESTURE_CONFIG) {
     this.cfg = cfg;
@@ -212,6 +234,7 @@ export class ViewGestures {
    */
   update(now: number, left: HandInput, right: HandInput, factor: number, startedOn: PinchTarget): void {
     this.commit = null;
+    this.flick = 0;
     this.trackOrigin('left', left);
     this.trackOrigin('right', right);
     const both = left.pinching && right.pinching;
@@ -223,8 +246,12 @@ export class ViewGestures {
     if (this.mode === 'pan' || this.mode === 'turn') {
       const h = this.panHand === 'left' ? left : right;
       if (both) this.startTwo(left, right, factor); // the other hand joined: carry on with two
-      else if (!h.pinching) this.mode = 'idle';
-      else if (this.mode === 'turn') {
+      else if (!h.pinching) {
+        if (this.mode === 'turn') this.endTurn(now);
+        this.mode = 'idle';
+      } else if (this.mode === 'turn') {
+        this.turnLastX = h.x;
+        this.turnLastY = h.y;
         // Like turning a globe from the front: dragging right spins the near side to the right,
         // dragging up tips the top away.
         this.pose.yaw = wrapAngle(this.yaw0 + (h.x - this.gx) * this.cfg.turnGain);
@@ -253,6 +280,7 @@ export class ViewGestures {
     this.mode = 'idle';
     this.preview = null;
     this.commit = null;
+    this.flick = 0;
     this.origin.left.set = this.origin.right.set = false;
     this.origin.left.spent = this.origin.right.spent = false;
   }
@@ -273,8 +301,29 @@ export class ViewGestures {
     return h.pinching && o.set && !o.spent && Math.hypot(h.x - o.x, h.y - o.y, h.z - o.z) > this.cfg.dragStart;
   }
 
+  /**
+   * A turn just ended. If it was short, fast and sideways it was a flick, not a turn: report it
+   * and put the model back the way it was.
+   */
+  private endTurn(now: number): void {
+    const c = this.cfg;
+    if (!this.flickEnabled) return;
+    const dx = this.turnLastX - this.turnFromX;
+    const dy = this.turnLastY - this.turnFromY;
+    if (now - this.turnStartedAt > c.flickMs || Math.abs(dx) < c.flickDistance || Math.abs(dy) > Math.abs(dx) * c.flickSlope) return;
+    this.flick = dx < 0 ? -1 : 1;
+    this.pose.yaw = this.yaw0;
+    this.pose.pitch = this.pitch0;
+  }
+
   private startDrag(side: Side, h: HandInput, startedOn: PinchTarget): void {
     this.mode = startedOn === 'part' ? 'pan' : 'turn';
+    const o = this.origin[side];
+    this.turnStartedAt = h.startedAt;
+    this.turnFromX = o.x;
+    this.turnFromY = o.y;
+    this.turnLastX = h.x;
+    this.turnLastY = h.y;
     this.yaw0 = this.pose.yaw;
     this.pitch0 = this.pose.pitch;
     this.panHand = side;

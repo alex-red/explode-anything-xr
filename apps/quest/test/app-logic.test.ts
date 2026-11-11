@@ -147,6 +147,14 @@ describe('TutorClient', () => {
     const a = await new TutorClient('https://proxy.example').ask(load(), 'explain_selection', true);
     expect(a.source).toBe('live');
     expect(a.plan.say).toBe(livePlan.say);
+    expect(a.model).toBe('m');
+  });
+
+  it('keeps the model a live answer came from, and never names one for a scripted answer', async () => {
+    vi.stubGlobal('fetch', respond({ plan: livePlan, source: 'live', model: 'muse-ember-1.0' }));
+    expect((await new TutorClient('https://proxy.example').ask(load(), 'explain_selection', true)).model).toBe('muse-ember-1.0');
+    vi.stubGlobal('fetch', respond({ plan: livePlan, source: 'scripted', model: 'muse-ember-1.0' }));
+    expect((await new TutorClient('https://proxy.example').ask(load(), 'explain_selection', true)).model).toBeNull();
   });
 
   it('re-validates on the client and falls back on an invented id', async () => {

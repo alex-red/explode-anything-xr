@@ -6,6 +6,8 @@ import type { Store } from './store.ts';
 export interface TutorAnswer {
   plan: TutorPlan;
   source: 'live' | 'scripted';
+  /** The model a live answer came from, as the proxy reported it; null when scripted. */
+  model: string | null;
   note: string | null;
 }
 
@@ -26,6 +28,7 @@ export class TutorClient {
     const scripted = (note: string | null): TutorAnswer => ({
       plan: scriptedTutorTurn(store.ctx, store.state, { trigger, selected_id: store.state.selected_id }),
       source: 'scripted',
+      model: null,
       note,
     });
     if (!this.url || !liveAllowed) return scripted(null);
@@ -58,7 +61,8 @@ export class TutorClient {
       // Never trust the server's validation alone: the client is what executes actions.
       const v = validateTutorPlan(store.ctx, parsed.data.plan);
       if (!v.ok) return scripted('Live AI answer failed validation; showing the offline guide.');
-      return { plan: v.plan, source: parsed.data.source, note: null };
+      const live = parsed.data.source === 'live';
+      return { plan: v.plan, source: parsed.data.source, model: live ? (parsed.data.model ?? null) : null, note: null };
     } catch {
       return scripted('Live AI unavailable. The guided lesson still works.');
     } finally {

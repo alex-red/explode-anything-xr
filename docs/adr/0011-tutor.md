@@ -26,6 +26,10 @@
 - At most one round-trip per turn.
 - The tutor can only *show*. It cannot break, repair, reset, grade or advance.
 
+## Note, 2026-11-11
+
+The model call can go to Meta's Model API instead of the Messages API (ADR-0004 note), with the same structured plan and the same validation. A live answer now names the model it came from in the caption (`Tutor (live AI · <model>)`), using the model the proxy returned, never a fixed string.
+
 ## Revisit trigger
 
 Voice input ships (P2), which adds `free_text`.

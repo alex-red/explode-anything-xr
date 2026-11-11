@@ -18,15 +18,18 @@ export const REPO_LESSON_ID = 'lesson:repo-login';
 export const DRILL_MUTATION_ID = 'mut:drop-body-parser';
 export const DRILL_LESSON_ID = 'lesson:repo-incident';
 
-/** Top-row clusters follow the login path left to right; supporting clusters below. */
+/**
+ * Top-row clusters follow the login path left to right; supporting clusters below, with users
+ * under auth, since the login path goes auth → users → auth.
+ */
 const CLUSTER_ORDER = [
   'cluster:src/http',
   'cluster:src/routes',
   'cluster:src/auth',
   'cluster:src/sessions',
   'cluster:src/app',
-  'cluster:src/users',
   'cluster:src/config',
+  'cluster:src/users',
   'cluster:src/audit',
 ];
 

@@ -23,6 +23,7 @@ import {
   type World,
 } from '@iwsdk/core';
 import type { FlowPath, GraphEdge, GraphNode, SceneState } from '@explode/contracts';
+import { visibleAtDetail, type DetailLevel } from '@explode/lesson-engine';
 import { makeInteractive } from './interactions.ts';
 import { conduitMaterial, createStage, haloMaterial, HoloMaterial, setReveal } from './holo.ts';
 import { COLOR } from './palette.ts';
@@ -34,6 +35,8 @@ export interface GraphHandlers {
   onNodePressed(id: string): void;
   onPlugPressed(edgeId: string): void;
   onSocketPressed(edgeId: string, targetId: string): void;
+  /** The "+N hidden" shelf was pressed: show one detail level more. */
+  onShelfPressed?(): void;
 }
 
 interface NodeView {
@@ -60,6 +63,8 @@ interface NodeView {
   spinSpeed: number;
   label: TextPanel | null;
   labelText: string;
+  /** 1 shown, 0 put away on the shelf at this detail level; eased between. */
+  vis: number;
 }
 
 interface EdgeView {
@@ -85,6 +90,15 @@ const PLUG_TAG_W = 0.1;
 const PLUG_TAG_H = 0.022;
 const MAX_LABEL_RECTS = 64;
 const PARTICLES = 8;
+/**
+ * Where parts hidden by the detail level go (EXPLORE_PLAN W11): a small shelf on the stage's
+ * front-left rim, labelled with how many are there. Pressing it shows one level more.
+ */
+const SHELF = new Vector3(-0.15, -0.18, 0.12);
+const SHELF_W = 0.13;
+const SHELF_H = 0.03;
+/** 1/s: how fast parts fly to and from the shelf. */
+const SHELF_EASE = 6;
 // Rays from a real hand wobble, so anything pressable is at least 4 cm across to the ray,
 // whatever size it is drawn.
 const MIN_HIT_RADIUS = 0.02; // mirrored in tools/content layout.ts
@@ -179,6 +193,13 @@ export class GraphView {
   private pathEdges = new Set<string>();
   private broken = new Set<string>();
   private segs: Array<[Vector3, Vector3]> = [];
+  /** Parts shown at the current detail level (software only; every part on a mechanical model). */
+  private shown = new Set<string>();
+  private hiddenCount = 0;
+  private detailLevel: DetailLevel = 'supporting';
+  private readonly shelf: TextPanel;
+  private readonly shelfEntity: Entity;
+  private shelfCount = -1;
 
   constructor(
     private readonly world: World,
@@ -222,6 +243,39 @@ export class GraphView {
     this.tray.position.copy(TRAY);
     this.tray.visible = false;
     this.root.add(this.tray);
+
+    this.shelf = new TextPanel({ width: SHELF_W, height: SHELF_H, pxPerMeter: 2400, background: 'rgba(12,18,30,0.85)', border: null, padding: 6, radius: 14, align: 'center' });
+    this.shelf.mesh.position.copy(SHELF);
+    this.shelf.mesh.rotation.x = -0.35;
+    this.shelf.mesh.visible = false;
+    this.shelf.mesh.scale.setScalar(1e-4); // rays hit invisible objects: shrunk until it has something to say
+    this.shelfEntity = makeInteractive(this.world, this.shelf.mesh, this.rootEntity, {
+      press: () => {
+        if (this.shelf.mesh.visible) this.handlers.onShelfPressed?.();
+      },
+      ui: true,
+    });
+  }
+
+  /** How much of a software graph is shown: key parts, plus supporting parts, or everything. */
+  get detail(): DetailLevel {
+    return this.detailLevel;
+  }
+
+  set detail(level: DetailLevel) {
+    if (level === this.detailLevel) return;
+    this.detailLevel = level;
+    this.derivedFor = null; // re-derive what is shown on the next frame
+  }
+
+  /** Parts put away at this detail level (0 on a mechanical model). */
+  get hiddenParts(): number {
+    return this.hiddenCount;
+  }
+
+  /** Whether a part is shown at the current detail level (always, on a mechanical model). */
+  isShown(id: string): boolean {
+    return this.isMechanical || this.shown.has(id);
   }
 
   update(dt: number, camera: Camera): void {
@@ -244,11 +298,19 @@ export class GraphView {
     const { highlighted, affected, isolated } = this;
 
     // Nodes
+    const visStep = Math.min(1, dt * SHELF_EASE);
     for (const v of this.nodes.values()) {
       const p = v.mesh.position.lerpVectors(v.collapsed, v.exploded, f);
+      // Parts the detail level puts away fly to the shelf as the model opens; closed, the model is
+      // whole. `e` is how present the part is now.
+      const shown = this.isMechanical || this.shown.has(v.node.id);
+      v.vis += ((shown ? 1 : 0) - v.vis) * visStep;
+      if (Math.abs((shown ? 1 : 0) - v.vis) < 0.001) v.vis = shown ? 1 : 0;
+      const e = 1 - (1 - v.vis) * f;
+      if (e < 1) p.lerpVectors(SHELF, this.tmpA.copy(p), e);
       const dimmed = isolated !== null && !isolated.has(v.node.id);
       const selected = s.selected_id === v.node.id;
-      let scale = v.radius * (selected ? 1.3 : v.hovered ? 1.15 : 1) * (dimmed ? 0.6 : 1);
+      let scale = v.radius * (selected ? 1.3 : v.hovered ? 1.15 : 1) * (dimmed ? 0.6 : 1) * e;
       if (!this.isMechanical && v.node.kind === 'cluster') scale *= 0.25 + 0.75 * (1 - f); // clusters shrink as the system opens
       const m = v.material;
       if (m) {
@@ -271,7 +333,9 @@ export class GraphView {
         // Software node: the hit volume is the drawn size, never under 4 cm across, and steady
         // while the drawn instance carries the state. The layout keeps these volumes from
         // overlapping (tools/content layout.ts hitRadius), so a ray lands on the part it aims at.
-        v.mesh.scale.setScalar(v.node.kind === 'cluster' ? scale : Math.max(v.radius, MIN_HIT_RADIUS));
+        // A part put away takes no ray hits at all: rays hit invisible objects, so it shrinks.
+        v.mesh.scale.setScalar(!shown && f > 0.05 ? 1e-4 : v.node.kind === 'cluster' ? Math.max(scale, 1e-4) : Math.max(v.radius, MIN_HIT_RADIUS));
+        v.mesh.visible = shown || f <= 0.05;
         const c = this.tmpColor;
         if (affected.has(v.node.id)) c.copy(NODE_FAULT).multiplyScalar(0.8 + 0.2 * Math.sin(this.time * 4));
         else if (highlighted.has(v.node.id)) c.copy(NODE_PATH);
@@ -299,8 +363,9 @@ export class GraphView {
           strength = HALO_SELECTED;
         } else if (v.hovered) strength = HALO_HOVER;
       }
+      strength *= e;
       const drawn = m ? v.radius : scale;
-      this.halos.setMatrixAt(v.halo, strength > 0 ? this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(drawn * HALO_SIZE)) : this.tmpM.makeScale(0, 0, 0));
+      this.halos.setMatrixAt(v.halo, strength > 0.001 ? this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(drawn * HALO_SIZE)) : this.tmpM.makeScale(0, 0, 0));
       this.halos.setColorAt(v.halo, glow.multiplyScalar(strength * glowIn));
 
       if (v.spinAxis) {
@@ -320,6 +385,7 @@ export class GraphView {
     this.updateLabels(s, f, highlighted, affected);
     this.updateParticles(s, f, activePath);
     this.updateSockets(s, f);
+    this.updateShelf(f);
     this.halos.instanceMatrix.needsUpdate = true;
     if (this.halos.instanceColor) this.halos.instanceColor.needsUpdate = true;
   }
@@ -332,9 +398,16 @@ export class GraphView {
     this.isolated = s.isolated_ids ? new Set(s.isolated_ids) : null;
     this.pathEdges = new Set(path?.edge_ids ?? []);
     this.broken = new Set(s.broken_edge_ids);
+    if (!this.isMechanical) {
+      this.shown = visibleAtDetail(this.store.ctx, s, this.detailLevel, this.revealConsequences);
+      let hidden = 0;
+      for (const id of this.nodes.keys()) if (!this.shown.has(id)) hidden++;
+      this.hiddenCount = hidden;
+    }
+    const shown = this.shown;
     this.labelIds = new Set(
       [...this.nodes.values()]
-        .map((v) => ({ id: v.node.id, score: labelScore(v.node, s, this.highlighted, this.affected, this.isMechanical) }))
+        .map((v) => ({ id: v.node.id, score: this.isMechanical || shown.has(v.node.id) ? labelScore(v.node, s, this.highlighted, this.affected, this.isMechanical) : 0 }))
         .filter((x) => x.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, MAX_LABELS)
@@ -385,6 +458,8 @@ export class GraphView {
     for (const m of Object.values(this.mats)) m.dispose();
     this.disposeSockets();
     this.trayLabel.dispose();
+    this.shelf.dispose();
+    this.shelfEntity.dispose({ disposeResources: false });
     this.rootEntity.dispose();
   }
 
@@ -437,7 +512,9 @@ export class GraphView {
     const exploded = new Vector3(...placement.exploded);
     mesh.position.copy(collapsed);
     const entity = makeInteractive(this.world, mesh, this.rootEntity, {
-      press: () => this.handlers.onNodePressed(node.id),
+      press: () => {
+        if (this.isShown(node.id)) this.handlers.onNodePressed(node.id);
+      },
       hover: (on) => {
         const v = this.nodes.get(node.id);
         if (v) v.hovered = on;
@@ -460,6 +537,7 @@ export class GraphView {
       spinSpeed: 0,
       label: null,
       labelText: '',
+      vis: 1,
     });
   }
 
@@ -531,7 +609,8 @@ export class GraphView {
       const a = this.nodes.get(edge.source_id)!.mesh.position;
       const b = this.nodes.get(edge.target_id)!.mesh.position;
       const isBroken = broken.has(edge.id);
-      const visible = this.edgeVisible(edge, s, f) || (pathEdges.has(edge.id) && f > 0.2);
+      const ends = this.isShown(edge.source_id) && this.isShown(edge.target_id);
+      const visible = ends && (this.edgeVisible(edge, s, f) || (pathEdges.has(edge.id) && f > 0.2));
       if (visible) {
         anyVisible = true;
         const onPath = pathEdges.has(edge.id);
@@ -551,8 +630,10 @@ export class GraphView {
           pm.position.lerp(this.tmpB.copy(TRAY).add(this.tmpA.set(0, 0.02, 0)), 0.15);
           if (ev.plug.detached !== true) ev.plug.label.draw([{ text: 'detached', size: 34, color: '#ff6b5b', bold: true }]);
           ev.plug.detached = true;
+          pm.scale.setScalar(1);
         } else {
-          pm.visible = f > 0.6;
+          pm.visible = f > 0.6 && ends;
+          pm.scale.setScalar(ends ? 1 : 1e-4); // a plug between parts put away takes no ray hits
           pm.position.lerp(this.tmpB.lerpVectors(a, b, 0.5), 0.25);
           if (ev.plug.detached !== false) ev.plug.label.draw([{ text: 'unplug', size: 34, color: '#3ccfcf', bold: true }]);
           ev.plug.detached = false;
@@ -587,6 +668,18 @@ export class GraphView {
     }
     this.particles.visible = segs.length > 0;
     this.particles.instanceMatrix.needsUpdate = true;
+  }
+
+  /** The "+N hidden" shelf: shown on an open software model while the detail level hides parts. */
+  private updateShelf(f: number): void {
+    const count = this.isMechanical ? 0 : this.hiddenCount;
+    const on = count > 0 && f > 0.6;
+    this.shelf.mesh.visible = on;
+    this.shelf.mesh.scale.setScalar(on ? 1 : 1e-4);
+    if (on && count !== this.shelfCount) {
+      this.shelfCount = count;
+      this.shelf.draw([{ text: `+${count} hidden · Show`, size: 34, color: '#3ccfcf', bold: true }]);
+    }
   }
 
   private updateSockets(s: SceneState, f: number): void {

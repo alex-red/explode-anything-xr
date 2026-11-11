@@ -20,7 +20,7 @@ export interface CaptionModel {
   question: string | null;
   feedback: string | null;
   annotation: string | null;
-  tutor: { say: string; status: TruthStatus; source: 'live' | 'scripted' } | null;
+  tutor: { say: string; status: TruthStatus; source: 'live' | 'scripted'; model?: string | null } | null;
   note: string | null;
   consequence: { status: TruthStatus; text: string } | null;
 }
@@ -271,7 +271,9 @@ export class SpatialUI {
     }
     if (model.tutor) {
       const b = TRUTH_BADGE[model.tutor.status];
-      lines.push({ text: `${model.tutor.source === 'live' ? 'Tutor (live AI)' : 'Guide (offline)'} · ${b.glyph} ${b.label}`, size: SMALL, color: b.color, bold: true });
+      // A live answer names the model it came from, as the proxy reported it (EXPLORE_PLAN W12).
+      const who = model.tutor.source === 'live' ? (model.tutor.model ? `Tutor (live AI · ${model.tutor.model.slice(0, 32)})` : 'Tutor (live AI)') : 'Guide (offline)';
+      lines.push({ text: `${who} · ${b.glyph} ${b.label}`, size: SMALL, color: b.color, bold: true });
       lines.push({ text: model.tutor.say, size: 38 });
     }
     if (model.note) lines.push({ text: model.note, size: SMALL, color: CSS.muted });
@@ -303,6 +305,7 @@ const GUIDE: ReadonlyArray<readonly [gesture: string, effect: string]> = [
   ['Pinch', 'select a part, press a button'],
   ['Drag a part', 'move the model'],
   ['Drag empty space', 'turn and tilt it'],
+  ['Flick empty space sideways', 'fewer or more code parts'],
   ['Both hands, pull apart', 'explode, then zoom in'],
   ['Both hands, push together', 'zoom out, then collapse'],
   ['Both hands, push away or pull closer', 'tilt it'],

@@ -2,6 +2,7 @@ import type { TutorPlan, TutorTurnRequest, TutorTurnResponse } from '@explode/co
 import { TutorTurnRequest as TutorTurnRequestSchema } from '@explode/contracts';
 import { scriptedTutorTurn, validateTutorPlan } from '@explode/lesson-engine';
 import { callAnthropic } from './anthropic.ts';
+import { callMeta, DEFAULT_META_MODEL } from './meta.ts';
 import type { BundleRegistry } from './bundles.ts';
 import { buildGraphContext, buildTurnText, stateFromRequest, SYSTEM_PROMPT } from './context.ts';
 import { DEFAULT_MODEL, PROXY_VERSION, type Env, type KVLike } from './env.ts';
@@ -43,11 +44,14 @@ export function createHandler(deps: HandlerDeps) {
     if (!originOk) return json(403, { error: 'origin not allowed' });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
-    const model = env.TUTOR_MODEL || DEFAULT_MODEL;
+    // One provider per deployment: Anthropic by default, Meta's Model API when asked for.
+    const provider = env.TUTOR_PROVIDER === 'meta' ? 'meta' : 'anthropic';
+    const model = provider === 'meta' ? env.META_MODEL || DEFAULT_META_MODEL : env.TUTOR_MODEL || DEFAULT_MODEL;
+    const apiKey = provider === 'meta' ? env.META_API_KEY : env.ANTHROPIC_API_KEY;
     const killed = env.KILL_SWITCH === '1';
 
     if (url.pathname === '/v1/health' && request.method === 'GET') {
-      return json(200, { ok: true, version: PROXY_VERSION, killed, model });
+      return json(200, { ok: true, version: PROXY_VERSION, killed, provider, model });
     }
     if (url.pathname !== '/v1/tutor/turn') return json(404, { error: 'not found' });
     if (request.method !== 'POST') return json(405, { error: 'method not allowed' });
@@ -85,7 +89,7 @@ export function createHandler(deps: HandlerDeps) {
     };
 
     if (killed) return scripted('kill_switch');
-    if (!env.ANTHROPIC_API_KEY) return scripted('no_api_key');
+    if (!apiKey) return scripted('no_api_key');
 
     let graphContext = graphContextCache.get(bundle.content_hash);
     if (!graphContext) {
@@ -97,8 +101,8 @@ export function createHandler(deps: HandlerDeps) {
     const cap = parseCap(env.DAILY_TOKEN_CAP);
     if ((await spentToday(kv, now())) + estimate > cap) return scripted('daily_cap');
 
-    const result = await callAnthropic({
-      apiKey: env.ANTHROPIC_API_KEY,
+    const result = await (provider === 'meta' ? callMeta : callAnthropic)({
+      apiKey,
       model,
       systemPrompt: SYSTEM_PROMPT,
       graphContext,

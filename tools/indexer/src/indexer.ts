@@ -44,6 +44,10 @@ export interface IndexResult {
 type Decl = FunctionDeclaration | MethodDeclaration | ClassDeclaration;
 
 const ROUTE_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
+/** Importance a function gains from its connections (calls, handlers, routes), at most. */
+const CONNECTED_BOOST = 0.2;
+/** Connections at which that boost is full. */
+const CONNECTED_SATURATION = 6;
 
 /**
  * Index a small TypeScript repository into a SystemGraph.
@@ -256,10 +260,21 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     return { id: spec.id, label: spec.label, flow: spec.flow, node_ids: [...spec.node_ids], edge_ids: edgeIds, truth_status: 'static_verified', evidence_ids: evidenceIds };
   });
 
-  // 6. Importance: kind baseline, boosted on named paths.
+  // 6. Importance (docs/EXPLORE_PLAN.md W11): a presentation ranking from structure, never from
+  // truth status. Kind baseline, +0.35 on a named path, and up to +0.2 for a function by how many
+  // calls, handlers and routes it takes part in (imports are not counted), saturating at six.
   const onPath = new Set(paths.flatMap((p) => p.node_ids));
   const base: Record<NodeKind, number> = { system: 1, cluster: 0.9, route: 0.6, module: 0.5, class: 0.45, function: 0.3, test: 0.2, assembly: 0.9, component: 0.6 };
-  for (const n of nodes.values()) n.importance = Math.min(1, base[n.kind] + (onPath.has(n.id) ? 0.35 : 0));
+  const links = new Map<string, number>();
+  for (const e of edges.values()) {
+    if (e.relation === 'imports') continue;
+    links.set(e.source_id, (links.get(e.source_id) ?? 0) + 1);
+    links.set(e.target_id, (links.get(e.target_id) ?? 0) + 1);
+  }
+  for (const n of nodes.values()) {
+    const connected = n.kind === 'function' ? CONNECTED_BOOST * Math.min(1, (links.get(n.id) ?? 0) / CONNECTED_SATURATION) : 0;
+    n.importance = Math.round(Math.min(1, base[n.kind] + (onPath.has(n.id) ? 0.35 : 0) + connected) * 1000) / 1000;
+  }
 
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const graph: SystemGraph = {

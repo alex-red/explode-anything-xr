@@ -1,6 +1,6 @@
 # EXPLODE tutor proxy (Cloudflare Worker)
 
-The only server in EXPLODE ([ADR-0004](../../docs/adr/0004-backend.md)). It turns one tutor turn into one structured Claude call and returns a validated plan. **The app never depends on it.** The client defaults to the scripted tutor and falls back to it whenever this proxy is slow, down, capped or killed.
+The only server in EXPLODE ([ADR-0004](../../docs/adr/0004-backend.md)). It turns one tutor turn into one structured model call and returns a validated plan. The provider is Anthropic (Claude) by default, or Meta's Model API with `TUTOR_PROVIDER = "meta"` (see [Providers](#providers)). **The app never depends on it.** The client defaults to the scripted tutor and falls back to it whenever this proxy is slow, down, capped or killed.
 
 ## API
 
@@ -49,7 +49,16 @@ Status codes:
 | 413 | Body over 16 KB |
 | 429 | Rate limited (`retry-after: 600`) |
 
-`GET /v1/health` returns `{ "ok": true, "version": "0.1.0", "killed": false, "model": "claude-haiku-5-5" }`.
+`GET /v1/health` returns `{ "ok": true, "version": "0.2.0", "killed": false, "provider": "anthropic", "model": "claude-haiku-5-5" }`.
+
+## Providers
+
+| `TUTOR_PROVIDER` | Call | Secret | Model setting (default) |
+|---|---|---|---|
+| `anthropic` (default) | `POST https://api.anthropic.com/v1/messages`, as below | `ANTHROPIC_API_KEY` | `TUTOR_MODEL` (`claude-haiku-5-5`) |
+| `meta` | `POST https://api.meta.ai/v1/chat/completions` (OpenAI-compatible), `response_format` json_schema with `strict: true`, `reasoning_effort: low`, `max_completion_tokens: 4096` | `META_API_KEY` | `META_MODEL` (`muse-ember-1.0`) |
+
+Both use the same system prompt, graph context, turn text, limits, validation and scripted fallback. The Meta request shape comes from Meta's docs (read Nov 11, 2026) and has **not** been run against the live API. Whether `reasoning_effort: low` is accepted, and the latency, are checked by the spike in [EXPLORE_PLAN.md](../../docs/EXPLORE_PLAN.md) W12 before the provider is switched on. Any error, including a 400, falls back to the scripted tutor.
 
 ## How a turn works
 
@@ -74,7 +83,7 @@ The PWA URL is effectively public, so treat this endpoint as public too.
 | Daily spend cap | `DAILY_TOKEN_CAP` tokens per UTC day (default 2,000,000), counted from actual `usage`. Once exceeded, every answer is scripted. |
 | Kill switch | `KILL_SWITCH = "1"`, then `wrangler deploy`, makes every answer scripted without calling the model. |
 | Body limit | 16 KB |
-| Secret handling | `ANTHROPIC_API_KEY` is a Worker secret. It is never logged or returned. |
+| Secret handling | `ANTHROPIC_API_KEY` and `META_API_KEY` are Worker secrets. They are never logged or returned. |
 
 ## Setup (run these yourself)
 

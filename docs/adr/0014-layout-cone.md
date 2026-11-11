@@ -26,3 +26,7 @@ The Glasses become a declared platform (P2).
 ## Note, 2026-11-11
 
 The panels now have field-of-view budgets too (`apps/quest/src/app/fov.ts`), measured like a view frustum around the gaze at the model. **Wide** (default, Quest 3S): model, caption and toolbar within ±46° × ±43°, with evidence and gestures a glance aside. **Narrow** (glasses-class): every panel within ±33° × ±31°, placed by angle from the measured eye, the toolbar reduced to the lesson's buttons. A "Layout" button switches them. The software layout is also spread at build time so no two ray targets overlap (`tools/content/src/layout.ts`), and part labels that would overlap a more important one move up or hide.
+
+## Note, 2026-11-11 (detail levels)
+
+Software parts now have tiers (key, supporting, extra) from a structural importance score, and the layout places key parts first in each ring and nearest the viewer, extras behind ([EXPLORE_PLAN.md](../EXPLORE_PLAN.md) W11). A detail level hides tiers at run time without re-laying anything out. Parts it hides shrink onto a shelf on the stage rim and take no ray hits. The cone, reach and target-overlap checks still hold with every part shown, which stays the worst case the tests check.

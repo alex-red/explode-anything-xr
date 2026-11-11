@@ -5,6 +5,7 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | Doc | What it's for |
 |---|---|
 | [WIN_PLAN.md](WIN_PLAN.md) | **Current plan (v5, Nov 11):** the judging criteria as read, room anchoring, a headset model to pull apart on your desk, Quest 3S test protocol, phases to Nov 18. Supersedes FINAL_PLAN's scope and phases |
+| [EXPLORE_PLAN.md](EXPLORE_PLAN.md) | **Adds to WIN_PLAN (Nov 11):** W11, key parts first and a detail level you can swipe down; W12, Meta's Model API as a tutor provider |
 | [FINAL_PLAN.md](FINAL_PLAN.md) | Previous plan (v4, Nov 9), still current for hosting and freeze: actual state, link-based submission, code-review findings, day-by-day to Nov 18. Supersedes PLAN.md's schedule and the APK packaging steps |
 | [DEVPOST_DRAFT.md](DEVPOST_DRAFT.md) | Draft Devpost text under the four judging criteria; `[TODO]` and **VERIFY** items to resolve before submitting |
 | [REVIEW.md](REVIEW.md) | Review of the original handoff: corrections, gaps, cuts, open **VERIFY** items, traceability |

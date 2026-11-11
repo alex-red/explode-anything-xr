@@ -134,9 +134,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown } = {}) {
+function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown; tutorUrl?: string } = {}) {
   const w = makeWorld();
-  const app = startApp(w.world as never, opts.bundles ?? bundles, null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never);
+  const app = startApp(w.world as never, opts.bundles ?? bundles, opts.tutorUrl ?? null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -425,6 +425,7 @@ describe('scene harness: handling the model with the hands', () => {
     h.frames(2);
     right.position.set(0.24, 1.26, -0.3); // 10 cm right, 6 cm up
     h.frames(30);
+    clock += 500; // held before letting go, as a deliberate turn is (a quick release would be a flick)
     fire('selectend', 'right');
     h.frames(30);
     expect(root.rotation.y).toBeGreaterThan(0.4);
@@ -731,7 +732,26 @@ describe('scene harness: software hero lesson', () => {
     });
   });
 
+  it('a live answer names the model it came from (EXPLORE_PLAN W12)', () => {
+    const h = setup(false, { tutorUrl: 'https://proxy.example' });
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    const login = 'fn:src/auth/service.ts#authservice.login';
+    h.press(h.view().nodes.get(login)!.mesh);
+    const node = ContentBundle.parse(repoJson).graph.nodes.find((n) => n.id === login)!;
+    const plan = { say: 'AuthService.login checks the password, then creates a session.', claim_status: 'static_verified', evidence_ids: [node.evidence_ids[0]], actions: [], abstain: false };
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ plan, source: 'live', model: 'muse-ember-1.0' }), { status: 200 })));
+    h.press(h.button(/Explain this/));
+    return vi.waitFor(() => {
+      h.frames(5);
+      expect(h.caption()).toMatch(/Tutor \(live AI · muse-ember-1\.0\)/);
+      expect(h.caption()).toMatch(/checks the password/);
+    });
+  });
+
   it('keeps the exploded layout inside the 60°×50° cone and labels capped at 30', () => {
+    localStorage.setItem('explode:detail:v1', 'all'); // the worst case: every part shown
     const h = setup();
     h.press(h.button(/Skip tutorial/));
     h.press(h.button(/^Explode$/));
@@ -742,6 +762,7 @@ describe('scene harness: software hero lesson', () => {
     let maxV = 0;
     let labels = 0;
     for (const v of h.view().nodes.values()) {
+      if (!v.mesh.visible) continue; // put away on the shelf by the detail level
       const p = v.mesh.getWorldPosition(new Vector3()).sub(cam);
       maxH = Math.max(maxH, Math.abs(MathUtils.radToDeg(Math.atan2(p.x, -p.z))));
       maxV = Math.max(maxV, Math.abs(MathUtils.radToDeg(Math.atan2(p.y, -p.z))));
@@ -755,6 +776,7 @@ describe('scene harness: software hero lesson', () => {
   });
 
   it('stays inside the draw-call budget and keeps every target at least 4 cm across to a ray', () => {
+    localStorage.setItem('explode:detail:v1', 'all'); // the worst case: every part shown
     const h = setup();
     h.press(h.button(/Skip tutorial/));
     h.press(h.button(/^Next/));
@@ -782,7 +804,7 @@ describe('scene harness: software hero lesson', () => {
     expect(draws, 'draw calls in the worst software scene').toBeLessThanOrEqual(120);
 
     for (const v of (h.view().nodes as Map<string, { node: { kind: string }; mesh: Mesh }>).values()) {
-      if (v.node.kind !== 'cluster') expect(v.mesh.scale.x * 2, `ray target for ${v.node.kind}`).toBeGreaterThanOrEqual(0.04);
+      if (v.node.kind !== 'cluster' && v.mesh.visible) expect(v.mesh.scale.x * 2, `ray target for ${v.node.kind}`).toBeGreaterThanOrEqual(0.04);
     }
     const plug = h.view().edges.get(BREAK)!.plug!.mesh as Mesh<SphereGeometry>;
     expect(plug.geometry.parameters.radius * 2).toBeGreaterThanOrEqual(0.04);
@@ -1301,6 +1323,7 @@ describe('scene harness: part labels never overlap', () => {
   }
 
   it('the exploded codebase, traced and broken, shows its labels without overlap', () => {
+    localStorage.setItem('explode:detail:v1', 'all'); // the worst case: every part shown
     const h = setup();
     h.press(h.button(/Skip tutorial/));
     h.press(h.button(/^Next/));
@@ -1455,5 +1478,143 @@ describe('scene harness: the incident drill', () => {
     const before = h.state();
     const again = setup(); // same storage: a relaunch
     expect(again.state()).toEqual(before);
+  });
+});
+
+describe('scene harness: detail levels for the codebase (EXPLORE_PLAN W11)', () => {
+  const BREAK = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
+  const EXTRA = 'fn:src/routes/login.ts#readcredentials'; // a leaf function off the login path
+  const REVOKE = 'fn:src/sessions/store.ts#sessionstore.revoke'; // an extra that is also a wrong socket
+  const shown = (h: ReturnType<typeof setup>) => [...h.view().nodes.values()].filter((v) => v.mesh.visible).length;
+  const shelf = (h: ReturnType<typeof setup>) => h.panels().find((p) => /hidden · Show/.test(p.text) && p.mesh.visible);
+  /** A hand-tracked session, as the "handling the model" tests use. */
+  function withHands(h: ReturnType<typeof setup>) {
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { inputSources: [{}, {}] as unknown[] });
+    (h.xr as unknown as { session: unknown }).session = session;
+    h.world.session = session;
+    h.xr.dispatchEvent({ type: 'sessionstart' });
+    h.frames(20);
+    const fire = (type: string, handedness: string) => session.dispatchEvent({ type, inputSource: { handedness } } as never);
+    return { fire, right: h.world.player.gripSpaces.right };
+  }
+  function openCodebase(h: ReturnType<typeof setup>) {
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+  }
+
+  it('opens on key and supporting parts, the extras on a shelf that cannot be pressed through', () => {
+    const h = setup();
+    openCodebase(h);
+    expect(h.button(/^Detail: more$/)).toBeDefined();
+    expect(shown(h)).toBe(44);
+    expect(shelf(h)?.text).toMatch(/\+23 hidden · Show/);
+    const extra = h.view().nodes.get(EXTRA)!.mesh;
+    expect(extra.visible).toBe(false);
+    expect(extra.scale.x, 'a shelved part takes no ray hits').toBeLessThan(0.001);
+    h.press(extra);
+    expect(h.state().selected_id).toBeNull();
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('the Detail button cycles more → all → key, the shelf shows one level more, and the choice is remembered', () => {
+    const h = setup();
+    openCodebase(h);
+    h.press(h.button(/^Detail: more$/));
+    h.frames(60);
+    expect(shown(h)).toBe(67);
+    expect(shelf(h)).toBeUndefined();
+    expect(h.view().nodes.get(EXTRA)!.mesh.visible).toBe(true);
+    h.press(h.button(/^Detail: all$/));
+    h.frames(60);
+    expect(shown(h)).toBe(19);
+    expect(shelf(h)?.text).toMatch(/\+48 hidden/);
+    h.press(shelf(h)!.mesh);
+    h.frames(60);
+    expect(h.button(/^Detail: more$/)).toBeDefined();
+    expect(shown(h)).toBe(44);
+    const again = setup(); // same storage: a relaunch
+    expect(again.button(/^Detail: more$/)).toBeDefined();
+    again.press(again.button(/^Detail: more$/));
+    expect(setup().button(/^Detail: all$/)).toBeDefined();
+  });
+
+  it('at the key level the whole lesson and the drill still work: every part they need is shown', () => {
+    localStorage.setItem('explode:detail:v1', 'key');
+    const h = setup();
+    openCodebase(h);
+    expect(shown(h)).toBe(19);
+    h.press(h.button(/^Trace/));
+    h.press(h.button(/^Evidence$/));
+    const create = h.view().nodes.get('fn:src/sessions/store.ts#sessionstore.create')!.mesh;
+    expect(create.visible).toBe(true);
+    h.press(create); // predict
+    expect(h.state().prediction?.correct).toBe(true);
+    h.press(h.view().edges.get(BREAK)!.plug!.mesh);
+    h.press(h.button(/^Next/));
+    h.frames(60);
+    expect(h.view().sockets).toHaveLength(3);
+    expect(h.view().nodes.get(REVOKE)!.mesh.visible, 'a wrong socket on an extra part comes off the shelf').toBe(true);
+    for (const sk of h.view().sockets) expect(sk.mesh.visible, sk.targetId).toBe(true);
+    h.press(h.view().sockets.find((s) => s.targetId === 'fn:src/sessions/store.ts#sessionstore.create')!.mesh);
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.status).toBe('complete');
+
+    h.press(h.button(/^Incident drill ▸$/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    const first = h.view().nodes.get('fn:src/http/middleware.ts#parsejsonbody')!.mesh;
+    expect(first.visible).toBe(true);
+    h.press(first);
+    expect(h.state().prediction?.correct).toBe(true);
+    h.press(h.button(/^Next/));
+    h.press(h.view().sockets.find((s) => s.targetId === 'fn:src/http/middleware.ts#parsejsonbody')!.mesh);
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.status).toBe('complete');
+  });
+
+  it('a quick flick on empty space swipes the extras away, and the other way brings them back', () => {
+    const h = setup();
+    openCodebase(h);
+    const { fire, right } = withHands(h);
+    const flick = (from: number, to: number) => {
+      right.position.set(from, 1.2, -0.3);
+      h.frames(2);
+      clock += 300;
+      fire('selectstart', 'right'); // the ray is on nothing
+      h.frames(1);
+      right.position.set(from + (to - from) / 2, 1.2, -0.3);
+      h.frames(1);
+      right.position.set(to, 1.2, -0.3);
+      h.frames(1);
+      clock += 150;
+      fire('selectend', 'right');
+      h.frames(60);
+    };
+    expect(shown(h)).toBe(44);
+    flick(0.15, -0.05);
+    expect(h.button(/^Detail: key$/)).toBeDefined();
+    expect(shown(h)).toBe(19);
+    flick(-0.05, 0.15);
+    flick(-0.05, 0.15);
+    expect(h.button(/^Detail: all$/)).toBeDefined();
+    expect(shown(h)).toBe(67);
+    const root = (h.view() as unknown as { root: Object3D }).root;
+    expect(Math.abs(root.rotation.y), 'a flick does not leave the model turned').toBeLessThan(0.02);
+  });
+
+  it('a mechanical model always shows every part, and its Detail button does nothing', () => {
+    localStorage.setItem('explode:detail:v1', 'key');
+    const h = setup();
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    const total = h.view().nodes.size;
+    expect(shown(h)).toBe(total);
+    h.press(h.button(/^Detail: all$/));
+    h.frames(30);
+    expect(shown(h)).toBe(total);
+    expect(shelf(h)).toBeUndefined();
   });
 });
