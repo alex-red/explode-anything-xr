@@ -1268,3 +1268,71 @@ describe('scene harness: field-of-view layouts', () => {
     expect(again.button(/^Skip tutorial$/)).toBeDefined();
   });
 });
+
+describe('scene harness: part labels never overlap', () => {
+  /** View-tangent rectangles of every visible part label (15 × 3 cm panels under the model root). */
+  function labelRects(h: ReturnType<typeof setup>): Array<{ text: string; r: [number, number, number, number] }> {
+    h.scene.updateMatrixWorld(true);
+    const root = (h.view() as unknown as { root: Object3D }).root;
+    const out: Array<{ text: string; r: [number, number, number, number] }> = [];
+    root.traverse((o) => {
+      const m = o as Mesh & { geometry?: { parameters?: { width: number; height: number } } };
+      const g = m.geometry?.parameters;
+      if (!g || Math.abs(g.width - 0.15) > 1e-6 || Math.abs(g.height - 0.03) > 1e-6) return;
+      const img = (m.material as unknown as { map?: { image?: object } | null }).map?.image;
+      if (!img || !canvasText.has(img)) return; // a label is a text panel
+      for (let a: Object3D | null = o; a; a = a.parent) if (!a.visible) return;
+      const c = o.getWorldPosition(new Vector3()).applyMatrix4(h.camera.matrixWorldInverse);
+      const d = -c.z;
+      const s = o.getWorldScale(new Vector3()).x;
+      const hw = (0.075 * s) / d;
+      const hh = (0.015 * s) / d;
+      out.push({ text: (canvasText.get(img) ?? []).join(' '), r: [c.x / d - hw, c.y / d - hh, c.x / d + hw, c.y / d + hh] });
+    });
+    return out;
+  }
+  function expectNoOverlap(list: ReturnType<typeof labelRects>) {
+    for (let i = 0; i < list.length; i++)
+      for (let j = i + 1; j < list.length; j++) {
+        const [a, b] = [list[i]!.r, list[j]!.r];
+        const overlap = Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 1e-4 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 1e-4;
+        expect(overlap, `"${list[i]!.text}" overlaps "${list[j]!.text}"`).toBe(false);
+      }
+  }
+
+  it('the exploded codebase, traced and broken, shows its labels without overlap', () => {
+    const h = setup();
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    h.press(h.button(/^Trace/));
+    h.frames(10);
+    let labels = labelRects(h);
+    expect(labels.length).toBeGreaterThanOrEqual(8);
+    expectNoOverlap(labels);
+    h.press(h.button(/^Evidence$/));
+    h.press(h.view().nodes.get('fn:src/sessions/store.ts#sessionstore.create')!.mesh); // predict
+    const BREAK = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
+    h.press(h.view().edges.get(BREAK)!.plug!.mesh);
+    h.frames(30);
+    labels = labelRects(h);
+    expect(labels.some((l) => /stopped/.test(l.text))).toBe(true); // the failure's labels win their place
+    expectNoOverlap(labels);
+  });
+
+  it('the headset and the drivetrain, exploded, show every part label without overlap', () => {
+    const h = setup(false, { bundles: shipped });
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    const headset = labelRects(h);
+    expect(headset.length).toBeGreaterThanOrEqual(7);
+    expectNoOverlap(headset);
+    h.press(h.button(/^More: Drivetrain$/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    const car = labelRects(h);
+    expect(car.length).toBeGreaterThanOrEqual(6);
+    expectNoOverlap(car);
+  });
+});

@@ -74,6 +74,16 @@ const UP = new Vector3(0, 1, 0);
 const TRAY = new Vector3(0.3, -0.17, 0.1);
 // Each label is its own texture and draw call, so the cap is part of the render budget.
 const MAX_LABELS = 18;
+// Part labels are 15 × 3 cm panels. One that would overlap a more important label (as seen
+// from the eye) moves up by a label's height, at most LABEL_TRIES - 1 times, or is hidden.
+const LABEL_W = 0.15;
+const LABEL_H = 0.03;
+const LABEL_STEP = LABEL_H + 0.004;
+const LABEL_TRIES = 3;
+/** Plug tags ("unplug") are 10 × 2.2 cm; labels keep clear of them too. */
+const PLUG_TAG_W = 0.1;
+const PLUG_TAG_H = 0.022;
+const MAX_LABEL_RECTS = 64;
 const PARTICLES = 8;
 // Rays from a real hand wobble, so anything pressable is at least 4 cm across to the ray,
 // whatever size it is drawn.
@@ -154,6 +164,10 @@ export class GraphView {
   private tmpC = new Vector3();
   private tmpQ = new Quaternion();
   private camPos = new Vector3();
+  private camera: Camera | null = null;
+  /** Rectangles already taken this frame, as [left, bottom, right, top] in view-tangent units. */
+  private readonly rects = new Float32Array(MAX_LABEL_RECTS * 4);
+  private rectCount = 0;
   private time = 0;
   // Derived from state; recomputed only when the state object or reveal flag changes (no per-frame allocation).
   private derivedFor: SceneState | null = null;
@@ -218,6 +232,7 @@ export class GraphView {
     if (Math.abs(target - this.displayFactor) < 0.001) this.displayFactor = target;
     const f = easeInOut(this.displayFactor);
     camera.getWorldPosition(this.camPos);
+    this.camera = camera;
     if (this.boot < 1) {
       this.boot = Math.min(1, this.boot + dt / BOOT_SECONDS);
       setReveal(this.boot < 1 ? this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT : null);
@@ -301,8 +316,8 @@ export class GraphView {
       if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
     }
 
+    this.updateEdges(s, f, isolated); // plugs first: labels keep clear of their tags
     this.updateLabels(s, f, highlighted, affected);
-    this.updateEdges(s, f, isolated);
     this.updateParticles(s, f, activePath);
     this.updateSockets(s, f);
     this.halos.instanceMatrix.needsUpdate = true;
@@ -607,8 +622,18 @@ export class GraphView {
 
   private updateLabels(s: SceneState, f: number, highlighted: Set<string>, affected: Set<string>): void {
     const shown = this.labelIds;
-    for (const v of this.nodes.values()) {
-      const want = shown.has(v.node.id) && (f > 0.45 || v.node.id === s.selected_id);
+    // Hide every label first; the wanted ones are then placed in score order (labelIds is
+    // sorted), each kept clear of the ones before it and of the plug tags.
+    for (const v of this.nodes.values()) if (v.label && !shown.has(v.node.id)) v.label.mesh.visible = false;
+    this.rectCount = 0;
+    this.root.updateMatrixWorld();
+    for (const e of this.edges.values()) {
+      if (e.plug?.mesh.visible) this.claim(this.tmpC.copy(e.plug.mesh.position).add(this.tmpA.set(0, 0.02, 0)), PLUG_TAG_W, PLUG_TAG_H, true);
+    }
+    for (const id of shown) {
+      const v = this.nodes.get(id);
+      if (!v) continue;
+      const want = f > 0.45 || v.node.id === s.selected_id;
       if (!want) {
         if (v.label) v.label.mesh.visible = false;
         continue;
@@ -624,11 +649,46 @@ export class GraphView {
         v.label.draw([{ text, size: 40, color: affected.has(v.node.id) ? '#ff6b5b' : highlighted.has(v.node.id) ? '#f2c14e' : '#f4f7fb', bold: v.node.kind !== 'function' }]);
       }
       const mesh = v.label.mesh;
-      mesh.visible = true;
       const lift = this.isMechanical ? 0.05 : v.radius * 1.4 + 0.016;
-      mesh.position.copy(v.mesh.position).add(this.tmpA.set(0, lift, 0));
-      mesh.lookAt(this.camPos); // billboard toward the viewer (lookAt takes world space)
+      let placed = false;
+      for (let t = 0; t < LABEL_TRIES && !placed; t++) {
+        mesh.position.copy(v.mesh.position).add(this.tmpA.set(0, lift + t * LABEL_STEP, 0));
+        // The selected part's label always shows, at its first spot, whatever it overlaps.
+        placed = this.claim(mesh.position, LABEL_W, LABEL_H, v.node.id === s.selected_id);
+      }
+      mesh.visible = placed;
+      if (placed) mesh.lookAt(this.camPos); // billboard toward the viewer (lookAt takes world space)
     }
+  }
+
+  /**
+   * Take the view-space rectangle of a w × h panel centred at `local` (root space), unless it
+   * overlaps one already taken (then return false), or `force` is set. No allocation.
+   */
+  private claim(local: Vector3, w: number, h: number, force: boolean): boolean {
+    const cam = this.camera;
+    if (!cam || this.rectCount >= MAX_LABEL_RECTS) return true;
+    const p = this.tmpB.copy(local).applyMatrix4(this.root.matrixWorld).applyMatrix4(cam.matrixWorldInverse);
+    const depth = -p.z;
+    if (depth <= 0.01) return true; // behind the eye: nothing to compare
+    const scale = this.root.matrixWorld.getMaxScaleOnAxis();
+    const hw = (w * scale) / 2 / depth;
+    const hh = (h * scale) / 2 / depth;
+    const cx = p.x / depth;
+    const cy = p.y / depth;
+    const r = this.rects;
+    if (!force) {
+      for (let i = 0; i < this.rectCount * 4; i += 4) {
+        if (cx - hw < r[i + 2]! && cx + hw > r[i]! && cy - hh < r[i + 3]! && cy + hh > r[i + 1]!) return false;
+      }
+    }
+    const k = this.rectCount * 4;
+    r[k] = cx - hw;
+    r[k + 1] = cy - hh;
+    r[k + 2] = cx + hw;
+    r[k + 3] = cy + hh;
+    this.rectCount++;
+    return true;
   }
 }
 
