@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/meta/immersive-web-sdk",
+  "name": "meta/immersive-web-sdk",
+  "commit": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+  "commit_date": "2026-11-05T02:56:53Z",
+  "license": "MIT",
+  "copyright": "Copyright (c) Meta Platforms, Inc. and affiliates.",
+  "copied": ["LICENSE", "packages/core/src", "packages/xr-input/src", "packages/locomotor/src"],
+  "note": "An unmodified copy of three packages' src directories, taken for static indexing only. Nothing here is built, run or shipped as code; the bundle carries short excerpts with their paths and this commit."
+}
