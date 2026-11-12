@@ -49,6 +49,13 @@ const CODE_LINES = 8;
 /** The buttons a lesson needs; the narrow layout shows only these (docs/WIN_PLAN.md W7). */
 const NARROW_BUTTONS = new Set(['next', 'explode', 'trace', 'evidence', 'hint', 'undo', 'recenter', 'layout']);
 const NARROW_COLUMNS = 4;
+/**
+ * Wide layout: the buttons a lesson is worked with stand in one column left of the model; these,
+ * which set up the session and are pressed rarely, form a strip above the caption. Two columns
+ * at the left stood in front of the open model's leftmost group.
+ */
+const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'live']);
+const SETTINGS_COLUMNS = 5;
 /** Where the eye is assumed to be, in the anchor's frame, until the app reports it (floating placement). */
 const DEFAULT_EYE = new Vector3(0, 0.14, 0.7);
 /**
@@ -63,7 +70,8 @@ const NARROW = {
 } as const;
 
 /**
- * Spatial UI: control panel (left), caption panel (top), evidence panel (right).
+ * Spatial UI: lesson controls (left), caption panel (top) with the settings strip above it,
+ * evidence panel (right).
  * Everything sits within the seated reach budget and the 60°×50° cone (ADR-0014).
  */
 export class SpatialUI {
@@ -73,6 +81,8 @@ export class SpatialUI {
   private readonly evidence: TextPanel;
   private readonly evidenceClose: TextPanel;
   private readonly controls = new Group();
+  /** The settings strip. In the narrow layout it shares the toolbar's place, and the two form one grid. */
+  private readonly settings = new Group();
   private readonly evidenceGroup = new Group();
   private readonly guide: TextPanel;
   private guideDrawn = false;
@@ -86,12 +96,13 @@ export class SpatialUI {
   constructor(world: World, parent: Entity, defs: ButtonDef[], onCloseEvidence: () => void) {
     const groupEntity = world.createTransformEntity(this.group, { parent });
 
-    // Controls: two columns, tilted toward the user, lower-left.
+    // Controls: one column, tilted toward the user, at the left; settings: a strip above the caption.
     const controlsEntity = world.createTransformEntity(this.controls, { parent: groupEntity });
+    const settingsEntity = world.createTransformEntity(this.settings, { parent: groupEntity });
     defs.forEach((def) => {
       const panel = new TextPanel({ width: BTN_W, height: BTN_H, pxPerMeter: PPM, padding: 10, radius: 22, align: 'center' });
       const entry = { def, panel, hovered: false, hidden: false, entity: null as unknown as Entity };
-      entry.entity = makeInteractive(world, panel.mesh, controlsEntity, {
+      entry.entity = makeInteractive(world, panel.mesh, SETTINGS_BUTTONS.has(def.id) ? settingsEntity : controlsEntity, {
         press: () => {
           if (entry.hidden) return; // not in this layout: a ray can still reach the hidden mesh
           if (def.enabled()) def.onPress();
@@ -154,28 +165,35 @@ export class SpatialUI {
     this.applyLayout();
   }
 
-  /** Lay the buttons out on a grid of `cols` columns, showing only those `show` accepts. */
-  private layoutButtons(cols: number, show: (id: string) => boolean): void {
-    const shown = this.buttons.filter((b) => show(b.def.id));
-    const rows = Math.ceil(shown.length / cols);
-    this.controlsHalfHeight = (rows * BTN_H + (rows - 1) * GAP) / 2;
+  /** Show only the buttons `show` accepts; the rest are hidden and out of a ray's reach. */
+  private showButtons(show: (id: string) => boolean): void {
     for (const b of this.buttons) {
       b.hidden = !show(b.def.id);
       b.panel.mesh.visible = !b.hidden;
       // A hidden mesh still takes ray hits, so it also shrinks to nothing.
       b.panel.mesh.scale.setScalar(b.hidden ? 1e-4 : 1);
     }
+  }
+
+  /** Lay the shown buttons `pick` accepts out on a grid of `cols` columns. Returns the grid's half height. */
+  private layoutGrid(cols: number, pick: (id: string) => boolean): number {
+    const shown = this.buttons.filter((b) => !b.hidden && pick(b.def.id));
+    const rows = Math.ceil(shown.length / cols);
     shown.forEach((b, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
       b.panel.mesh.position.set((col - (cols - 1) / 2) * (BTN_W + GAP), ((rows - 1) / 2 - row) * (BTN_H + GAP), 0);
     });
+    return (rows * BTN_H + (rows - 1) * GAP) / 2;
   }
 
   private applyLayout(): void {
     if (this.mode === 'narrow') {
-      this.layoutButtons(NARROW_COLUMNS, (id) => NARROW_BUTTONS.has(id));
+      // One strip of the lesson's buttons: both groups stand in the same place and share its grid.
+      this.showButtons((id) => NARROW_BUTTONS.has(id));
+      this.controlsHalfHeight = this.layoutGrid(NARROW_COLUMNS, () => true);
       placeFacing(this.controls, this.eye, ...NARROW.controls);
+      placeFacing(this.settings, this.eye, ...NARROW.controls);
       placeFacing(this.caption.mesh, this.eye, ...NARROW.caption);
       placeFacing(this.evidenceGroup, this.eye, ...NARROW.evidence);
       placeFacing(this.guide.mesh, this.eye, ...NARROW.guide);
@@ -183,13 +201,20 @@ export class SpatialUI {
       this.dirty = true;
       return;
     }
-    this.layoutButtons(2, () => true);
+    this.showButtons(() => true);
+    this.controlsHalfHeight = this.layoutGrid(1, (id) => !SETTINGS_BUTTONS.has(id));
+    this.layoutGrid(SETTINGS_COLUMNS, (id) => SETTINGS_BUTTONS.has(id));
+    // The column's inner edge is about 32° left of the gaze, just outside the open model's reach
+    // (31°), and its outer edge about 41°, inside the wide budget (fov.ts).
     this.controls.rotation.order = 'XYZ';
-    this.controls.position.set(-0.31, CONTROLS_Y, 0.16);
+    this.controls.position.set(-0.4, CONTROLS_Y, 0.16);
     this.controls.rotation.set(-0.25, 0.5, 0);
     this.caption.mesh.rotation.order = 'XYZ';
-    this.caption.mesh.position.set(0, 0.335, -0.02); // clear of the tallest exploded layout and its labels
+    this.caption.mesh.position.set(0, 0.335, -0.02); // above the tallest exploded layout; part labels keep below it (graph-view LABEL_CEILING)
     this.caption.mesh.rotation.set(0.12, 0, 0);
+    this.settings.rotation.order = 'XYZ';
+    this.settings.position.set(0, 0.478, -0.03);
+    this.settings.rotation.set(0.2, 0, 0);
     this.evidenceGroup.rotation.order = 'XYZ';
     this.evidenceGroup.position.set(0.43, 0.04, 0.14);
     this.evidenceGroup.rotation.set(0, -0.62, 0);

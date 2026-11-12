@@ -90,6 +90,11 @@ const LABEL_W = 0.15;
 const LABEL_H = 0.03;
 const LABEL_STEP = LABEL_H + 0.004;
 const LABEL_TRIES = 3;
+/**
+ * m above the model's centre: the caption panel's lower edge, less a margin (ui.ts). A label that
+ * would rise past it goes under its part instead, so labels never lie across the caption.
+ */
+const LABEL_CEILING = 0.225;
 /** Plug tags ("unplug") are 10 × 2.2 cm; labels keep clear of them too. */
 const PLUG_TAG_W = 0.1;
 const PLUG_TAG_H = 0.022;
@@ -873,8 +878,13 @@ export class GraphView {
       const mesh = v.label.mesh;
       const lift = this.isMechanical ? 0.05 : v.radius * 1.4 + 0.016;
       let placed = false;
+      // Above its part, stepping up out of the way of other labels for as long as that stays
+      // under the caption panel; after that, under the part, stepping down.
+      let below = 0;
       for (let t = 0; t < LABEL_TRIES && !placed; t++) {
-        mesh.position.copy(v.mesh.position).add(this.tmpA.set(0, lift + t * LABEL_STEP, 0));
+        const up = lift + t * LABEL_STEP;
+        const fits = v.mesh.position.y + up + LABEL_H / 2 <= LABEL_CEILING;
+        mesh.position.copy(v.mesh.position).add(this.tmpA.set(0, fits ? up : -(lift + below++ * LABEL_STEP), 0));
         // The selected part's label always shows, at its first spot, whatever it overlaps.
         placed = this.claim(mesh.position, LABEL_W, LABEL_H, v.node.id === s.selected_id);
       }

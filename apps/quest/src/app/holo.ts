@@ -103,13 +103,24 @@ export class HoloMaterial extends ShaderMaterial {
 }
 
 /**
+ * How much of what is behind it a glow covers, 0..1. Pure additive light (0) is the classic
+ * hologram glow, but it vanishes over a bright room: light added to a white wall is still white.
+ * These effects are drawn premultiplied instead: they add their light and also hold back this
+ * fraction of the background, so they read as tinted haze over a bright room and as glow over a
+ * dark one.
+ */
+const GLOW_COVER = { nebula: 0.55, conduit: 0.75, dust: 0.6 } as const;
+/** Blending for those effects: source over, with colour already multiplied by alpha. */
+const PREMULTIPLIED = { transparent: true, premultipliedAlpha: true, depthWrite: false } as const;
+
+/**
  * Edges as energy conduits, one instanced batch. `aFlow` (per instance, 0..1) turns on pulses
  * that travel from source to target; only traced-path edges set it, so moving light always
  * means "this is the traced flow". Other edges just breathe.
  */
 export function conduitMaterial(bend = 0): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uTime: TIME, uBend: { value: bend } },
+    uniforms: { uTime: TIME, uBend: { value: bend }, uCover: { value: bend > 0 ? GLOW_COVER.conduit : -1 } },
     vertexShader: /* glsl */ `
 attribute float aFlow;
 uniform float uBend;
@@ -136,6 +147,7 @@ void main() {
 }`,
     fragmentShader: /* glsl */ `
 uniform float uTime;
+uniform float uCover;
 varying vec3 vColor;
 varying float vAlong;
 varying float vFlow;
@@ -145,18 +157,20 @@ void main() {
   float breathe = 0.85 + 0.15 * sin(uTime * 1.7 + vAlong * 9.0);
   float pulse = smoothstep(0.7, 1.0, 0.5 + 0.5 * sin(vAlong * 55.0 - uTime * 7.0)) * vFlow;
   vec3 c = vColor * core * breathe * (1.25 + vFlow * 0.5) + vColor * pulse * 1.8 + vec3(pulse * 0.5);
-  gl_FragColor = vec4(c, 1.0);
+  // Arced (software) conduits are threads of light, not solid tubes: how bright one is decides
+  // how much it shows, so a dim one is a faint tinted thread instead of a grey pipe. Straight
+  // (mechanical) ones stay solid.
+  float strength = uCover < 0.0 ? 1.0 : clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0);
+  gl_FragColor = vec4(c, uCover < 0.0 ? 1.0 : strength * uCover);
   #include <colorspace_fragment>
 }`,
-    // Arced (software) conduits are light, not solid tubes: a dim one is a faint thread instead of
-    // a grey pipe across the parts behind it. Straight (mechanical) ones stay solid.
-    ...(bend > 0 ? { transparent: true, blending: AdditiveBlending, depthWrite: false } : {}),
+    ...(bend > 0 ? PREMULTIPLIED : {}),
   });
 }
 
 /**
  * A drifting cloud of light behind each group of parts: one instanced batch of camera-facing
- * additive quads, like the halos, shaded with slowly swirling noise. Each instance's matrix gives
+ * quads, like the halos, shaded with slowly swirling noise. Each instance's matrix gives
  * a centre and a size; its colour carries the group's hue and the intensity.
  */
 export function nebulaMaterial(): ShaderMaterial {
@@ -196,12 +210,10 @@ void main() {
   vec2 p = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * vUv;
   float cloud = noise(p * 2.3 + vSeed) * 0.6 + noise(p * 5.1 - uTime * 0.05 + vSeed) * 0.4;
   float a = pow(1.0 - d, 1.6) * (0.25 + 0.75 * cloud);
-  gl_FragColor = vec4(vColor * a, a);
+  gl_FragColor = vec4(vColor * a, a * ${GLOW_COVER.nebula.toFixed(2)});
   #include <colorspace_fragment>
 }`,
-    transparent: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
+    ...PREMULTIPLIED,
   });
 }
 
@@ -253,12 +265,10 @@ varying float vFade;
 void main() {
   float d = length(gl_PointCoord * 2.0 - 1.0);
   float a = pow(max(0.0, 1.0 - d), 2.0) * vFade * 0.8;
-  gl_FragColor = vec4(uColor * a, a);
+  gl_FragColor = vec4(uColor * a, a * ${GLOW_COVER.dust.toFixed(2)});
   #include <colorspace_fragment>
 }`,
-    transparent: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
+    ...PREMULTIPLIED,
   });
   const points = new Points(geometry, material);
   points.frustumCulled = false; // the shader moves the points; the bounds would be stale

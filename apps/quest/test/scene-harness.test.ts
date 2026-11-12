@@ -1228,6 +1228,43 @@ describe('scene harness: field-of-view layouts', () => {
     expect((h.app as unknown as { ui: { guideVisible: boolean } }).ui.guideVisible).toBe(true);
   }
 
+  it('wide: no toolbar button stands in front of the open model, the settings strip is above the caption, and no part label lies across it', () => {
+    const h = scene('wide', false);
+    busiest(h);
+    const all = extents(h);
+    // How far left the open model reaches, in the same view angles: every shown part, out to its ray target's edge.
+    const anchor = (h.app as unknown as { anchor: Object3D }).anchor;
+    const eye = h.camera.getWorldPosition(new Vector3());
+    const g = anchor.getWorldPosition(new Vector3()).sub(eye);
+    const toGaze = new Quaternion().setFromEuler(new Euler(Math.asin(g.y / g.length()), -Math.atan2(g.x, -g.z), 0, 'YXZ')).invert();
+    let modelLeft = 0;
+    const nodes = h.view().nodes as unknown as Map<string, { mesh: Mesh; label: { mesh: Mesh } | null }>;
+    for (const v of nodes.values()) {
+      if (!v.mesh.visible || v.mesh.scale.x < 0.001) continue;
+      const c = v.mesh.getWorldPosition(new Vector3()).sub(eye).applyQuaternion(toGaze);
+      modelLeft = Math.min(modelLeft, MathUtils.radToDeg(Math.atan2(c.x - v.mesh.scale.x, -c.z)));
+    }
+    expect(modelLeft).toBeLessThan(-20); // the model is open and wide
+
+    const lessonButtons = all.filter((e) => /^(Next|Lesson done|Incident|Collapse|Explode|Trace|Detail|Evidence$|Explain this|What depends|Why it failed|Hint|Undo)/.test(e.name));
+    expect(lessonButtons).toHaveLength(10);
+    for (const e of lessonButtons) expect(e.h[1], `${e.name} is left of the model`).toBeLessThanOrEqual(modelLeft);
+
+    const caption = all.find((e) => /^What happens when/.test(e.name))!; // the lesson's title heads the caption panel
+    const settings = all.filter((e) => /^(Reset|Recenter|Gestures|Hide gestures|Sound|Layout|View|◂|More|Live AI)/.test(e.name));
+    expect(settings).toHaveLength(9);
+    for (const e of settings) expect(e.v[0], `${e.name} is above the caption`).toBeGreaterThanOrEqual(caption.v[1]);
+
+    // The caption panel's lower edge is 0.24 m above the model's centre (ui.ts): every part label stays under it.
+    let labels = 0;
+    for (const v of nodes.values()) {
+      if (!v.label?.mesh.visible) continue;
+      labels++;
+      expect(v.label.mesh.position.y + 0.015, 'label top').toBeLessThanOrEqual(0.24);
+    }
+    expect(labels).toBeGreaterThan(5);
+  });
+
   for (const onDesk of [false, true]) {
     const where = onDesk ? 'on a desk' : 'floating';
     it(`narrow, ${where}: every panel, evidence and gestures included, fits the glasses-class budget`, () => {
