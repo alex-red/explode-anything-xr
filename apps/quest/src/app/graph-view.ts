@@ -185,6 +185,7 @@ export class GraphView {
   /** 0 → 1 while the model materialises from its stage. */
   private boot = 0;
   private tray: Group;
+  private hasPlugs = false;
   private trayLabel: TextPanel;
   private readonly isMechanical: boolean;
   // Twelve rings along its length, so the conduit shader can bend it into an arc.
@@ -260,6 +261,7 @@ export class GraphView {
       this.nebulae.renderOrder = -1; // behind the parts it surrounds
     }
     for (const edge of bundle.graph.edges) this.buildEdge(edge);
+    for (const e of this.edges.values()) this.hasPlugs ||= e.plug !== null;
     if (this.edges.size > 0) {
       this.edgeFlow = new InstancedBufferAttribute(new Float32Array(this.edges.size), 1);
       this.edgeGeo.setAttribute('aFlow', this.edgeFlow);
@@ -765,7 +767,8 @@ export class GraphView {
     batch.instanceMatrix.needsUpdate = true;
     if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
     if (this.edgeFlow) this.edgeFlow.needsUpdate = true;
-    this.tray.visible = broken.size > 0 || f > 0.6;
+    // The tray is where unplugged connections wait; a system with nothing to unplug has none.
+    this.tray.visible = broken.size > 0 || (f > 0.6 && this.hasPlugs);
   }
 
   private updateParticles(s: SceneState, f: number, path: FlowPath | undefined): void {
@@ -859,9 +862,13 @@ export class GraphView {
       const status = affected.has(v.node.id) ? ' · stopped' : '';
       // A group the curation step chose is a hypothesis, and says so with the truth badge's glyph.
       const text = `${v.node.truth_status === 'inferred' ? '◌ ' : ''}${v.node.label}${status}`;
-      if (text !== v.labelText) {
-        v.labelText = text;
-        v.label.draw([{ text, size: 40, color: affected.has(v.node.id) ? '#ff6b5b' : highlighted.has(v.node.id) ? '#f2c14e' : '#f4f7fb', bold: v.node.kind !== 'function' }]);
+      // Redrawn when the words or the colour change: a label that stops being highlighted must
+      // lose its gold even though it still says the same thing.
+      const color = affected.has(v.node.id) ? '#ff6b5b' : highlighted.has(v.node.id) ? '#f2c14e' : '#f4f7fb';
+      const drawn = `${color}${text}`;
+      if (drawn !== v.labelText) {
+        v.labelText = drawn;
+        v.label.draw([{ text, size: 40, color, bold: v.node.kind !== 'function' }]);
       }
       const mesh = v.label.mesh;
       const lift = this.isMechanical ? 0.05 : v.radius * 1.4 + 0.016;

@@ -1697,6 +1697,10 @@ describe('scene harness: a real SDK, from its most relevant parts', () => {
     h.press(h.button(/^Trace/));
     h.frames(30);
     for (const e of h.view().edges.values()) expect(e.plug).toBeNull();
+    // With nothing to unplug there is no sandbox tray, and a label that is no longer highlighted is redrawn plain.
+    expect(h.panels().some((p) => p.mesh.visible && p.mesh.parent?.visible && /Sandbox tray/.test(p.text))).toBe(false);
+    const groupLabel = (h.view().nodes as unknown as Map<string, { node: { kind: string }; labelText: string }>);
+    for (const v of groupLabel.values()) if (v.node.kind === 'cluster' && v.labelText) expect(v.labelText.startsWith('#f4f7fb'), v.labelText).toBe(true);
     let draws = 0;
     const walk = (o: Object3D) => {
       if (!o.visible) return;
