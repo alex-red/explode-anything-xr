@@ -259,3 +259,15 @@ describe('prompt construction', () => {
     walk(tutorOutputSchema());
   });
 });
+
+describe('worker entry', () => {
+  it('registers every bundle the app ships, so no system falls back for being unknown', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { BUNDLES } = await import('../src/index.ts');
+    const shipped = readdirSync(new URL('../../../apps/quest/src/content/', import.meta.url)).filter((f) => f.endsWith('.bundle.json'));
+    expect(BUNDLES.length).toBe(shipped.length);
+    const registry = createRegistry(BUNDLES);
+    for (const b of BUNDLES) expect(registry.get(b.graph.system_id)).toBeTruthy();
+    expect(registry.get('system:mr-headset')).toBeTruthy();
+  });
+});
