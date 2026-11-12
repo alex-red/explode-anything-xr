@@ -14,7 +14,7 @@ import { hashDirectory, verifyDeployment, type ReleaseManifest } from './manifes
 const ROOT = resolve(import.meta.dirname, '../../..');
 const DEFAULT_DIST = join(ROOT, 'apps/quest/dist');
 const DEFAULT_MANIFEST = join(ROOT, 'release/manifest.json');
-const BUNDLES = ['apps/quest/src/content/drivetrain.bundle.json', 'apps/quest/src/content/repo-demo.bundle.json'];
+const BUNDLES = ['apps/quest/src/content/drivetrain.bundle.json', 'apps/quest/src/content/repo-demo.bundle.json', 'apps/quest/src/content/iwsdk.bundle.json'];
 
 const git = (...args: string[]) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 

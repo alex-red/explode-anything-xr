@@ -16,6 +16,13 @@ export const COLOR = {
   stage: 0x35c8ff, // the projector stage under the model
 } as const;
 
+/**
+ * One hue per group of a software system, in reading order. All sit between cyan-blue and
+ * orchid, well clear of the state colours: gold (path), coral (fault) and teal (action) keep
+ * their meaning. A group is also told apart by where it is and by its label, never by hue alone.
+ */
+export const GROUP_HUES = [0x4d9dff, 0x9a86ff, 0x5fd4ff, 0xc98bff, 0x6f8cff, 0x7fe6ff, 0xb39dff, 0x86b6ff] as const;
+
 export const CSS = {
   // Dark glass with a neon edge: readable over a bright room, and still a hologram.
   panelBg: 'rgba(4,13,26,0.88)',

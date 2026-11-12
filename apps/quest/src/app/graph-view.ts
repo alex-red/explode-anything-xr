@@ -25,9 +25,9 @@ import {
 import type { FlowPath, GraphEdge, GraphNode, SceneState } from '@explode/contracts';
 import { visibleAtDetail, type DetailLevel } from '@explode/lesson-engine';
 import { makeInteractive } from './interactions.ts';
-import { conduitMaterial, createStage, haloMaterial, HoloMaterial, setReveal } from './holo.ts';
-import { COLOR } from './palette.ts';
-import { partGeometry, softwareGeometry } from './shapes.ts';
+import { conduitMaterial, createDust, createStage, haloMaterial, HoloMaterial, nebulaMaterial, setReveal } from './holo.ts';
+import { COLOR, GROUP_HUES } from './palette.ts';
+import { partGeometry, softwareGeometry, softwareShape } from './shapes.ts';
 import type { Store } from './store.ts';
 import { TextPanel } from './text.ts';
 
@@ -65,6 +65,11 @@ interface NodeView {
   labelText: string;
   /** 1 shown, 0 put away on the shelf at this detail level; eased between. */
   vis: number;
+  /** Special shapes turn where they stand: the axis and rad/s, or null. */
+  turnAxis: Vector3 | null;
+  turnRate: number;
+  /** This group's cloud in the nebula batch, or -1. */
+  nebula: number;
 }
 
 interface EdgeView {
@@ -120,6 +125,22 @@ export const STAGE_Y = -0.2;
 // Boot-up: the scan front climbs this far above the stage in this many seconds.
 const BOOT_SECONDS = 1.3;
 const BOOT_HEIGHT = 0.9;
+// How far a software connection arcs out of the straight line, as a fraction of its length
+// (the conduit shader and arcPoint share it).
+const EDGE_ARC = 0.08;
+// Connections rest dim, so sixty of them read as a web, not a tangle; the ones touching the part
+// you point at or select light up in its group's colour.
+const EDGE_REST = 0.5;
+// Metres across: the cloud behind each group when the model is open.
+const NEBULA_SIZE = 0.26;
+const NEBULA_GLOW = 0.42;
+// Radians: how far parts wheel round the vertical axis in mid-flight when the model opens or closes.
+const SWIRL = 0.9;
+// Seconds for the stage's shockwave to reach the rim.
+const BURST_SECONDS = 0.9;
+const AXIS_Y = new Vector3(0, 1, 0);
+const AXIS_Z = new Vector3(0, 0, 1);
+const AXIS_TUMBLE = new Vector3(0.45, 0.8, 0.4).normalize();
 const EDGE_DIM = new Color(COLOR.dim);
 const EDGE_PATH = new Color(COLOR.path);
 const EDGE_BROKEN = new Color(COLOR.fault);
@@ -155,15 +176,23 @@ export class GraphView {
   private halos: InstancedMesh;
   private readonly haloGeo = new PlaneGeometry(1, 1);
   private readonly stage: ReturnType<typeof createStage>;
+  private readonly dust: ReturnType<typeof createDust>;
+  /** Clouds behind the groups of a software system (one draw call); null on a mechanical model. */
+  private nebulae: InstancedMesh | null = null;
+  /** 0 → 1 while the stage's shockwave runs; above 1 when idle. */
+  private burst = 2;
+  private wasOpen = false;
   /** 0 → 1 while the model materialises from its stage. */
   private boot = 0;
   private tray: Group;
   private trayLabel: TextPanel;
   private readonly isMechanical: boolean;
-  private readonly edgeGeo = new CylinderGeometry(1, 1, 1, 6, 1, true);
+  // Twelve rings along its length, so the conduit shader can bend it into an arc.
+  private readonly edgeGeo = new CylinderGeometry(1, 1, 1, 6, 12, true);
   private readonly plugHitGeo = new SphereGeometry(PLUG_HIT_RADIUS, 10, 8);
   private readonly mats = {
-    edge: conduitMaterial(), // tinted per instance
+    edge: conduitMaterial(), // tinted per instance; replaced by an arced one on software systems
+    nebula: nebulaMaterial(),
     halo: haloMaterial(),
     particle: new MeshBasicMaterial({ color: 0xfff1c4 }), // a white-hot core; its halo carries the gold
     socket: new MeshBasicMaterial({ color: COLOR.action, transparent: true, opacity: 0.9 }),
@@ -193,6 +222,8 @@ export class GraphView {
   private pathEdges = new Set<string>();
   private broken = new Set<string>();
   private segs: Array<[Vector3, Vector3]> = [];
+  /** Group index of every software node (see assignGroups). Empty on a mechanical model. */
+  private groupOf = new Map<string, number>();
   /** Parts shown at the current detail level (software only; every part on a mechanical model). */
   private shown = new Set<string>();
   private hiddenCount = 0;
@@ -216,8 +247,18 @@ export class GraphView {
     sun.position.set(0.4, 1, 0.6);
     this.root.add(hemi, sun);
 
-    if (!this.isMechanical) this.buildNodeBatches(bundle.graph.nodes);
+    if (!this.isMechanical) {
+      this.buildNodeBatches(bundle.graph.nodes);
+      this.assignGroups(bundle.graph.nodes);
+      this.mats.edge.dispose();
+      this.mats.edge = conduitMaterial(EDGE_ARC);
+    }
     for (const node of bundle.graph.nodes) this.buildNode(node);
+    if (this.groupOf.size > 0) {
+      const groups = new Set(this.groupOf.values()).size;
+      this.nebulae = this.addBatch(this.haloGeo, this.mats.nebula, groups);
+      this.nebulae.renderOrder = -1; // behind the parts it surrounds
+    }
     for (const edge of bundle.graph.edges) this.buildEdge(edge);
     if (this.edges.size > 0) {
       this.edgeFlow = new InstancedBufferAttribute(new Float32Array(this.edges.size), 1);
@@ -231,6 +272,9 @@ export class GraphView {
     this.stage = createStage(STAGE_RADIUS);
     this.stage.group.position.y = STAGE_Y;
     this.root.add(this.stage.group);
+    this.dust = createDust(STAGE_RADIUS * 0.95, 0.42);
+    this.dust.points.position.y = STAGE_Y;
+    this.root.add(this.dust.points);
 
     this.tray = new Group();
     const plate = new Mesh(new BoxGeometry(0.16, 0.006, 0.09), new HoloMaterial(COLOR.cluster, 0.4));
@@ -292,6 +336,19 @@ export class GraphView {
       setReveal(this.boot < 1 ? this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT : null);
     }
     const glowIn = this.boot * this.boot; // halos fade in behind the scan front
+    // Opening and closing: parts wheel round the vertical axis in mid-flight (nothing at either
+    // end, so the layout the cone and target checks were made for is untouched), and the stage
+    // throws a shockwave when the model opens.
+    const swirl = this.isMechanical ? 0 : SWIRL * 4 * f * (1 - f);
+    const swirlCos = Math.cos(swirl);
+    const swirlSin = Math.sin(swirl);
+    const open = target > 0.5;
+    if (open && !this.wasOpen && this.boot >= 1) this.burst = 0;
+    this.wasOpen = open;
+    if (this.burst <= 1) {
+      this.burst += dt / BURST_SECONDS;
+      this.stage.burst(this.burst);
+    }
 
     const activePath = s.active_path_id ? this.store.ctx.paths.get(s.active_path_id) : undefined;
     if (s !== this.derivedFor || this.revealConsequences !== this.derivedReveal) this.derive(s, activePath);
@@ -301,6 +358,11 @@ export class GraphView {
     const visStep = Math.min(1, dt * SHELF_EASE);
     for (const v of this.nodes.values()) {
       const p = v.mesh.position.lerpVectors(v.collapsed, v.exploded, f);
+      if (swirl !== 0) {
+        const x = p.x;
+        p.x = x * swirlCos + p.z * swirlSin;
+        p.z = p.z * swirlCos - x * swirlSin;
+      }
       // Parts the detail level puts away fly to the shelf as the model opens; closed, the model is
       // whole. `e` is how present the part is now.
       const shown = this.isMechanical || this.shown.has(v.node.id);
@@ -341,8 +403,15 @@ export class GraphView {
         else if (highlighted.has(v.node.id)) c.copy(NODE_PATH);
         else if (dimmed) c.copy(NODE_DIM);
         else c.copy(v.baseColor).lerp(WHITE, selected ? 0.45 : v.hovered ? 0.2 : 0);
-        v.batch.setMatrixAt(v.slot, this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(scale)));
+        const q = v.turnAxis ? this.tmpQ.setFromAxisAngle(v.turnAxis, this.time * v.turnRate) : IDENTITY;
+        v.batch.setMatrixAt(v.slot, this.tmpM.compose(p, q, this.tmpS.setScalar(scale)));
         v.batch.setColorAt(v.slot, c);
+        if (v.nebula >= 0 && this.nebulae) {
+          // The group's cloud swells as the model opens, and stands back when another group is isolated.
+          const size = NEBULA_SIZE * f * e;
+          this.nebulae.setMatrixAt(v.nebula, size > 0.001 ? this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(size)) : this.tmpM.makeScale(0, 0, 0));
+          this.nebulae.setColorAt(v.nebula, this.tmpColor.copy(v.baseColor).multiplyScalar(NEBULA_GLOW * glowIn * (dimmed ? 0.25 : 1)));
+        }
       }
 
       // Halo: every node glows a little; state decides how much and in what colour.
@@ -388,6 +457,11 @@ export class GraphView {
     this.updateShelf(f);
     this.halos.instanceMatrix.needsUpdate = true;
     if (this.halos.instanceColor) this.halos.instanceColor.needsUpdate = true;
+    if (this.nebulae) {
+      this.nebulae.visible = f > 0.02; // no draw call while the model is closed
+      this.nebulae.instanceMatrix.needsUpdate = true;
+      if (this.nebulae.instanceColor) this.nebulae.instanceColor.needsUpdate = true;
+    }
   }
 
   private derive(s: SceneState, path: FlowPath | undefined): void {
@@ -451,8 +525,10 @@ export class GraphView {
     this.particles.geometry.dispose();
     this.particles.dispose();
     this.halos.dispose();
+    this.nebulae?.dispose();
     this.haloGeo.dispose();
     this.stage.dispose();
+    this.dust.dispose();
     setReveal(null);
     this.plugHitGeo.dispose();
     for (const m of Object.values(this.mats)) m.dispose();
@@ -503,10 +579,14 @@ export class GraphView {
     if (!placement) return;
     const part = bundle.assets?.parts[node.id];
     if (this.isMechanical && !part) return; // cluster-only nodes in mechanical systems are not rendered
-    const baseColor = new Color(part ? part.color : colorForKind(node.kind));
+    const baseColor = new Color(part ? part.color : this.softwareColor(node));
     const material = part ? new HoloMaterial(baseColor, 0.62) : null;
-    const mesh: Mesh<BufferGeometry, Material> = material && part ? new Mesh(partGeometry(part), material) : new Mesh(softwareGeometry(node), this.mats.hit);
-    const batch = part ? null : (this.nodeBatches.get(batchKey(node.kind)) ?? null);
+    // The ray target of a software node is always a plain round volume, whatever shape is drawn:
+    // a knot or a gear has gaps a ray could slip through.
+    const mesh: Mesh<BufferGeometry, Material> = material && part ? new Mesh(partGeometry(part), material) : new Mesh(softwareGeometry({ kind: node.kind }), this.mats.hit);
+    const shape = softwareShape(node);
+    const batch = part ? null : (this.nodeBatches.get(shape) ?? null);
+    const group = this.groupOf.get(node.id);
     const slot = batch ? batch.userData.next++ : -1;
     const collapsed = new Vector3(...placement.collapsed);
     const exploded = new Vector3(...placement.exploded);
@@ -538,7 +618,43 @@ export class GraphView {
       label: null,
       labelText: '',
       vis: 1,
+      // An engine turns like the gear it is; an entry knot and a hub star turn slowly, so their
+      // shape reads from every side. Each starts at its own angle (the rate differs a little).
+      turnAxis: part ? null : shape === 'engine' ? AXIS_Z : shape === 'entry' ? AXIS_Y : shape === 'hub' ? AXIS_TUMBLE : null,
+      turnRate: (shape === 'engine' ? 1.1 : 0.45) * (0.8 + 0.4 * ((this.nodes.size * 0.618) % 1)),
+      nebula: !part && node.parent_id === null && group !== undefined ? group : -1,
     });
+  }
+
+  /**
+   * Give every top-level group of a software system an index, in reading order of the open layout
+   * (rows from the top, left to right), and every part the index of the group it sits in.
+   */
+  private assignGroups(nodes: readonly GraphNode[]): void {
+    const placements = this.store.ctx.bundle.layout.placements;
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const roots = nodes
+      .filter((n) => n.parent_id === null && placements[n.id])
+      .sort((a, b) => {
+        const pa = placements[a.id]!.exploded;
+        const pb = placements[b.id]!.exploded;
+        return pb[1] - pa[1] || pa[0] - pb[0] || (a.id < b.id ? -1 : 1);
+      });
+    const index = new Map(roots.map((n, i) => [n.id, i]));
+    for (const n of nodes) {
+      let cur: GraphNode | undefined = n;
+      while (cur && cur.parent_id !== null) cur = byId.get(cur.parent_id);
+      const i = cur ? index.get(cur.id) : undefined;
+      if (i !== undefined) this.groupOf.set(n.id, i);
+    }
+  }
+
+  /** A software node's resting colour: its group's hue, paler the deeper it sits; routes stay violet. */
+  private softwareColor(node: GraphNode): number | Color {
+    const group = this.groupOf.get(node.id);
+    if (group === undefined || node.kind === 'route') return colorForKind(node.kind);
+    const hue = new Color(GROUP_HUES[group % GROUP_HUES.length]);
+    return node.parent_id === null ? hue : hue.lerp(WHITE, node.kind === 'module' ? 0.1 : 0.18);
   }
 
   private buildEdge(edge: GraphEdge): void {
@@ -559,18 +675,18 @@ export class GraphView {
     this.edges.set(edge.id, { edge, slot: this.edges.size, plug });
   }
 
-  /** One instanced batch per software node shape (cluster, module, everything else). */
+  /** One instanced batch per software node shape (shapes.ts softwareShape): groups, modules, leaves and each special role. */
   private buildNodeBatches(nodes: readonly GraphNode[]): void {
     const counts = new Map<string, { count: number; sample: GraphNode }>();
     for (const n of nodes) {
-      const entry = counts.get(batchKey(n.kind));
+      const entry = counts.get(softwareShape(n));
       if (entry) entry.count++;
-      else counts.set(batchKey(n.kind), { count: 1, sample: n });
+      else counts.set(softwareShape(n), { count: 1, sample: n });
     }
     for (const [key, { count, sample }] of counts) {
-      const cluster = key === 'cluster';
+      const cluster = key === 'cluster' || key === 'concept';
       // Clusters are see-through shells round their members; everything else is a solid-looking crystal.
-      const material = new HoloMaterial(0xffffff, cluster ? 0.12 : 0.55);
+      const material = new HoloMaterial(0xffffff, key === 'concept' ? 0.3 : cluster ? 0.12 : 0.55);
       if (cluster) material.depthWrite = false;
       const batch = this.addBatch(softwareGeometry(sample), material, count);
       batch.userData.next = 0;
@@ -616,8 +732,13 @@ export class GraphView {
         const onPath = pathEdges.has(edge.id);
         const dim = isolated !== null && !(isolated.has(edge.source_id) && isolated.has(edge.target_id));
         const end = isBroken ? this.tmpC.lerpVectors(a, b, 0.4) : b;
-        tubeMatrix(this.tmpM, a, end, onPath || isBroken ? 0.0028 : 0.0014, this.tmpA, this.tmpB, this.tmpS, this.tmpQ);
-        batch.setColorAt(ev.slot, isBroken ? EDGE_BROKEN : onPath ? EDGE_PATH : dim ? EDGE_DIM : EDGE_COLOR);
+        // On a software system a connection rests dim and lights up, in its source's colour, when
+        // either end is pointed at or selected.
+        const source = this.nodes.get(edge.source_id)!;
+        const live = !this.isMechanical && (source.hovered || this.nodes.get(edge.target_id)!.hovered || s.selected_id === edge.source_id || s.selected_id === edge.target_id);
+        tubeMatrix(this.tmpM, a, end, onPath || isBroken ? 0.0028 : live ? 0.0022 : this.isMechanical ? 0.0014 : 0.001, this.tmpA, this.tmpB, this.tmpS, this.tmpQ);
+        const rest = this.isMechanical ? EDGE_COLOR : this.tmpColor.copy(source.baseColor).multiplyScalar(live ? 1.1 : EDGE_REST);
+        batch.setColorAt(ev.slot, isBroken ? EDGE_BROKEN : onPath ? EDGE_PATH : dim ? EDGE_DIM : rest);
         this.edgeFlow?.setX(ev.slot, onPath && !isBroken ? 1 : 0);
       } else {
         this.tmpM.makeScale(0, 0, 0); // hidden
@@ -634,7 +755,7 @@ export class GraphView {
         } else {
           pm.visible = f > 0.6 && ends;
           pm.scale.setScalar(ends ? 1 : 1e-4); // a plug between parts put away takes no ray hits
-          pm.position.lerp(this.tmpB.lerpVectors(a, b, 0.5), 0.25);
+          pm.position.lerp(this.isMechanical ? this.tmpB.lerpVectors(a, b, 0.5) : arcPoint(this.tmpB, a, b, 0.5, EDGE_ARC), 0.25);
           if (ev.plug.detached !== false) ev.plug.label.draw([{ text: 'unplug', size: 34, color: '#3ccfcf', bold: true }]);
           ev.plug.detached = false;
         }
@@ -659,7 +780,7 @@ export class GraphView {
         const t = ((this.time * 0.35 + i / PARTICLES) % 1) * segs.length;
         const k = Math.min(Math.floor(t), segs.length - 1);
         const seg = segs[k]!;
-        const at = this.tmpA.lerpVectors(seg[0], seg[1], t - k);
+        const at = this.isMechanical ? this.tmpA.lerpVectors(seg[0], seg[1], t - k) : arcPoint(this.tmpA, seg[0], seg[1], t - k, EDGE_ARC);
         this.halos.setMatrixAt(halo, this.tmpM.compose(at, IDENTITY, this.tmpS.setScalar(PARTICLE_HALO)));
         this.halos.setColorAt(halo, EDGE_PATH);
         this.tmpM.makeTranslation(at);
@@ -736,7 +857,8 @@ export class GraphView {
         this.root.add(v.label.mesh);
       }
       const status = affected.has(v.node.id) ? ' · stopped' : '';
-      const text = `${v.node.label}${status}`;
+      // A group the curation step chose is a hypothesis, and says so with the truth badge's glyph.
+      const text = `${v.node.truth_status === 'inferred' ? '◌ ' : ''}${v.node.label}${status}`;
       if (text !== v.labelText) {
         v.labelText = text;
         v.label.draw([{ text, size: 40, color: affected.has(v.node.id) ? '#ff6b5b' : highlighted.has(v.node.id) ? '#f2c14e' : '#f4f7fb', bold: v.node.kind !== 'function' }]);
@@ -810,9 +932,20 @@ function colorForKind(kind: GraphNode['kind']): number {
   }
 }
 
-/** Software node shapes share three batches: clusters, modules, and everything else. */
-function batchKey(kind: GraphNode['kind']): string {
-  return kind === 'cluster' || kind === 'module' ? kind : 'leaf';
+/**
+ * A point on a software connection's arc, `t` of the way from a to b: the straight-line point
+ * pushed sideways by a half sine, exactly as the conduit shader bends the tube (holo.ts).
+ */
+function arcPoint(out: Vector3, a: Vector3, b: Vector3, t: number, arc: number): Vector3 {
+  const mx = a.x + b.x; // twice the midpoint, as the shader's `mid.xy * 2.0`
+  const my = a.y + b.y;
+  const inv = 1 / Math.hypot(mx, my, 0.35);
+  const k = arc * Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) * Math.sin(Math.PI * t);
+  out.lerpVectors(a, b, t);
+  out.x += mx * inv * k;
+  out.y += my * inv * k;
+  out.z += 0.35 * inv * k;
+  return out;
 }
 
 /** Matrix for a unit cylinder stretched from a to b with the given radius. */

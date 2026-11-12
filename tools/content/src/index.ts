@@ -4,3 +4,5 @@ export { buildHeadsetBundle } from './headset.ts';
 export { finalizeBundle, verifyBundle, contentHash } from './bundle.ts';
 export { layoutSoftware, layoutProblems, targetOverlaps } from './layout.ts';
 export { recordEvidence } from './evidence.ts';
+export { buildSdkBundle, indexSdk, selectSdk, sdkCuration, sdkSource, SDK_BUDGET, SDK_LESSON_ID, SDK_SYSTEM_ID } from './sdk.ts';
+export { Curation, buildDigest, curationProblems, partGraph, selectRelevant } from './relevance.ts';

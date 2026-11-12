@@ -76,7 +76,10 @@ export function layoutSoftware(graph: SystemGraph, clusterOrder: readonly string
   roots.forEach((id, i) => {
     const col = i % COLUMNS;
     const row = Math.floor(i / COLUMNS);
-    const x = COLUMNS === 1 ? 0 : -COLUMN_SPAN + (2 * COLUMN_SPAN * col) / (COLUMNS - 1);
+    // A short last row is centred under the full ones.
+    const inRow = Math.min(COLUMNS, roots.length - row * COLUMNS);
+    const step = COLUMNS === 1 ? 0 : (2 * COLUMN_SPAN) / (COLUMNS - 1);
+    const x = (col - (inRow - 1) / 2) * step;
     const y = rows === 1 ? 0 : ROW_SPAN - (2 * ROW_SPAN * row) / (rows - 1);
     const z = ARC_DEPTH * (x / COLUMN_SPAN) ** 2;
     exploded.set(id, [x, y, z]);

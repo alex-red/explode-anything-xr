@@ -14,6 +14,8 @@ Every asset in a PWA is publicly downloadable, so everything shipped must be our
 | SFX | TBD | **VERIFY** | Prefer self-made or CC0 |
 | Narration audio (P1) | TBD TTS provider | **VERIFY** the redistribution terms | Store the script + generation metadata |
 | IWSDK scaffold files (`apps/quest`) | `@iwsdk/create` 1.0.1 | MIT © Meta Platforms | Agent guidance files kept as generated |
+| Immersive Web SDK source (`content/iwsdk/source`) | https://github.com/meta/immersive-web-sdk at commit `52f0f502b339` (Nov 5, 2026): `packages/core/src`, `packages/xr-input/src`, `packages/locomotor/src`, unmodified, with its `LICENSE` | MIT © Meta Platforms, Inc. and affiliates | Indexed at build time, never built or run. The app ships short excerpts (at most 12 lines each) with their path and commit, and the license notice as evidence `ev:license:iwsdk`. Not affiliated with or endorsed by Meta |
+| SDK parent nodes (`content/iwsdk/curation.json`) | Chosen by `muse-spark-1.3` through Meta's Model API on Nov 12, 2026, from a digest of the index | Meta Model API terms: **VERIFY** before release | Written as returned, checked against the index, shown as `inferred` (hypothesis) |
 
 ## Runtime services
 
@@ -21,6 +23,7 @@ Every asset in a PWA is publicly downloadable, so everything shipped must be our
 |---|---|---|
 | Anthropic Messages API (via `services/tutor-proxy`) | Anthropic commercial terms — **VERIFY** before release | Graph ids, labels, summaries, selected node, recent engine events. No personal data |
 | Cloudflare Workers / static host | Provider terms | Standard request logs |
+| Meta Model API, build time only (`bun run content:curate`) | Meta Model API terms: **VERIFY** | A digest of the open source SDK: directory names, declaration names and doc comments. Nothing from this project, no personal data. Never called by the app or by `content:generate` |
 
 ## Prior-art references (not dependencies)
 

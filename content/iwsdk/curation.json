@@ -1,0 +1,153 @@
+{
+  "schema_version": "1",
+  "source": {
+    "repository": "https://github.com/meta/immersive-web-sdk",
+    "commit": "52f0f502b339f341f35233e52f5524c3cdf78ccc"
+  },
+  "produced_by": {
+    "provider": "api.meta.ai",
+    "model": "muse-spark-1.3",
+    "created_at": "2026-11-12T18:05:25.745Z",
+    "digest_sha256": "f98e6e8c440b2b513a9a3498e054a95a49659aea4dedce1577f6c7be60ae4bdc"
+  },
+  "groups": [
+    {
+      "id": "world-startup",
+      "label": "World and startup",
+      "summary": "World owns the scene, renderer, and XR session; systems tick each frame and startup adopts sessions.",
+      "members": [
+        "packages/core/src/ecs",
+        "packages/core/src/init",
+        "packages/core/src/runtime",
+        "packages/core/src/transform"
+      ]
+    },
+    {
+      "id": "assets-levels",
+      "label": "Assets and levels",
+      "summary": "Cached loaders for models, textures, and audio plus atomic level loading from scene JSON.",
+      "members": [
+        "packages/core/src/asset",
+        "packages/core/src/asset/loaders",
+        "packages/core/src/level"
+      ]
+    },
+    {
+      "id": "input-pointers",
+      "label": "Input and pointers",
+      "summary": "Samples hands, controllers, gamepads, and gaze into prioritized pointers for raycasting.",
+      "members": [
+        "packages/xr-input/src",
+        "packages/xr-input/src/pointer",
+        "packages/xr-input/src/gamepad",
+        "packages/xr-input/src/rig",
+        "packages/core/src/input"
+      ]
+    },
+    {
+      "id": "grab-interaction",
+      "label": "Grab and gaze interaction",
+      "summary": "Turns pointer hits into grabbing, manipulation, and gaze wiring for interactables.",
+      "members": [
+        "packages/core/src/grab",
+        "packages/core/src/gaze",
+        "packages/core/src/environment-raycast"
+      ]
+    },
+    {
+      "id": "movement-physics",
+      "label": "Movement and physics",
+      "summary": "Slide, teleport, turn, and Havok simulation backed by the locomotor engine.",
+      "members": [
+        "packages/core/src/locomotion",
+        "packages/core/src/locomotion/geometries",
+        "packages/core/src/locomotion/materials",
+        "packages/core/src/physics",
+        "packages/locomotor/src/core",
+        "packages/locomotor/src/physics",
+        "packages/locomotor/src/environment",
+        "packages/locomotor/src/worker"
+      ]
+    },
+    {
+      "id": "environment-senses",
+      "label": "Environment and senses",
+      "summary": "Backgrounds, lighting, spatial audio, depth occlusion, and real-world plane and mesh detection.",
+      "members": [
+        "packages/core/src/environment",
+        "packages/core/src/lighting",
+        "packages/core/src/audio",
+        "packages/core/src/camera",
+        "packages/core/src/depth",
+        "packages/core/src/depth/occlusion",
+        "packages/core/src/scene-understanding"
+      ]
+    },
+    {
+      "id": "ui-display",
+      "label": "UI and display layers",
+      "summary": "Spatial UIKit panels, XR composition layers, and animated hand and controller visuals.",
+      "members": [
+        "packages/core/src/ui",
+        "packages/core/src/layers",
+        "packages/xr-input/src/visual/adapter",
+        "packages/xr-input/src/visual/impl",
+        "packages/xr-input/src/visual/utils"
+      ]
+    }
+  ],
+  "spotlight": [
+    {
+      "id": "class:packages/core/src/ecs/world.ts#world",
+      "why": "Root container every system attaches to; owns scene, renderer, and XR session lifecycle."
+    },
+    {
+      "id": "fn:packages/core/src/ecs/system.ts#createsystem",
+      "why": "Factory for all typed systems with query bindings; how to add new frame behavior."
+    },
+    {
+      "id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+      "why": "Central cached loading and preloading for all models, textures, and audio."
+    },
+    {
+      "id": "class:packages/core/src/level/level-system.ts#levelsystem",
+      "why": "Atomically swaps the active level root and enforces its transforms."
+    },
+    {
+      "id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+      "why": "Fuses hands, controllers, and gaze poses into one per-frame input source."
+    },
+    {
+      "id": "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+      "why": "Arbitrates multiple pointers by priority to pick the active interaction ray."
+    },
+    {
+      "id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+      "why": "Implements VR/AR object grabbing and manipulation from pointer input."
+    },
+    {
+      "id": "class:packages/core/src/input/input-system.ts#inputsystem",
+      "why": "Samples XR poses and gamepads and curates raycast targets each frame."
+    },
+    {
+      "id": "class:packages/core/src/physics/physics-system.ts#physicssystem",
+      "why": "Runs Havok simulation on worker or main thread and syncs poses."
+    },
+    {
+      "id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+      "why": "Main-thread interface to locomotion physics with worker and inline modes."
+    },
+    {
+      "id": "class:packages/core/src/environment/environment-system.ts#environmentsystem",
+      "why": "Unified background and image-based lighting for VR and AR."
+    },
+    {
+      "id": "class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem",
+      "why": "Manages WebXR quad and cylinder composition layers for crisp UI."
+    }
+  ],
+  "entry_points": [
+    "class:packages/core/src/ecs/world.ts#world",
+    "fn:packages/core/src/ecs/system.ts#createsystem"
+  ]
+}

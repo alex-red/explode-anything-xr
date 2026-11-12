@@ -21,6 +21,20 @@ export interface IndexOptions {
   paths?: PathSpec[];
   /** Max excerpt length in lines. */
   excerptLines?: number;
+  // Globs under `root` to index. Default: every .ts file under src. Tests and .d.ts files are skipped.
+  include?: string[];
+  /** TypeScript `paths`, relative to `root`, so imports between packages of a monorepo resolve. */
+  tsPaths?: Record<string, string[]>;
+  /** A pinned git commit of `root`'s origin. Default: the content hash of the tree. */
+  gitRevision?: string;
+}
+
+/** Structural facts about a declaration, for ranking and roles. Never evidence. */
+export interface DeclFact {
+  exported: boolean;
+  lines: number;
+  /** A class that declares an `update` method. */
+  has_update: boolean;
 }
 
 /** Character range of a function/method/class declaration, used to map V8 coverage to node ids. */
@@ -39,10 +53,13 @@ export interface IndexResult {
   evidence: Evidence[];
   declRanges: DeclRange[];
   revision: string;
+  facts: Record<string, DeclFact>;
 }
 
 type Decl = FunctionDeclaration | MethodDeclaration | ClassDeclaration;
 
+const SKIPPED_FILE = /\.d\.ts$|\.(test|spec)\.ts$|(^|\/)(__tests__|__mocks__|test|tests)\//;
+const MAX_ID = 200;
 const ROUTE_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
 /** Importance a function gains from its connections (calls, handlers, routes), at most. */
 const CONNECTED_BOOST = 0.2;
@@ -55,7 +72,7 @@ const CONNECTED_SATURATION = 6;
  */
 export function indexRepository(opts: IndexOptions): IndexResult {
   const maxLines = opts.excerptLines ?? 12;
-  const revision = hashTree(opts.root);
+  const revision = opts.gitRevision ?? hashTree(opts.root);
   const project = new Project({
     skipAddingFilesFromTsConfig: true,
     compilerOptions: {
@@ -67,12 +84,14 @@ export function indexRepository(opts: IndexOptions): IndexResult {
       strict: true,
       skipLibCheck: true,
       types: ['node'],
+      ...(opts.tsPaths ? { baseUrl: opts.root, paths: opts.tsPaths } : {}),
     },
   });
-  project.addSourceFilesAtPaths(join(opts.root, 'src/**/*.ts'));
+  for (const glob of opts.include ?? ['src/**/*.ts']) project.addSourceFilesAtPaths(join(opts.root, glob));
   const files = project
     .getSourceFiles()
     .map((sf) => ({ sf, rel: rel(opts.root, sf) }))
+    .filter(({ rel: file }) => !SKIPPED_FILE.test(file))
     .sort((a, b) => (a.rel < b.rel ? -1 : 1));
 
   const nodes = new Map<string, GraphNode>();
@@ -80,6 +99,7 @@ export function indexRepository(opts: IndexOptions): IndexResult {
   const evidence = new Map<string, Evidence>();
   const declToId = new Map<Node, string>();
   const declRanges: DeclRange[] = [];
+  const facts: Record<string, DeclFact> = {};
   const lineCache = new Map<string, string[]>();
 
   const lines = (file: string) => {
@@ -91,7 +111,9 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     return l;
   };
 
-  const sourceEvidence = (id: string, file: string, startLine: number, endLine: number, title: string, summary: string) => {
+  const sourceEvidence = (longId: string, file: string, startLine: number, endLine: number, title: string, summary: string) => {
+    // Ids are capped at 200 characters; a call between two deeply nested declarations can exceed that.
+    const id = longId.length <= MAX_ID ? longId : `ev:src:long:${sha256(longId).slice(0, 24)}`;
     if (evidence.has(id)) return id;
     const end = Math.min(endLine, startLine + maxLines - 1);
     const excerpt = lines(file).slice(startLine - 1, end).join('\n');
@@ -139,6 +161,11 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     const evId = sourceEvidence(`ev:src:${id}`, file, start, end, `Source: ${file}:${start}-${end}`, `Declaration of ${label}.`);
     addNode({ id, kind, label, summary: docSummary(decl), parent_id: parent, truth_status: 'static_verified', evidence_ids: [evId] });
     declToId.set(decl, id);
+    facts[id] = {
+      exported: Node.isMethodDeclaration(decl) ? false : decl.isExported(),
+      lines: end - start + 1,
+      has_update: Node.isClassDeclaration(decl) && decl.getMethods().some((m) => m.getName() === 'update'),
+    };
     declRanges.push({ node_id: id, kind: kind === 'class' ? 'class' : 'function', name: decl.getName() ?? '', file, start: decl.getStart(), end: decl.getEnd() });
   };
   for (const { sf, rel: file } of files) {
@@ -161,7 +188,8 @@ export function indexRepository(opts: IndexOptions): IndexResult {
 
   const addEdge = (relation: Relation, source: string, target: string, file: string, at: Node, flows: GraphEdge['flows'], label?: string, evidenceId?: string) => {
     if (source === target) return null;
-    const id = `edge:${relation}:${source}->${target}`;
+    const longId = `edge:${relation}:${source}->${target}`;
+    const id = longId.length <= MAX_ID ? longId : `edge:${relation}:long:${sha256(longId).slice(0, 24)}`;
     if (edges.has(id)) return id;
     const start = at.getStartLineNumber();
     const evId =
@@ -282,12 +310,12 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     system_id: opts.systemId,
     system_kind: 'software',
     display_name: opts.displayName,
-    revision: { kind: 'content_hash', value: revision },
+    revision: { kind: opts.gitRevision ? 'git' : 'content_hash', value: revision },
     nodes: [...nodes.values()].sort(byId),
     edges: [...edges.values()].sort(byId),
     paths,
   };
-  return { graph, evidence: [...evidence.values()].sort(byId), declRanges: declRanges.sort((a, b) => (a.node_id < b.node_id ? -1 : 1)), revision };
+  return { graph, evidence: [...evidence.values()].sort(byId), declRanges: declRanges.sort((a, b) => (a.node_id < b.node_id ? -1 : 1)), revision, facts };
 }
 
 function rel(root: string, sf: SourceFile): string {
@@ -325,14 +353,16 @@ function resolveIdentifierLike(node: Node, declToId: Map<Node, string>): string 
   return undefined;
 }
 
+/** The declaration's own doc comment: the nearest one, never a file's license header. */
 function docSummary(decl: Decl): string {
-  const doc = decl.getJsDocs()[0]?.getDescription().trim() ?? '';
-  return doc.replace(/\s+/g, ' ');
+  const docs = decl.getJsDocs();
+  const doc = docs[docs.length - 1]?.getDescription().trim() ?? '';
+  return /^copyright\b/i.test(doc) ? '' : doc.replace(/\s+/g, ' ');
 }
 
 function moduleSummary(sf: SourceFile): string {
   const decls = [...sf.getFunctions(), ...sf.getClasses()].filter((d) => d.isExported());
-  const first = decls.map((d) => d.getJsDocs()[0]?.getDescription().trim()).find(Boolean);
+  const first = decls.map((d) => docSummary(d)).find(Boolean);
   const names = decls.map((d) => d.getName()).filter(Boolean);
   if (names.length === 0) return 'Types and helpers.';
   return truncate(`Exports ${names.join(', ')}.${first ? ` ${first.replace(/\s+/g, ' ')}` : ''}`, 300);

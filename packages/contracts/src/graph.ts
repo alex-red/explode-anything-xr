@@ -18,6 +18,18 @@ export const NodeKind = z.enum([
 ]);
 export type NodeKind = z.infer<typeof NodeKind>;
 
+/**
+ * A presentation hint: which special shape a part is drawn with. Like `importance`, it is never
+ * evidence and never decides what is true.
+ *
+ * - `concept`: a grouping chosen by the curation step (its node is `inferred`).
+ * - `entry`: where a flow enters the system.
+ * - `hub`: one of the parts most others call into.
+ * - `engine`: a class with a per-frame `update` method.
+ */
+export const NodeRole = z.enum(['concept', 'entry', 'hub', 'engine']);
+export type NodeRole = z.infer<typeof NodeRole>;
+
 export const GraphNode = z.object({
   id: Id,
   kind: NodeKind,
@@ -28,6 +40,7 @@ export const GraphNode = z.object({
   evidence_ids: z.array(Id),
   /** 0..1, drives label priority and size. */
   importance: z.number().min(0).max(1),
+  role: NodeRole.optional(),
 });
 export type GraphNode = z.infer<typeof GraphNode>;
 

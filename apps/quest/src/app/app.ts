@@ -55,6 +55,8 @@ export class ExplodeApp {
   private readonly software: ContentBundle;
   /** Tutorial systems in the order given; the first is the opening lesson, the rest are under "More". */
   private readonly tutorials: ContentBundle[];
+  /** Further software systems after the lesson codebase (the real SDK): explored, not broken. */
+  private readonly showcases: ContentBundle[];
   private roomDimmed = false;
   /** The broken edge whose spreading failure has already been played, so it plays once. */
   private cascadePlayedFor: string | null = null;
@@ -93,6 +95,7 @@ export class ExplodeApp {
     if (!software || tutorials.length === 0) throw new Error('expected one software bundle and at least one mechanical bundle');
     this.software = software;
     this.tutorials = tutorials;
+    this.showcases = bundles.filter((b) => b.graph.system_kind === 'software' && b !== software);
     this.store = new Store(new Map(bundles.map((b) => [b.graph.system_id, b])));
     this.tutor = new TutorClient(tutorUrl);
     this.anchorEntity = world.createTransformEntity(this.anchor);
@@ -343,7 +346,12 @@ export class ExplodeApp {
   }
 
   private get onMechanical(): boolean {
-    return this.store.systemId !== this.software.graph.system_id;
+    return this.store.ctx.bundle.graph.system_kind === 'mechanical';
+  }
+
+  /** On a software system other than the lesson codebase. */
+  private get onShowcase(): boolean {
+    return this.showcases.some((b) => b.graph.system_id === this.store.systemId);
   }
 
   /** Tutorial ⇄ software. From the software system it goes back to the opening tutorial. */
@@ -352,11 +360,15 @@ export class ExplodeApp {
     this.loadSystem(this.onMechanical ? this.software.graph.system_id : this.opening.graph.system_id);
   }
 
-  /** The tutorial that "More" opens next: the one after the current tutorial, or the second when on software. */
+  /**
+   * What "More" opens next. The round goes through the tutorials, then the showcase systems; from
+   * the lesson codebase it opens the first thing after the opening tutorial.
+   */
   private moreTarget(): ContentBundle | null {
-    if (this.tutorials.length < 2) return null;
-    const i = this.tutorials.findIndex((b) => b.graph.system_id === this.store.systemId);
-    return this.tutorials[i < 0 ? 1 : (i + 1) % this.tutorials.length]!;
+    const round = [...this.tutorials, ...this.showcases];
+    if (round.length < 2) return null;
+    const i = round.findIndex((b) => b.graph.system_id === this.store.systemId);
+    return round[i < 0 ? 1 : (i + 1) % round.length]!;
   }
 
   private openMore(): void {
@@ -582,9 +594,13 @@ export class ExplodeApp {
       if (this.onMechanical) this.switchSystem();
       else {
         const following = this.nextLesson();
+        const showcase = this.onShowcase ? undefined : this.showcases[0];
         if (following) {
           this.sfx.collapse(this.modelAt());
           this.store.restart(following.id);
+        } else if (showcase) {
+          this.sfx.collapse(this.modelAt());
+          this.loadSystem(showcase.graph.system_id);
         }
       }
       return;
@@ -604,8 +620,17 @@ export class ExplodeApp {
     return [
       {
         id: 'next',
-        label: () => (lessonDone() ? (this.onMechanical ? 'Continue: software ▸' : this.nextLesson() ? 'Incident drill ▸' : 'Lesson done') : 'Next ▸'),
-        enabled: () => (lessonDone() ? this.onMechanical || this.nextLesson() !== null : step()?.expect.type === 'next'),
+        label: () =>
+          lessonDone()
+            ? this.onMechanical
+              ? 'Continue: software ▸'
+              : this.nextLesson()
+                ? 'Incident drill ▸'
+                : !this.onShowcase && this.showcases[0]
+                  ? `Real ${shortName(this.showcases[0])} ▸`
+                  : 'Lesson done'
+            : 'Next ▸',
+        enabled: () => (lessonDone() ? this.onMechanical || this.nextLesson() !== null || (!this.onShowcase && this.showcases.length > 0) : step()?.expect.type === 'next'),
         primary: () => lessonDone() || step()?.expect.type === 'next',
         onPress: () => this.next(),
       },
@@ -707,7 +732,9 @@ export class ExplodeApp {
         ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
         : this.nextLesson()
           ? 'Lesson complete. Ready for an incident? Press Incident drill: something will be broken, and only the symptom will tell you where.'
-          : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate. Gestures lists them all.';
+          : !this.onShowcase && this.showcases[0]
+            ? `Lesson complete. Next, a real codebase: press Real ${shortName(this.showcases[0])} to explode the open source framework this app runs on.`
+            : 'Lesson complete. Explore freely: drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate. Gestures lists them all.';
     else caption = 'Free exploration. Drag a part to move it, drag empty space to turn it, hold it with both hands to zoom and rotate.';
     const tutor = this.tutorAnswer && this.tutorAnswer.stepKey === this.stepKey() ? this.tutorAnswer : null;
     const graph = this.store.ctx.bundle.graph;

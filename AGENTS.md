@@ -11,6 +11,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
   - Edges are never `observed`.
   - `inferred` and `authored_model` are never promoted.
   - `checkBundleIntegrity` must return `[]`.
+  - Anything a model chose (the SDK's parent nodes) is `inferred`, cites no evidence, and is shown as a hypothesis. `importance` and `role` are presentation, never evidence.
 - The tutor (LLM or scripted) may only use `TUTOR_ACTION_TYPES`. It cannot break or repair edges, and it cannot pass or advance lessons; only the lesson engine does that.
 - Commit messages follow Conventional Commits: `<type>(<optional scope>): <summary>`, lowercase imperative summary, subject ≤ 72 chars. Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `style`, `build`, `ci`, `revert`. Scopes are package or area names (`quest`, `content`, `lesson-engine`, `tutor-proxy`, `release`). `.githooks/commit-msg` rejects anything else; `bun install` enables it via `core.hooksPath`.
 - Don't commit, push or deploy unless asked. The site is GitHub Pages (`bun run release:pages` publishes the local build to the `gh-pages` branch of `alex-red/explode-anything-xr`); never publish after the release candidate: the entry is frozen.
@@ -24,6 +25,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 | `tools/indexer` | ts-morph indexer for the fixture repo | agents |
 | `tools/content` | Build-time pipeline: coverage + mutation evidence, layout, lessons, bundles | agents |
 | `content/repo-demo/fixture` | The sample auth-service being taught (MIT, written for this demo) | changing it changes evidence: regenerate |
+| `content/iwsdk` | A real repository drawn from its most relevant parts: `source/` is an unmodified copy of three packages of `meta/immersive-web-sdk` at the commit in `SOURCE.json`; `curation.json` is a model's choice of parent nodes | never edit `source/` or `curation.json` by hand: re-copy at a new commit, or run `content:curate` |
 | `content/drivetrain` | Authored procedural EV drivetrain spec | — |
 | `apps/quest` | IWSDK 1.0.1 WebXR app (three.js via `@iwsdk/core`) | agents for logic; the human judges look and clarity in the emulator |
 | `services/tutor-proxy` | Optional Cloudflare Worker for the live tutor | agents |
@@ -38,7 +40,8 @@ bun run dev                                  # IWSDK dev server + emulator brows
 bun run test                                 # vitest: all packages, tools, proxy
 bunx tsc -p tsconfig.json --noEmit           # node-side typecheck
 bun run --cwd apps/quest typecheck           # app typecheck (run before any device test)
-bun run content:generate                     # rebuild all three bundles (runs the fixture's tests, mutations)
+bun run content:generate                     # rebuild all four bundles (runs the fixture's tests, mutations); offline
+bun run content:curate                       # ask the model for the SDK's parent nodes again (calls Meta's Model API with META_API_KEY; only when the user asks)
 bun run content:check                        # re-validate committed bundles + hashes
 bun run emulator:walkthrough                 # headset tutorial, codebase lesson and incident drill in the IWER emulator (needs the dev server; `-- --start` runs one)
 bun run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)

@@ -1,4 +1,4 @@
-import { AdditiveBlending, BackSide, Color, CylinderGeometry, DoubleSide, Group, Mesh, PlaneGeometry, ShaderMaterial, type IUniform } from '@iwsdk/core';
+import { AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, Color, CylinderGeometry, DoubleSide, Group, Mesh, PlaneGeometry, Points, ShaderMaterial, type IUniform } from '@iwsdk/core';
 import { COLOR } from './palette.ts';
 
 /**
@@ -67,8 +67,14 @@ void main() {
   float scan = smoothstep(0.55, 1.0, 0.5 + 0.5 * sin(vWorld.y * 520.0 - uTime * 5.0));
   float sweep = smoothstep(0.985, 1.0, 0.5 + 0.5 * sin(vWorld.y * 7.0 - uTime * 0.9));
   float flicker = 0.97 + 0.03 * sin(uTime * 41.0);
+  // Thin-film sheen on the rim: the hue slides with the viewing angle, so a facet flashes through
+  // the spectrum as the model turns. It only tints the rim; the body keeps its state colour.
+  float facing = max(dot(n, v), 0.0);
+  vec3 sheen = 0.5 + 0.5 * cos(6.28318 * ((1.0 - facing) * 1.3 + vWorld.y * 2.5 + vec3(0.0, 0.33, 0.67)));
+  // A core of light inside each crystal, breathing out of step with its neighbours.
+  float core = pow(facing, 3.0) * (0.55 + 0.45 * sin(uTime * 2.1 + dot(vWorld, vec3(31.0, 17.0, 23.0))));
   vec3 body = vColor * light * 0.55;
-  vec3 glow = vColor * (rim * 1.7 + scan * 0.22 + sweep * 0.9) + uEmissive + vec3(0.6, 0.95, 1.0) * front * 1.6;
+  vec3 glow = vColor * (rim * 1.7 + scan * 0.22 + sweep * 0.9 + core * 0.4) + sheen * rim * 0.3 + uEmissive + vec3(0.6, 0.95, 1.0) * front * 1.6;
   float alpha = clamp(uOpacity + rim * 0.75 + scan * 0.12 + sweep * 0.35 + front, 0.0, 1.0);
   gl_FragColor = vec4((body + glow) * flicker, alpha);
   #include <colorspace_fragment>
@@ -101,18 +107,25 @@ export class HoloMaterial extends ShaderMaterial {
  * that travel from source to target; only traced-path edges set it, so moving light always
  * means "this is the traced flow". Other edges just breathe.
  */
-export function conduitMaterial(): ShaderMaterial {
+export function conduitMaterial(bend = 0): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uTime: TIME },
+    uniforms: { uTime: TIME, uBend: { value: bend } },
     vertexShader: /* glsl */ `
 attribute float aFlow;
+uniform float uBend;
 varying vec3 vColor;
 varying float vAlong;
 varying float vFlow;
 varying float vSide;
 void main() {
   mat4 m = modelMatrix * instanceMatrix;
-  vec4 world = m * vec4(position, 1.0);
+  // Arc the tube: push each ring of vertices sideways by a half sine along its length. The same
+  // formula runs on the CPU (arcPoint) for whatever rides the conduit.
+  vec4 local = instanceMatrix * vec4(position, 1.0);
+  vec3 mid = instanceMatrix[3].xyz;
+  vec3 dir = normalize(vec3(mid.xy * 2.0, 0.35));
+  local.xyz += dir * (uBend * length(instanceMatrix[1].xyz) * sin(3.14159265 * (position.y + 0.5)));
+  vec4 world = modelMatrix * local;
   vColor = instanceColor;
   // Metres along the tube from its source end (the unit cylinder runs -0.5..0.5 on y).
   vAlong = (position.y + 0.5) * length(instanceMatrix[1].xyz);
@@ -135,7 +148,128 @@ void main() {
   gl_FragColor = vec4(c, 1.0);
   #include <colorspace_fragment>
 }`,
+    // Arced (software) conduits are light, not solid tubes: a dim one is a faint thread instead of
+    // a grey pipe across the parts behind it. Straight (mechanical) ones stay solid.
+    ...(bend > 0 ? { transparent: true, blending: AdditiveBlending, depthWrite: false } : {}),
   });
+}
+
+/**
+ * A drifting cloud of light behind each group of parts: one instanced batch of camera-facing
+ * additive quads, like the halos, shaded with slowly swirling noise. Each instance's matrix gives
+ * a centre and a size; its colour carries the group's hue and the intensity.
+ */
+export function nebulaMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
+    uniforms: { uTime: TIME },
+    vertexShader: /* glsl */ `
+varying vec2 vUv;
+varying vec3 vColor;
+varying float vSeed;
+void main() {
+  mat4 m = modelMatrix * instanceMatrix;
+  float size = length(m[0].xyz);
+  vec4 view = viewMatrix * vec4(m[3].xyz, 1.0);
+  view.xy += position.xy * size;
+  vUv = uv * 2.0 - 1.0;
+  vColor = instanceColor;
+  vSeed = float(gl_InstanceID) * 7.31;
+  gl_Position = projectionMatrix * view;
+}`,
+    fragmentShader: /* glsl */ `
+uniform float uTime;
+varying vec2 vUv;
+varying vec3 vColor;
+varying float vSeed;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void main() {
+  float d = length(vUv);
+  if (d > 1.0) discard;
+  // Wind the cloud round its centre, more tightly toward the middle, and let it turn slowly.
+  float turn = uTime * 0.06 + (1.0 - d) * 2.2 + vSeed;
+  vec2 p = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * vUv;
+  float cloud = noise(p * 2.3 + vSeed) * 0.6 + noise(p * 5.1 - uTime * 0.05 + vSeed) * 0.4;
+  float a = pow(1.0 - d, 1.6) * (0.25 + 0.75 * cloud);
+  gl_FragColor = vec4(vColor * a, a);
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+  });
+}
+
+/**
+ * Motes of light rising through the projection: one `Points` draw call, moved entirely in the
+ * vertex shader. Purely decorative; rays ignore it.
+ */
+export function createDust(radius: number, height: number, count = 140): { points: Points; dispose(): void } {
+  const positions = new Float32Array(count * 3);
+  const seeds = new Float32Array(count);
+  // A small fixed-seed generator: the same motes every run, so the scene is repeatable.
+  let state = 0x2f6e2b1;
+  const rand = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  for (let i = 0; i < count; i++) {
+    const r = radius * Math.sqrt(rand());
+    const a = rand() * Math.PI * 2;
+    positions[i * 3] = r * Math.cos(a);
+    positions[i * 3 + 1] = rand() * height;
+    positions[i * 3 + 2] = r * Math.sin(a);
+    seeds[i] = rand();
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setAttribute('aSeed', new BufferAttribute(seeds, 1));
+  const material = new ShaderMaterial({
+    uniforms: { uTime: TIME, uHeight: { value: height }, uColor: { value: new Color(COLOR.stage) } },
+    vertexShader: /* glsl */ `
+attribute float aSeed;
+uniform float uTime;
+uniform float uHeight;
+varying float vFade;
+void main() {
+  vec3 p = position;
+  p.y = mod(p.y + uTime * (0.012 + 0.03 * aSeed), uHeight);
+  p.x += sin(uTime * 0.5 + aSeed * 40.0) * 0.008;
+  p.z += cos(uTime * 0.4 + aSeed * 27.0) * 0.008;
+  // Fade in off the stage and out at the top, and twinkle.
+  vFade = smoothstep(0.0, 0.12, p.y / uHeight) * smoothstep(1.0, 0.7, p.y / uHeight) * (0.55 + 0.45 * sin(uTime * 3.0 + aSeed * 90.0));
+  vec4 view = modelViewMatrix * vec4(p, 1.0);
+  gl_PointSize = (1.5 + 3.0 * aSeed) / max(0.1, -view.z);
+  gl_Position = projectionMatrix * view;
+}`,
+    fragmentShader: /* glsl */ `
+uniform vec3 uColor;
+varying float vFade;
+void main() {
+  float d = length(gl_PointCoord * 2.0 - 1.0);
+  float a = pow(max(0.0, 1.0 - d), 2.0) * vFade * 0.8;
+  gl_FragColor = vec4(uColor * a, a);
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+  });
+  const points = new Points(geometry, material);
+  points.frustumCulled = false; // the shader moves the points; the bounds would be stale
+  points.renderOrder = -1;
+  return {
+    points,
+    dispose() {
+      geometry.dispose();
+      material.dispose();
+    },
+  };
 }
 
 /**
@@ -177,9 +311,10 @@ void main() {
  * a radial grid, drawn by one shader on one flat quad, plus a faint beam of light rising from
  * its rim. Two draw calls. Purely decorative; rays ignore it.
  */
-export function createStage(radius: number): { group: Group; dispose(): void } {
+export function createStage(radius: number): { group: Group; burst(progress: number): void; dispose(): void } {
+  const burst: IUniform<number> = { value: 2 };
   const material = new ShaderMaterial({
-    uniforms: { uTime: TIME, uColor: { value: new Color(COLOR.stage) }, uAccent: { value: new Color(COLOR.route) } },
+    uniforms: { uTime: TIME, uBurst: burst, uColor: { value: new Color(COLOR.stage) }, uAccent: { value: new Color(COLOR.route) } },
     vertexShader: /* glsl */ `
 varying vec2 vUv;
 void main() {
@@ -188,6 +323,7 @@ void main() {
 }`,
     fragmentShader: /* glsl */ `
 uniform float uTime;
+uniform float uBurst;
 uniform vec3 uColor;
 uniform vec3 uAccent;
 varying vec2 vUv;
@@ -219,7 +355,10 @@ void main() {
   float sweep = fract((a + uTime * 0.6) / TAU);
   float wedge = pow(sweep, 9.0) * step(r, 0.97) * 0.28;
   float pool = pow(max(0.0, 1.0 - r), 3.0) * 0.55;
-  vec3 c = uColor * (glow + pool) + uAccent * wedge;
+  // A shockwave racing out to the rim when the model is pulled apart (uBurst 0 → 1; above 1 is none).
+  float wave = (ring(r, uBurst, 0.06) + ring(r, uBurst * 0.72, 0.03) * 0.5) * (1.0 - uBurst) * step(uBurst, 1.0) * 2.2;
+  glow += wave;
+  vec3 c = uColor * (glow + pool) + uAccent * (wedge + wave * 0.6);
   float alpha = clamp(glow + pool * 0.6 + wedge, 0.0, 1.0) * smoothstep(1.0, 0.94, r);
   gl_FragColor = vec4(c * alpha, alpha);
   #include <colorspace_fragment>
@@ -267,6 +406,9 @@ void main() {
   group.add(disc, beam);
   return {
     group,
+    burst(progress: number) {
+      burst.value = progress;
+    },
     dispose() {
       disc.geometry.dispose();
       material.dispose();

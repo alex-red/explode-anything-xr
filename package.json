@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && bun run --cwd apps/quest typecheck",
     "content:generate": "node tools/content/src/generate.ts",
     "content:check": "node tools/content/src/check.ts",
+    "content:curate": "node --env-file=.env tools/content/src/curate.ts",
     "emulator:walkthrough": "node apps/quest/scripts/walkthrough.ts",
     "release:pages": "bunx gh-pages@6 -d apps/quest/dist --dotfiles -m \"Deploy $(git rev-parse --short HEAD)\"",
     "release:manifest": "node tools/release/src/cli.ts manifest",

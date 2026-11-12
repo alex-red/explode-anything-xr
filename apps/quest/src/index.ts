@@ -3,6 +3,7 @@ import projectOptions from 'virtual:iwsdk-project';
 import { ContentBundle } from '@explode/contracts';
 import drivetrain from './content/drivetrain.bundle.json';
 import headset from './content/headset.bundle.json';
+import iwsdk from './content/iwsdk.bundle.json';
 import repoDemo from './content/repo-demo.bundle.json';
 import { startApp } from './app/app.ts';
 import { SdkAnchorFrame } from './app/desk-memory.ts';
@@ -28,7 +29,8 @@ const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace,
 async function main(): Promise<void> {
   // Bundles are imported statically, so they ship inside the build. The first tutorial is the
   // opening lesson (the headset); the drivetrain stays reachable from the toolbar's "More".
-  const bundles = [ContentBundle.parse(headset), ContentBundle.parse(drivetrain), ContentBundle.parse(repoDemo)];
+  // The sample service carries the lessons; the real SDK after it is explored from its most relevant parts.
+  const bundles = [ContentBundle.parse(headset), ContentBundle.parse(drivetrain), ContentBundle.parse(repoDemo), ContentBundle.parse(iwsdk)];
   const world = await World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions);
   world.registerSystem(InteractionSystem);
   // Reads the planes the headset detected, so the stage can stand on the real desk.

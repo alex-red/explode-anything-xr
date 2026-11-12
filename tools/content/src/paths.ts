@@ -10,3 +10,5 @@ export const OUTPUT_DIR = resolve(REPO_ROOT, 'apps/quest/src/content');
 export const REPO_BUNDLE_PATH = resolve(OUTPUT_DIR, 'repo-demo.bundle.json');
 export const DRIVETRAIN_BUNDLE_PATH = resolve(OUTPUT_DIR, 'drivetrain.bundle.json');
 export const HEADSET_BUNDLE_PATH = resolve(OUTPUT_DIR, 'headset.bundle.json');
+export const IWSDK_DIR = resolve(CONTENT_DIR, 'iwsdk');
+export const IWSDK_BUNDLE_PATH = resolve(OUTPUT_DIR, 'iwsdk.bundle.json');

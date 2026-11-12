@@ -9,6 +9,7 @@ import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import headsetJson from '../src/content/headset.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
+import sdkJson from '../src/content/iwsdk.bundle.json';
 import { startApp, type ExplodeApp } from '../src/app/app.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
@@ -1616,5 +1617,97 @@ describe('scene harness: detail levels for the codebase (EXPLORE_PLAN W11)', () 
     h.frames(30);
     expect(shown(h)).toBe(total);
     expect(shelf(h)).toBeUndefined();
+  });
+});
+
+describe('scene harness: a real SDK, from its most relevant parts', () => {
+  /** What src/index.ts ships: the three lesson systems, then the SDK. */
+  const withSdk = [...shipped, ContentBundle.parse(sdkJson)];
+  const sdk = withSdk[3]!;
+  const openSdk = () => {
+    const h = setup(false, { bundles: withSdk });
+    h.press(h.button(/^More: Drivetrain$/));
+    h.press(h.button(/^More: SDK$/));
+    expect(h.state().system_id).toBe('system:iwsdk');
+    return h;
+  };
+
+  it('is one more press under More, and More goes round back to the opening tutorial', () => {
+    const h = openSdk();
+    expect(h.caption()).toMatch(/Immersive Web SDK/);
+    h.press(h.button(/^More: Headset$/));
+    expect(h.state().system_id).toBe('system:mr-headset');
+  });
+
+  it('is offered when the last codebase lesson is finished', () => {
+    const h = setup(false, { bundles: withSdk });
+    h.press(h.button(/Skip tutorial/));
+    const store = h.store() as unknown as { restart(id?: string): void; dispatch(e: unknown): void };
+    store.restart('lesson:repo-incident');
+    h.frames(5);
+    // Finish the drill through the engine's own events, as the drill test does with presses.
+    const drill = repoJson.lessons.find((l) => l.id === 'lesson:repo-incident')!;
+    const edge = repoJson.graph.edges.find((e) => e.id === drill.break_edge_id)!;
+    store.dispatch({ type: 'next' });
+    store.dispatch({ type: 'set_explode', factor: 1 });
+    store.dispatch({ type: 'predict', target_id: edge.target_id });
+    store.dispatch({ type: 'next' });
+    store.dispatch({ type: 'plug', edge_id: edge.id, target_id: edge.target_id });
+    store.dispatch({ type: 'next' });
+    h.frames(10);
+    expect(h.state().lesson?.status).toBe('complete');
+    h.press(h.button(/^Real SDK/));
+    expect(h.state().system_id).toBe('system:iwsdk');
+  });
+
+  it('runs the tour at the key detail level: explode, the chosen groups, a traced call chain, source evidence', () => {
+    localStorage.setItem('explode:detail:v1', 'key');
+    const h = openSdk();
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    expect(h.caption()).toMatch(/chosen by an AI model \(.+\).*hypothesis/);
+    // The groups are labelled as hypotheses, with the truth badge's glyph.
+    expect(h.panels().some((p) => p.text.startsWith('◌ '))).toBe(true);
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Trace a move$/));
+    expect(h.state().active_path_id).toBe('path:sdk-move');
+    const path = sdk.graph.paths[0]!;
+    const view = h.view() as unknown as { isShown(id: string): boolean; nodes: Map<string, { mesh: Mesh }> };
+    for (const id of path.node_ids) expect(view.isShown(id), `${id} is shown while traced`).toBe(true);
+    h.press(view.nodes.get(path.node_ids[1]!)!.mesh);
+    h.press(h.button(/^Evidence$/));
+    const evidence = h.panels().find((p) => p.text.startsWith('EVIDENCE'))?.text ?? '';
+    expect(evidence).toMatch(/IN SOURCE/);
+    expect(evidence).toMatch(/packages\/.*\.ts:\d+-\d+/);
+    h.press(h.button(/^Next/));
+    expect(h.state().lesson?.status).toBe('complete');
+    expect(h.button(/^Lesson done$/)).toBeDefined(); // nothing follows the tour
+    expectFinite(h.scene);
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('offers nothing to unplug, and stays inside the draw-call budget with every part shown', () => {
+    localStorage.setItem('explode:detail:v1', 'all');
+    const h = openSdk();
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Trace/));
+    h.frames(30);
+    for (const e of h.view().edges.values()) expect(e.plug).toBeNull();
+    let draws = 0;
+    const walk = (o: Object3D) => {
+      if (!o.visible) return;
+      const m = o as Mesh & { isMesh?: boolean; isPoints?: boolean; material?: { visible?: boolean } };
+      if ((m.isMesh || m.isPoints) && m.material?.visible !== false) draws++;
+      o.children.forEach(walk);
+    };
+    walk(h.scene);
+    expect(draws, 'draw calls with the whole SDK selection open').toBeLessThanOrEqual(120);
+    for (const v of (h.view().nodes as Map<string, { node: { kind: string }; mesh: Mesh }>).values()) {
+      if (v.node.kind !== 'cluster' && v.mesh.visible) expect(v.mesh.scale.x * 2).toBeGreaterThanOrEqual(0.04);
+    }
   });
 });

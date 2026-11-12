@@ -1,0 +1,15 @@
+[
+  {
+    "id": "path:sdk-move",
+    "label": "a move",
+    "flow": "control",
+    "node_ids": [
+      "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+      "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+      "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+      "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+      "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+      "class:packages/locomotor/src/core/engine.ts#locomotionengine"
+    ]
+  }
+]
