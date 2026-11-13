@@ -1,6 +1,7 @@
 import { sha256 } from '@explode/indexer';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { CURATION_SCHEMA, curationSystemPrompt } from './curation-prompt.ts';
 import { IWSDK_DIR } from './paths.ts';
 import { Curation, buildDigest, curationProblems, partGraph } from './relevance.ts';
 import { indexSdk, sdkSource } from './sdk.ts';
@@ -26,42 +27,8 @@ const KEY = process.env.CURATE_API_KEY ?? process.env.META_API_KEY;
 const TIMEOUT_MS = Number(process.env.CURATE_TIMEOUT_MS ?? 180_000);
 const ATTEMPTS = 3;
 
-const SYSTEM = `You are helping a newcomer see how a large codebase is organised. You are given a digest of every source directory of one repository: each DIR line, then its strongest PART lines (classes and top-level functions, with their doc comment and how many other parts call them).
-
-Choose what a first-time reader should be shown, as JSON.
-
-"groups": 6 to 8 parent nodes. Each is one idea a newcomer must know to understand this system, not a folder listing.
-- "id": lowercase slug, letters, digits and dashes, 2 to 30 characters.
-- "label": plain words, at most 24 characters. No file names.
-- "summary": one or two sentences, at most 200 characters, saying what this part of the system does. Describe only what the digest supports. No marketing words.
-- "members": one or more DIR paths, copied exactly from the digest. A DIR may appear in at most one group. Leave out DIRs that are plumbing a newcomer can skip; they will not be drawn.
-- Order the groups the way the system would be explained: how it starts, then what runs each frame, then what a user's hands reach, then the rest.
-
-"spotlight": 8 to 14 PART ids, copied exactly from the digest (the whole text after "PART ", up to the first space). Pick the parts that are most interesting or most central, including ones that nothing calls directly because a frame loop runs them. Each has "why": at most 140 characters, a plain reason.
-
-"entry_points": 1 or 2 PART ids where a newcomer should start reading.`;
-
-const SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['groups', 'spotlight', 'entry_points'],
-  properties: {
-    groups: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['id', 'label', 'summary', 'members'],
-        properties: { id: { type: 'string' }, label: { type: 'string' }, summary: { type: 'string' }, members: { type: 'array', items: { type: 'string' } } },
-      },
-    },
-    spotlight: {
-      type: 'array',
-      items: { type: 'object', additionalProperties: false, required: ['id', 'why'], properties: { id: { type: 'string' }, why: { type: 'string' } } },
-    },
-    entry_points: { type: 'array', items: { type: 'string' } },
-  },
-};
+const SYSTEM = curationSystemPrompt();
+const SCHEMA = CURATION_SCHEMA;
 
 interface Turn {
   role: 'system' | 'user' | 'assistant';

@@ -12,3 +12,4 @@ export * from './tutor.ts';
 export * from './bundle.ts';
 export * from './canonical.ts';
 export * from './integrity.ts';
+export * from './explode.ts';

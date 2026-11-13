@@ -65,8 +65,17 @@ describe('validateTutorPlan: commands', () => {
     ['an unknown path', { type: 'trace', path_id: 'path:nope' }],
     ['an unknown system', { type: 'open_system', system_id: 'sys:elsewhere' }],
     ['a command outside the schema', { type: 'run_shell', cmd: 'ls' }],
+    ['a proposal where nothing can be built', { type: 'propose_system', kind: 'repository', query: 'colinhacks/zod' }],
+    ['a proposal of an unknown kind', { type: 'propose_system', kind: 'website', query: 'example.com' }],
   ])('rejects %s', (_name, command) => {
     expect(validateTutorPlan(ctx, withCommands(command), scope).ok).toBe(false);
+  });
+
+  it('accepts a proposal only where the app says one can be made', () => {
+    const command = { type: 'propose_system', kind: 'repository', query: 'github.com/colinhacks/zod' };
+    expect(validateTutorPlan(ctx, withCommands(command), { ...scope, canPropose: true })).toMatchObject({ ok: true });
+    expect(validateTutorPlan(ctx, withCommands(command), { ...scope, canPropose: false }).ok).toBe(false);
+    expect(validateTutorPlan(ctx, withCommands(command)).ok).toBe(false);
   });
 
   it('rejects more than four commands', () => {

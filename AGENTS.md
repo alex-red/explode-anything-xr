@@ -44,6 +44,7 @@ bun run content:generate                     # rebuild all five bundles (runs th
 bun run content:curate                       # ask the model for the SDK's parent nodes again (calls Meta's Model API with META_API_KEY; only when the user asks)
 bun run content:check                        # re-validate committed bundles + hashes
 bun run proxy:dev                            # tutor proxy on port 8787, keys from .env (only when the user asks)
+bun run explode:build -- <owner/name>        # build one GitHub repository as the proxy would (ADR-0026); calls GitHub and the model API with the .env keys (only when the user asks). `--index-only` stops before the model
 bun run emulator:walkthrough                 # headset tutorial, codebase lesson and incident drill in the IWER emulator (needs the dev server; `-- --start` runs one)
 bun run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
 bun run release:manifest                     # hash a finished build into release/manifest.json (does not build)

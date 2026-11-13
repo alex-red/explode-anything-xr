@@ -256,6 +256,12 @@ export interface SelectOptions {
   paths: PathSpec[];
   systemId: string;
   displayName: string;
+  /**
+   * For a repository nobody prepared: when two parts would be shown under the same short name,
+   * keep the stronger and leave the other out, instead of failing. Parts that must be shown
+   * (paths, entry points, spotlight) still fail on a clash, so the caller sorts those out first.
+   */
+  skipDuplicateNames?: boolean;
 }
 
 export interface Selection {
@@ -329,20 +335,26 @@ export function selectRelevant(index: IndexResult, curation: Curation, opts: Sel
   const ranked = [...pg.parts.values()].filter((p) => groupOf.has(p.id)).sort((a, b) => b.score - a.score || cmp(a.id, b.id));
   const chosen = new Set<string>(forced);
   const perGroup = new Map<string, number>();
-  const bump = (id: string) => perGroup.set(groupOf.get(id)!, (perGroup.get(groupOf.get(id)!) ?? 0) + 1);
+  const taken = new Set<string>();
+  const bump = (id: string) => {
+    perGroup.set(groupOf.get(id)!, (perGroup.get(groupOf.get(id)!) ?? 0) + 1);
+    taken.add(partShortName(pg.parts.get(id)!.label));
+  };
+  /** A part that cannot be shown beside the ones already chosen (only when duplicates are skipped). */
+  const clashes = (p: Part) => !!opts.skipDuplicateNames && (partShortName(p.label) === '' || taken.has(partShortName(p.label)));
   for (const id of chosen) bump(id);
   // Every group gets its strongest parts first, then the rest of the budget goes to the best overall.
   for (const g of curation.groups) {
     for (const p of ranked) {
       if ((perGroup.get(g.id) ?? 0) >= opts.perGroupMin) break;
-      if (groupOf.get(p.id) !== g.id || chosen.has(p.id)) continue;
+      if (groupOf.get(p.id) !== g.id || chosen.has(p.id) || clashes(p)) continue;
       chosen.add(p.id);
       bump(p.id);
     }
   }
   for (const p of ranked) {
     if (chosen.size >= opts.budget) break;
-    if (chosen.has(p.id) || (perGroup.get(groupOf.get(p.id)!) ?? 0) >= opts.perGroupMax) continue;
+    if (chosen.has(p.id) || (perGroup.get(groupOf.get(p.id)!) ?? 0) >= opts.perGroupMax || clashes(p)) continue;
     chosen.add(p.id);
     bump(p.id);
   }
@@ -352,7 +364,7 @@ export function selectRelevant(index: IndexResult, curation: Curation, opts: Sel
   const candidateLinks = pg.links.filter((l) => chosen.has(l.source) && chosen.has(l.target));
   // Ids are capped at 200 characters and two full part ids do not fit, so a connection is named by
   // its ends' labels (`edge:calls:grabsystem->multipointer`); labels are checked to be unique below.
-  const shortName = (id: string) => pg.parts.get(id)!.label.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+  const shortName = (id: string) => partShortName(pg.parts.get(id)!.label);
   const names = new Set<string>();
   for (const id of chosen) {
     if (names.has(shortName(id))) throw new Error(`two parts shown are both named ${shortName(id)}; connection ids would collide`);
@@ -473,6 +485,11 @@ export function selectRelevant(index: IndexResult, curation: Curation, opts: Sel
       groups: curation.groups.map((g) => ({ id: g.id, parts: totals.get(g.id) ?? 0, shown: perGroup.get(g.id) ?? 0 })),
     },
   };
+}
+
+/** The name a part goes by inside a connection id. */
+export function partShortName(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9_.]/g, '');
 }
 
 function cmp(a: string, b: string): number {

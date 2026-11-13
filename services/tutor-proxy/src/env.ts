@@ -25,7 +25,13 @@ export interface Env {
   TUTOR_KV?: KVLike;
   /** Seconds of speech transcribed per UTC day. Default 3600. */
   DAILY_AUDIO_SECONDS_CAP?: string;
+  /** Optional GitHub token for Explode Anything: a higher rate limit only. Public repositories need none. Never logged. */
+  GITHUB_TOKEN?: string;
+  /** The model that groups a repository's parts. Default: the tutor's model for the provider in use. */
+  EXPLODE_MODEL?: string;
+  /** Builds one address may start per UTC day. Default 5. */
+  EXPLODE_BUILDS_PER_DAY?: string;
 }
 
 export const DEFAULT_MODEL = 'claude-haiku-5-5';
-export const PROXY_VERSION = '0.4.0';
+export const PROXY_VERSION = '0.5.0';

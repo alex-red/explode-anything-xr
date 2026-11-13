@@ -27,6 +27,20 @@ export interface IndexOptions {
   tsPaths?: Record<string, string[]>;
   /** A pinned git commit of `root`'s origin. Default: the content hash of the tree. */
   gitRevision?: string;
+  /**
+   * Resolve imports the way a bundler does: no file extension needed, `./x.js` finds `x.ts`, and a
+   * directory finds its index. Most repositories are written this way. Default: Node's own rules.
+   */
+  bundlerResolution?: boolean;
+  /** Also parse JavaScript files matched by `include`. Default: TypeScript only. */
+  allowJs?: boolean;
+  /**
+   * For a repository nobody prepared: build ids from a lowercased path and name with any other
+   * character replaced, so they always fit the id contract, and leave out a declaration whose id
+   * would be too long or would repeat. Evidence still cites the real path. Default: off, ids use
+   * the path as written.
+   */
+  normalizeIds?: boolean;
 }
 
 /** Structural facts about a declaration, for ranking and roles. Never evidence. */
@@ -77,13 +91,14 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     skipAddingFilesFromTsConfig: true,
     compilerOptions: {
       target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.NodeNext,
-      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      module: opts.bundlerResolution ? ts.ModuleKind.ESNext : ts.ModuleKind.NodeNext,
+      moduleResolution: opts.bundlerResolution ? ts.ModuleResolutionKind.Bundler : ts.ModuleResolutionKind.NodeNext,
       allowImportingTsExtensions: true,
       noEmit: true,
       strict: true,
       skipLibCheck: true,
       types: ['node'],
+      ...(opts.allowJs ? { allowJs: true } : {}),
       ...(opts.tsPaths ? { baseUrl: opts.root, paths: opts.tsPaths } : {}),
     },
   });
@@ -93,6 +108,9 @@ export function indexRepository(opts: IndexOptions): IndexResult {
     .map((sf) => ({ sf, rel: rel(opts.root, sf) }))
     .filter(({ rel: file }) => !SKIPPED_FILE.test(file))
     .sort((a, b) => (a.rel < b.rel ? -1 : 1));
+  /** The form of a path or a name used inside ids. */
+  const idPart = (s: string) => (opts.normalizeIds ? s.toLowerCase().replace(/[^a-z0-9._/@-]/g, '-') : s);
+  const idName = (s: string) => (opts.normalizeIds ? s.toLowerCase().replace(/[^a-z0-9._-]/g, '-') : s.toLowerCase());
 
   const nodes = new Map<string, GraphNode>();
   const edges = new Map<string, GraphEdge>();
@@ -135,11 +153,12 @@ export function indexRepository(opts: IndexOptions): IndexResult {
   // 1. Clusters (directories) and modules (files).
   for (const { sf, rel: file } of files) {
     const dir = posix.dirname(file);
-    const clusterId = `cluster:${dir}`;
+    const clusterId = `cluster:${idPart(dir)}`;
     if (!nodes.has(clusterId)) {
       addNode({ id: clusterId, kind: 'cluster', label: posix.basename(dir), parent_id: null, truth_status: 'static_verified', evidence_ids: [] });
     }
-    const modId = `mod:${file}`;
+    const modId = `mod:${idPart(file)}`;
+    if (opts.normalizeIds && (modId.length > MAX_ID - 8 || nodes.has(modId))) continue;
     const evId = sourceEvidence(`ev:src:${modId}`, file, 1, lines(file).length, `Source: ${file}`, `Module ${file}.`);
     addNode({
       id: modId,
@@ -155,7 +174,8 @@ export function indexRepository(opts: IndexOptions): IndexResult {
   }
 
   // 2. Declarations: functions, classes, methods.
-  const registerDecl = (decl: Decl, id: string, kind: NodeKind, label: string, parent: string, file: string) => {
+  const registerDecl = (decl: Decl, id: string, kind: NodeKind, label: string, parent: string, file: string): boolean => {
+    if (opts.normalizeIds && (id.length > MAX_ID - 8 || nodes.has(id))) return false;
     const start = decl.getStartLineNumber();
     const end = decl.getEndLineNumber();
     const evId = sourceEvidence(`ev:src:${id}`, file, start, end, `Source: ${file}:${start}-${end}`, `Declaration of ${label}.`);
@@ -167,21 +187,24 @@ export function indexRepository(opts: IndexOptions): IndexResult {
       has_update: Node.isClassDeclaration(decl) && decl.getMethods().some((m) => m.getName() === 'update'),
     };
     declRanges.push({ node_id: id, kind: kind === 'class' ? 'class' : 'function', name: decl.getName() ?? '', file, start: decl.getStart(), end: decl.getEnd() });
+    return true;
   };
   for (const { sf, rel: file } of files) {
-    const modId = `mod:${file}`;
+    const idFile = idPart(file);
+    const modId = `mod:${idFile}`;
+    if (!nodes.has(modId)) continue;
     for (const fn of sf.getFunctions()) {
       const name = fn.getName();
       if (!name) continue;
-      registerDecl(fn, `fn:${file}#${name.toLowerCase()}`, 'function', name, modId, file);
+      registerDecl(fn, `fn:${idFile}#${idName(name)}`, 'function', name, modId, file);
     }
     for (const cls of sf.getClasses()) {
       const name = cls.getName();
       if (!name) continue;
-      const classId = `class:${file}#${name.toLowerCase()}`;
-      registerDecl(cls, classId, 'class', name, modId, file);
+      const classId = `class:${idFile}#${idName(name)}`;
+      if (!registerDecl(cls, classId, 'class', name, modId, file)) continue;
       for (const m of cls.getMethods()) {
-        registerDecl(m, `fn:${file}#${name.toLowerCase()}.${m.getName().toLowerCase()}`, 'function', `${name}.${m.getName()}`, classId, file);
+        registerDecl(m, `fn:${idFile}#${idName(name)}.${idName(m.getName())}`, 'function', `${name}.${m.getName()}`, classId, file);
       }
     }
   }
@@ -215,8 +238,8 @@ export function indexRepository(opts: IndexOptions): IndexResult {
       if (imp.isTypeOnly()) continue;
       const target = imp.getModuleSpecifierSourceFile();
       if (!target) continue;
-      const targetId = `mod:${rel(opts.root, target)}`;
-      if (nodes.has(targetId)) addEdge('imports', `mod:${file}`, targetId, file, imp, []);
+      const targetId = `mod:${idPart(rel(opts.root, target))}`;
+      if (nodes.has(targetId) && nodes.has(`mod:${idPart(file)}`)) addEdge('imports', `mod:${idPart(file)}`, targetId, file, imp, []);
     }
   }
 
@@ -224,12 +247,14 @@ export function indexRepository(opts: IndexOptions): IndexResult {
   for (const { sf, rel: file } of files) {
     for (const expr of sf.getDescendants()) {
       if (Node.isCallExpression(expr)) {
-        const owner = ownerOf(expr, declToId) ?? `mod:${file}`;
+        const owner = ownerOf(expr, declToId) ?? `mod:${idPart(file)}`;
+        if (!nodes.has(owner)) continue;
         const target = resolveCallee(expr, declToId);
         if (target) addEdge('calls', owner, target, file, expr, ['request']);
         maybeRoute(expr, owner, file);
       } else if (Node.isNewExpression(expr)) {
-        const owner = ownerOf(expr, declToId) ?? `mod:${file}`;
+        const owner = ownerOf(expr, declToId) ?? `mod:${idPart(file)}`;
+        if (!nodes.has(owner)) continue;
         const target = resolveIdentifierLike(expr.getExpression(), declToId);
         if (target) addEdge('depends_on', owner, target, file, expr, [], 'constructs');
       }

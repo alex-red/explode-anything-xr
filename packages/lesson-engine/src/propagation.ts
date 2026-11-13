@@ -6,7 +6,8 @@ import type { EngineContext } from './context.ts';
  * every node after it on that path stops receiving the path's flow.
  *
  * Truth (ADR-0007):
- * - mechanical systems → `authored_model` (the teaching model's rule);
+ * - mechanical systems → `authored_model` (the teaching model's rule), or `inferred` when the
+ *   connection itself is only a hypothesis (a model drafted by an AI on request);
  * - software with a recorded mutation run for this edge → `observed`;
  * - otherwise → `inferred` (shown as a hypothesis, never as a failure).
  */
@@ -25,7 +26,9 @@ export function computeConsequence(ctx: EngineContext, edgeId: string): Conseque
   let truth: Consequence['truth_status'] = 'inferred';
   const evidenceIds: string[] = [];
   if (ctx.bundle.graph.system_kind === 'mechanical') {
-    truth = 'authored_model';
+    // The consequence is the model's rule, so it is exactly as strong as the connection that was
+    // cut: a person's teaching model, or a model's unchecked draft (ADR-0026), never more.
+    truth = edge.truth_status === 'authored_model' ? 'authored_model' : 'inferred';
     evidenceIds.push(...edge.evidence_ids.filter((id) => ctx.evidence.get(id)?.kind === 'authored_rule'));
   } else {
     for (const ev of ctx.evidence.values()) {

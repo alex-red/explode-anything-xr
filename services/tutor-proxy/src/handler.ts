@@ -6,6 +6,7 @@ import { callMeta, DEFAULT_META_MODEL } from './meta.ts';
 import type { BundleRegistry } from './bundles.ts';
 import { buildGraphContext, buildTurnText, stateFromRequest, SYSTEM_PROMPT } from './context.ts';
 import { DEFAULT_MODEL, PROXY_VERSION, type Env, type KVLike } from './env.ts';
+import type { ExplodeService } from './explode/service.ts';
 import { callTranscribe } from './transcribe.ts';
 import { audioToday, checkRateLimit, DEFAULT_DAILY_AUDIO_SECONDS, estimateTokens, MAX_AUDIO_BYTES, MAX_BODY_BYTES, MemoryKV, parseCap, recordAudio, recordSpend, spentToday } from './limits.ts';
 
@@ -17,6 +18,8 @@ export interface HandlerDeps {
   memoryKv?: KVLike;
   timeoutMs?: number;
   log?: (msg: string) => void;
+  /** Explode Anything (ADR-0026). Absent: those routes answer 404 and only shipped systems exist. */
+  explode?: ExplodeService;
 }
 
 type FallbackReason = string;
@@ -65,7 +68,7 @@ export function createHandler(deps: HandlerDeps) {
     const cors: Record<string, string> = { vary: 'Origin' };
     if (origin && originOk) {
       cors['access-control-allow-origin'] = origin;
-      cors['access-control-allow-methods'] = 'POST, GET, OPTIONS';
+      cors['access-control-allow-methods'] = 'POST, GET, DELETE, OPTIONS';
       cors['access-control-allow-headers'] = 'content-type';
       cors['access-control-max-age'] = '86400';
     }
@@ -82,11 +85,15 @@ export function createHandler(deps: HandlerDeps) {
     const killed = env.KILL_SWITCH === '1';
 
     if (url.pathname === '/v1/health' && request.method === 'GET') {
-      return json(200, { ok: true, version: PROXY_VERSION, killed, provider, model });
+      return json(200, { ok: true, version: PROXY_VERSION, killed, provider, model, explode: !!deps.explode && !killed && !!apiKey });
     }
     if (url.pathname === '/v1/tutor/transcribe') {
       if (request.method !== 'POST') return json(405, { error: 'method not allowed' });
       return transcribe(request, env, killed, json);
+    }
+    if (url.pathname.startsWith('/v1/explode/')) {
+      if (!deps.explode) return json(404, { error: 'not found' });
+      return deps.explode.handle(request, env, url.pathname, json, env.TUTOR_KV ?? memoryKv);
     }
     if (url.pathname !== '/v1/tutor/turn') return json(404, { error: 'not found' });
     if (request.method !== 'POST') return json(405, { error: 'method not allowed' });
@@ -110,7 +117,8 @@ export function createHandler(deps: HandlerDeps) {
     if (!parsed.success) return json(400, { error: 'invalid request', issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`) });
     const req: TutorTurnRequest = parsed.data;
 
-    const entry = deps.registry.get(req.system_id);
+    // A shipped system, or one built on request that this process still holds.
+    const entry = deps.registry.get(req.system_id) ?? deps.explode?.entry(req.system_id);
     if (!entry) return json(404, { error: 'unknown system' });
     if (entry.bundle.graph.revision.value !== req.revision) {
       return json(409, { error: 'revision mismatch', expected: entry.bundle.graph.revision.value });

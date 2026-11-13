@@ -24,6 +24,12 @@ export const AssistantCommand = z.discriminatedUnion('type', [
   z.object({ type: z.literal('set_detail'), level: z.enum(['key', 'supporting', 'all']) }),
   /** Open another of the systems the app ships. */
   z.object({ type: z.literal('open_system'), system_id: Id }),
+  /**
+   * Explode Anything (ADR-0026): look up something the app does not ship and put a proposal in
+   * front of the learner. It builds nothing: only the learner's Build button does, and Cancel is
+   * as near. `query` is the learner's own words for it, e.g. a GitHub address.
+   */
+  z.object({ type: z.literal('propose_system'), kind: z.enum(['repository', 'subject']), query: z.string().min(1).max(300) }),
 ]);
 export type AssistantCommand = z.infer<typeof AssistantCommand>;
 export type AssistantCommandType = AssistantCommand['type'];
@@ -47,7 +53,9 @@ export const ViewContext = z.object({
   awaiting_prediction: z.boolean(),
   /** Every button the learner can see, with the label it shows now. */
   buttons: z.array(z.object({ id: Id, label: z.string().max(40), enabled: z.boolean() })).max(48),
-  systems: z.array(z.object({ id: Id, name: z.string().max(80), current: z.boolean() })).max(8),
+  systems: z.array(z.object({ id: Id, name: z.string().max(80), current: z.boolean() })).max(12),
+  /** True when the app can reach a server that builds systems on request (ADR-0026). */
+  can_propose: z.boolean().default(false),
 });
 export type ViewContext = z.infer<typeof ViewContext>;
 

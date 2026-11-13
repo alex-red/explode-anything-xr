@@ -14,6 +14,8 @@ const ALLOWED: ReadonlySet<string> = new Set(TUTOR_ACTION_TYPES);
 export interface CommandScope {
   enabledButtons: ReadonlySet<string>;
   systems: ReadonlySet<string>;
+  /** The app can put a proposal for a new system in front of the learner (ADR-0026). */
+  canPropose?: boolean;
 }
 
 /** The scope a request grants: none unless it is a `free_text` turn that says what is on screen. */
@@ -22,6 +24,7 @@ export function commandScopeOf(req: Pick<TutorTurnRequest, 'trigger' | 'view'>):
   return {
     enabledButtons: new Set(req.view.buttons.filter((b) => b.enabled).map((b) => b.id)),
     systems: new Set(req.view.systems.map((s) => s.id)),
+    canPropose: req.view.can_propose === true,
   };
 }
 
@@ -115,6 +118,9 @@ export function validateCommand(ctx: EngineContext, c: AssistantCommand, scope: 
       break;
     case 'open_system':
       if (!scope.systems.has(c.system_id)) errors.push(`unknown system ${c.system_id}`);
+      break;
+    case 'propose_system':
+      if (!scope.canPropose) errors.push('building a new system is not available here');
       break;
     default:
       break;

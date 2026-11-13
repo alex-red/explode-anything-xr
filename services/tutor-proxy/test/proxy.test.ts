@@ -280,7 +280,7 @@ describe('tutor proxy', () => {
     const { handle } = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
     const res = await handle(new Request('https://proxy.test/v1/health'), { ...baseEnv, KILL_SWITCH: '1' });
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, version: '0.4.0', killed: true, provider: 'anthropic', model: 'claude-haiku-5-5' });
+    expect(JSON.parse(text)).toEqual({ explode: false, ok: true, version: '0.5.0', killed: true, provider: 'anthropic', model: 'claude-haiku-5-5' });
     expect(text).not.toContain('sk-test');
   });
 
