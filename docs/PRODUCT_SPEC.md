@@ -165,7 +165,7 @@ A submission can win at most one prize.
 1. Every visible claim carries a truth status ([ARCHITECTURE.md §3](ARCHITECTURE.md#3-truth-contract)).
 2. `observed` means *recorded at build time*. The UI never says "running now".
 3. Edges are never `observed`. A break with no matching recorded mutation is styled as a **hypothesis**.
-4. The drivetrain is labeled "simplified teaching model, not a real vehicle".
+4. The drivetrain is labeled "simplified teaching model, not a real vehicle". Jupiter is labeled a teaching model too: its statement says the layers are approximate, nobody has seen the interior, the field, Io, the aurora and the spot's depth are not to scale, and the clouds are painted by rule, not imaged.
 5. The hero repo is disclosed as "a sample service written for this demo" in both the UI and Devpost text.
 6. The tutor cannot invent ids, cite missing evidence, or claim more than its evidence supports. Plans that do are rejected ([ADR-0011](adr/0011-tutor.md)).
 7. Video and screenshots are genuine captures of the real app. Captures made in the desktop emulator are labeled as emulator captures and are never presented as headset or passthrough footage. Any composited overlay is labeled.

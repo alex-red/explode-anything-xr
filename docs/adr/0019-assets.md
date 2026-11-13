@@ -12,6 +12,10 @@ Every PWA asset is a publicly downloadable file. Many asset licenses (possibly i
 - No third-party meshes or textures in P0.
 - Fonts, SFX and narration are recorded in [DATA_PROVENANCE.md](../DATA_PROVENANCE.md).
 
+## Amendment, 2026-11-12: procedural textures
+
+The Jupiter model paints its own textures at runtime (`apps/quest/src/app/looks/jupiter-paint.ts`): the cloud map, a row of depth colours and a tile of fine streaks, all computed from a seed. Nothing is downloaded and no image file ships, so the decision above stands: still no third-party meshes or textures. A painted texture is an illustration, and the model statement says the clouds are "painted by rule, not imaged".
+
 ## Consequences
 
 - Small download and no licensing risk.

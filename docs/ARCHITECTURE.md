@@ -41,6 +41,7 @@ tools/content/              generate.ts (pipeline), check.ts, layout, lessons, e
 services/tutor-proxy/       Node server: POST tutor turn → validated TutorPlan; POST audio → transcript
 content/repo-demo/fixture/  sample auth-service (MIT, written for this demo; ADR-0018)
 content/drivetrain/         authored drivetrain spec (procedural parts; ADR-0019)
+content/jupiter/            authored Jupiter spec and lesson (procedural parts and painted textures; ADR-0019)
 docs/                       this tree
 ```
 

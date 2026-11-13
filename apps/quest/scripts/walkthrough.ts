@@ -2,7 +2,8 @@
  * Emulator walkthrough (docs/FINAL_PLAN.md B1).
  *
  * Drives the real app in the IWER desktop emulator through both lessons with emulated rays,
- * first with controllers and then with hands, then does a two-hand pull. Every step is derived
+ * first with controllers and then with hands, then does a two-hand pull, then runs the Jupiter
+ * lesson from under "More". Every step is derived
  * from the lesson definitions in the content bundles and checked against the `[explode]` events
  * the app logs. Fails on a missing or unexpected event, or on any console error or warning.
  *
@@ -142,11 +143,11 @@ function loadBundle(name: string): Bundle {
 
 let pressed = 0;
 
-async function runLesson(mode: Mode, bundle: Bundle, index = 0): Promise<void> {
+async function runLesson(mode: Mode, bundle: Bundle, index = 0, label?: string): Promise<void> {
   const lesson = bundle.lessons[index] ?? fail(`${bundle.graph.system_id} has no lesson ${index}`);
   const breakTarget = bundle.graph.edges.find((e) => e.id === lesson.break_edge_id)?.target_id ?? fail('break edge not in graph');
   const wrongSocket = lesson.repair_candidates.find((c) => c !== breakTarget);
-  const name = index === 0 ? bundle.graph.system_kind : lesson.id.replace(/^lesson:/, '');
+  const name = label ?? (index === 0 ? bundle.graph.system_kind : lesson.id.replace(/^lesson:/, ''));
   const say = (i: number, text: string) => console.log(`  [${mode}] ${name} step ${i + 1}/${lesson.steps.length} ${lesson.steps[i]!.kind}: ${text}`);
 
   /** Do one press and return the accepted events, failing unless one of them is `type`. */
@@ -191,7 +192,18 @@ async function runLesson(mode: Mode, bundle: Bundle, index = 0): Promise<void> {
   }
 }
 
-async function runMode(mode: Mode, mechanical: Bundle, software: Bundle): Promise<void> {
+/** Press More (the M key) until the app is on `bundle`'s first lesson. */
+async function openUnderMore(bundle: Bundle): Promise<void> {
+  const lesson = bundle.lessons[0]!.id;
+  for (let tries = 0; tries < 6; tries++) {
+    await key('m');
+    await sleep(1500);
+    if ((await targets()).step.includes(lesson)) return;
+  }
+  fail(`More never reached ${bundle.graph.system_id}`);
+}
+
+async function runMode(mode: Mode, mechanical: Bundle, software: Bundle, extras: Bundle[]): Promise<void> {
   console.log(`\n${mode} mode`);
   await cli('xr', 'set-input-mode', { mode });
   await key('0'); // forget progress, back to the tutorial
@@ -230,6 +242,13 @@ async function runMode(mode: Mode, mechanical: Bundle, software: Bundle): Promis
   const stray = [...together, ...apart].filter((e) => e.type !== 'set_explode');
   if (stray.length) fail(`the two-hand pull also triggered: ${stray.map((e) => e.type).join(', ')}`);
   console.log(`  [${mode}] two-hand pull: collapse and explode ok, nothing else triggered`);
+
+  // The other teaching models under More, each through its whole lesson.
+  for (const extra of extras) {
+    await openUnderMore(extra);
+    await newEvents();
+    await runLesson(mode, extra, 0, extra.graph.system_id.replace(/^system:/, ''));
+  }
 }
 
 async function main(): Promise<void> {
@@ -239,6 +258,7 @@ async function main(): Promise<void> {
   const modes: Mode[] = args.includes('--mode') && (modeArg === 'controller' || modeArg === 'hand') ? [modeArg] : ['controller', 'hand'];
   const mechanical = loadBundle('headset'); // the opening tutorial; the drivetrain is under "More"
   const software = loadBundle('repo-demo');
+  const extras = [loadBundle('jupiter')];
 
   let started = false;
   const browserReady = () => cli<{ state?: { browserCommandReady?: boolean } }>('dev', 'status', undefined, 20_000).then((r) => r.state?.browserCommandReady === true, () => false);
@@ -267,7 +287,7 @@ async function main(): Promise<void> {
     await newLogs();
     const runStartedAt = seenUntil; // the log buffer outlives reloads; only this run's entries count
 
-    for (const mode of modes) await runMode(mode, mechanical, software);
+    for (const mode of modes) await runMode(mode, mechanical, software, extras);
 
     const problems = (await cli<LogEntry[]>('browser', 'logs', { count: 200, level: 'warn' })).concat(await cli<LogEntry[]>('browser', 'logs', { count: 200, level: 'error' }));
     const real = problems.filter((e) => (e.level === 'warn' || e.level === 'error') && e.timestamp > runStartedAt);
