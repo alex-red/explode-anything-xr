@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { Id } from './common.ts';
 import { TruthStatus } from './truth.ts';
 
-export const FlowType = z.enum(['request', 'data', 'electrical', 'torque', 'control']);
+export const FlowType = z.enum(['request', 'data', 'electrical', 'torque', 'control', 'heat']);
 export type FlowType = z.infer<typeof FlowType>;
 
 export const NodeKind = z.enum([

@@ -16,6 +16,8 @@ interface Layer {
   base: Color;
   glow: Color;
   glowIntensity: number;
+  /** Goes dark when its part stops (Finish.goesOut). */
+  out: boolean;
 }
 
 /**
@@ -27,6 +29,13 @@ interface Layer {
  */
 export class PartLook {
   readonly group = new Group();
+  /**
+   * When this part leaves as the model opens, 0 (first) to 1 (last), or null to move with the
+   * rest. Closing runs the same order backwards.
+   */
+  stage: number | null = null;
+  /** This part's own motion, if it has one. */
+  move: Motion | null = null;
   private readonly layers: Layer[] = [];
   private state: LookState | null = null;
 
@@ -38,7 +47,7 @@ export class PartLook {
       mesh.name = finish.name;
       mesh.raycast = noRaycast;
       this.group.add(mesh);
-      this.layers.push({ mat, base: mat.color.clone(), glow: mat.emissive.clone(), glowIntensity: mat.emissiveIntensity });
+      this.layers.push({ mat, base: mat.color.clone(), glow: mat.emissive.clone(), glowIntensity: mat.emissiveIntensity, out: finish.goesOut === true });
     }
   }
 
@@ -58,6 +67,13 @@ export class PartLook {
       m.emissiveIntensity = l.glowIntensity;
       switch (state) {
         case 'fault':
+          if (l.out) {
+            // A light that has lost its source: nearly out, with a faint ember of the fault colour.
+            m.color.multiplyScalar(0.25);
+            m.emissive.copy(FAULT);
+            m.emissiveIntensity = 0.05 + 0.05 * pulse;
+            break;
+          }
           m.color.lerp(FAULT, 0.45);
           m.emissive.copy(FAULT);
           m.emissiveIntensity = 0.3 + 0.35 * pulse;
@@ -84,6 +100,11 @@ export class PartLook {
     }
   }
 
+  /** Once a frame: `time` in seconds, `open` 0 (closed) to 1 (fully open). No allocation. */
+  tick(time: number, open: number): void {
+    this.move?.(this.group, time, open);
+  }
+
   dispose(): void {
     for (const child of this.group.children) (child as Mesh).geometry.dispose();
     for (const l of this.layers) l.mat.dispose();
@@ -92,6 +113,8 @@ export class PartLook {
 
 function material(f: Finish, env: Texture | null): MeshPhysicalMaterial {
   const see = f.opacity !== undefined && f.opacity < 1;
+  const map = f.map?.() ?? null;
+  const lit = map && f.selfLit ? f.selfLit : 0;
   const m = new MeshPhysicalMaterial({
     color: f.color,
     metalness: f.metalness,
@@ -101,8 +124,10 @@ function material(f: Finish, env: Texture | null): MeshPhysicalMaterial {
     sheen: f.sheen ?? 0,
     sheenRoughness: 0.8,
     sheenColor: 0x8a9099,
-    emissive: f.emissive ?? 0x000000,
-    emissiveIntensity: f.emissive ? (f.emissiveIntensity ?? 1) : 0,
+    map,
+    emissiveMap: lit ? map : null,
+    emissive: lit ? 0xffffff : (f.emissive ?? 0x000000),
+    emissiveIntensity: lit || (f.emissive ? (f.emissiveIntensity ?? 1) : 0),
     transparent: see,
     opacity: f.opacity ?? 1,
     depthWrite: !see,
@@ -112,8 +137,12 @@ function material(f: Finish, env: Texture | null): MeshPhysicalMaterial {
     side: DoubleSide,
   });
   m.name = f.name;
+  f.shade?.(m);
   return m;
 }
+
+/** A part's own motion: turn or sway its group. Runs every frame, so it must not allocate. */
+export type Motion = (group: Group, time: number, open: number) => void;
 
 /** A part type a builder knows: (part spec) → its assembly, in the part's own frame before rotation. */
 export type LookBuilder = (part: PartShape, id: string) => Assembly;

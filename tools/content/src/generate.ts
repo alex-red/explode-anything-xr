@@ -2,7 +2,8 @@ import type { ContentBundle } from '@explode/contracts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { buildDrivetrainBundle } from './drivetrain.ts';
 import { buildHeadsetBundle } from './headset.ts';
-import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, IWSDK_BUNDLE_PATH, OUTPUT_DIR, REPO_BUNDLE_PATH } from './paths.ts';
+import { buildJupiterBundle } from './jupiter.ts';
+import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, IWSDK_BUNDLE_PATH, JUPITER_BUNDLE_PATH, OUTPUT_DIR, REPO_BUNDLE_PATH } from './paths.ts';
 import { buildRepoBundle } from './repo.ts';
 import { buildSdkBundle } from './sdk.ts';
 
@@ -21,5 +22,6 @@ function write(path: string, bundle: ContentBundle) {
 mkdirSync(OUTPUT_DIR, { recursive: true });
 write(DRIVETRAIN_BUNDLE_PATH, buildDrivetrainBundle(previous(DRIVETRAIN_BUNDLE_PATH)));
 write(HEADSET_BUNDLE_PATH, buildHeadsetBundle(previous(HEADSET_BUNDLE_PATH)));
+write(JUPITER_BUNDLE_PATH, buildJupiterBundle(previous(JUPITER_BUNDLE_PATH)));
 write(REPO_BUNDLE_PATH, buildRepoBundle(previous(REPO_BUNDLE_PATH)));
 write(IWSDK_BUNDLE_PATH, buildSdkBundle(previous(IWSDK_BUNDLE_PATH)));

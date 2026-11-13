@@ -8,6 +8,7 @@ import { Euler, EventDispatcher, Group, Matrix4, Mesh, Quaternion, MathUtils, Ob
 import { ContentBundle } from '@explode/contracts';
 import drivetrainJson from '../src/content/drivetrain.bundle.json';
 import headsetJson from '../src/content/headset.bundle.json';
+import jupiterJson from '../src/content/jupiter.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
 import sdkJson from '../src/content/iwsdk.bundle.json';
 import { startApp, type ExplodeApp } from '../src/app/app.ts';
@@ -1475,6 +1476,15 @@ describe('scene harness: part labels never overlap', () => {
     expect(car.length).toBeGreaterThanOrEqual(6);
     expectNoOverlap(car);
   });
+
+  it('Jupiter, exploded, shows every part label without overlap', () => {
+    const h = setup(false, { bundles: [ContentBundle.parse(jupiterJson), ContentBundle.parse(repoJson)] });
+    h.press(h.button(/^Explode$/));
+    h.frames(90);
+    const planet = labelRects(h);
+    expect(planet.length).toBe(9);
+    expectNoOverlap(planet);
+  });
 });
 
 describe('scene harness: render budget for the opening scene', () => {
@@ -1943,5 +1953,61 @@ describe('scene harness: part context menu', () => {
     h.press(h.view().nodes.get('part:display')!.mesh); // commits the prediction instead
     expect(h.state().prediction?.target_id).toBe('part:display');
     expect(menuOf(h).openFor).toBeNull();
+  });
+});
+
+describe('scene harness: Jupiter', () => {
+  const DYNAMO = 'edge:powers:part:metallic->part:field';
+  const withJupiter = [ContentBundle.parse(headsetJson), ContentBundle.parse(drivetrainJson), ContentBundle.parse(jupiterJson), ContentBundle.parse(repoJson)];
+
+  it('is under More after the drivetrain, and its lesson runs to the end by presses', () => {
+    const h = setup(false, { bundles: withJupiter });
+    h.press(h.button(/^More: Drivetrain$/));
+    h.press(h.button(/^More: Jupiter$/));
+    expect(h.state().system_id).toBe('system:jupiter');
+    expect(h.caption()).toMatch(/nobody has seen the interior directly/);
+
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get(DYNAMO)!.plug!.mesh);
+    expect(h.state().broken_edge_ids).toEqual([DYNAMO]);
+    h.press(h.view().nodes.get('part:field')!.mesh);
+    expect(h.state().prediction).toEqual({ target_id: 'part:field', correct: true });
+    // The field and the aurora lose their source; the weather and Io do not.
+    expect(h.state().consequences[0]?.affected_ids).toEqual(['part:field', 'part:aurora']);
+    expect(h.state().consequences[0]?.truth_status).toBe('authored_model');
+    expect(h.caption()).not.toMatch(/We dimmed your view/); // the room dims for the headset's camera link only
+
+    h.press(h.button(/^Next/));
+    h.press(h.view().sockets.find((s) => s.targetId === 'part:field')!.mesh);
+    expect(h.state().broken_edge_ids).toEqual([]);
+    h.press(h.button(/^Collapse$/));
+    h.frames(60);
+    expect(h.state().lesson?.status).toBe('complete');
+    h.press(h.button(/^More: Headset$/));
+    expect(h.state().system_id).toBe('system:mr-headset');
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('opens from the outside in and ends exactly on the layout; the field turns while it does', () => {
+    const h = setup(false, { bundles: [ContentBundle.parse(jupiterJson), ContentBundle.parse(repoJson)] });
+    const layout = ContentBundle.parse(jupiterJson).layout.placements;
+    const node = (id: string) => h.view().nodes.get(id)! as unknown as { mesh: Mesh; look: { group: Object3D } };
+    const moved = (id: string) => node(id).mesh.position.distanceTo(new Vector3(...layout[id]!.collapsed)) / new Vector3(...layout[id]!.exploded).distanceTo(new Vector3(...layout[id]!.collapsed));
+    h.frames(30);
+    const turnedBefore = node('part:field').look.group.rotation.y;
+    h.press(h.button(/^Explode$/));
+    let seen = false;
+    for (let i = 0; i < 120; i++) {
+      h.frames(1);
+      // Part way through (the harness takes long steps): the field has arrived while the core is still on its way.
+      if (moved('part:field') > 0.99 && moved('part:core') < 0.8) seen = true;
+      expect(moved('part:field')).toBeGreaterThanOrEqual(moved('part:clouds-north') - 1e-6);
+      expect(moved('part:clouds-north')).toBeGreaterThanOrEqual(moved('part:core') - 1e-6);
+    }
+    expect(seen).toBe(true);
+    for (const id of Object.keys(layout)) expect(node(id).mesh.position.toArray().map((n) => +n.toFixed(5)), id).toEqual(layout[id]!.exploded);
+    expect(node('part:field').look.group.rotation.y).toBeGreaterThan(turnedBefore);
   });
 });

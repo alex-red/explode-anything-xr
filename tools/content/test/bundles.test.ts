@@ -6,13 +6,16 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildDrivetrainBundle } from '../src/drivetrain.ts';
 import { buildHeadsetBundle } from '../src/headset.ts';
+import { buildJupiterBundle } from '../src/jupiter.ts';
 import { layoutProblems, targetOverlaps, verifyBundle, DRILL_LESSON_ID, DRILL_MUTATION_ID } from '../src/index.ts';
-import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, REPO_BUNDLE_PATH, REPO_DEMO_DIR } from '../src/paths.ts';
+import { DRIVETRAIN_BUNDLE_PATH, HEADSET_BUNDLE_PATH, JUPITER_BUNDLE_PATH, REPO_BUNDLE_PATH, REPO_DEMO_DIR } from '../src/paths.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8')) as ContentBundle;
 const repo = load(REPO_BUNDLE_PATH);
 const drivetrain = load(DRIVETRAIN_BUNDLE_PATH);
 const headset = load(HEADSET_BUNDLE_PATH);
+const jupiter = load(JUPITER_BUNDLE_PATH);
+const JP_EDGE = 'edge:powers:part:metallic->part:field';
 const HS_EDGE = 'edge:transmits:part:cameras->part:board';
 const MAIN_EDGE = 'edge:calls:fn:src/auth/service.ts#authservice.login->fn:src/sessions/store.ts#sessionstore.create';
 const CREATE = 'fn:src/sessions/store.ts#sessionstore.create';
@@ -23,6 +26,7 @@ describe('generated bundles', () => {
     expect(verifyBundle(repo)).toEqual([]);
     expect(verifyBundle(drivetrain)).toEqual([]);
     expect(verifyBundle(headset)).toEqual([]);
+    expect(verifyBundle(jupiter)).toEqual([]);
     expect(layoutProblems(repo.layout)).toEqual([]);
     expect(targetOverlaps(repo.graph, repo.layout), 'a ray aimed at one part must not land on its neighbour').toEqual([]);
   });
@@ -31,6 +35,7 @@ describe('generated bundles', () => {
     expect(repo.graph.revision.value).toBe(hashTree(resolve(REPO_DEMO_DIR, 'fixture')));
     expect(buildDrivetrainBundle(drivetrain).content_hash).toBe(drivetrain.content_hash);
     expect(buildHeadsetBundle(headset).content_hash).toBe(headset.content_hash);
+    expect(buildJupiterBundle(jupiter).content_hash).toBe(jupiter.content_hash);
   });
 
   it('marks only mutated edges as sandbox-mutable and never marks an edge observed', () => {
@@ -139,6 +144,42 @@ describe('lessons replay to completion', () => {
     const model = headset.evidence.find((ev) => ev.id === 'ev:rule:headset-model');
     expect(model?.summary).toMatch(/not the device's actual internals/);
     expect(model?.summary).toMatch(/Not affiliated with or endorsed by Meta/);
+  });
+
+  it('jupiter lesson: stopping the dynamo takes the field and the aurora, and leaves the weather', () => {
+    const ctx = createContext(jupiter);
+    let s = replay(ctx, [
+      { type: 'set_explode', factor: 1 },
+      { type: 'trace', path_id: 'path:dynamo-to-aurora' },
+      { type: 'unplug', edge_id: JP_EDGE },
+    ]);
+    const c = s.consequences[0];
+    expect(c?.truth_status).toBe('authored_model');
+    expect(c?.affected_ids).toEqual(['part:field', 'part:aurora']);
+    s = reduce(ctx, s, { type: 'plug', edge_id: JP_EDGE, target_id: 'part:aurora' });
+    expect(s.broken_edge_ids).toEqual([JP_EDGE]);
+    expect(s.misplug_count).toBe(1);
+    s = replay(ctx, [
+      { type: 'set_explode', factor: 1 },
+      { type: 'trace', path_id: 'path:dynamo-to-aurora' },
+      { type: 'unplug', edge_id: JP_EDGE },
+      { type: 'predict', target_id: 'part:field' },
+      { type: 'next' },
+      { type: 'plug', edge_id: JP_EDGE, target_id: 'part:field' },
+      { type: 'set_explode', factor: 0 },
+    ]);
+    expect(s.lesson?.status).toBe('complete');
+    expect(s.prediction?.correct).toBe(true);
+  });
+
+  it('every jupiter claim is an authored model, and the model says what it is not', () => {
+    for (const n of jupiter.graph.nodes) expect(n.truth_status).toBe('authored_model');
+    for (const e of jupiter.graph.edges) expect(e.truth_status).toBe('authored_model');
+    for (const ev of jupiter.evidence) expect(ev.truth_status).toBe('authored_model');
+    const model = jupiter.evidence.find((ev) => ev.id === 'ev:rule:jupiter-model');
+    expect(model?.summary).toMatch(/nobody has seen the interior directly/);
+    expect(model?.summary).toMatch(/not to scale/);
+    expect(model?.summary).toMatch(/Not affiliated with or endorsed by NASA/);
   });
 
   it('repo hero lesson', () => {

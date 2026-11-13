@@ -1,0 +1,776 @@
+{
+  "bundle_version": "1",
+  "graph": {
+    "schema_version": "1.0",
+    "system_id": "system:jupiter",
+    "system_kind": "mechanical",
+    "display_name": "Jupiter (teaching model)",
+    "revision": {
+      "kind": "content_hash",
+      "value": "f4ee58541fc1f229f92dd8e4459e86ba8bcce08cfa45dcbb99c1d29d4217a26b"
+    },
+    "nodes": [
+      {
+        "id": "part:clouds-north",
+        "kind": "component",
+        "label": "Northern cloud deck",
+        "summary": "Belts and zones: jet streams blowing in alternating directions.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.8
+      },
+      {
+        "id": "part:clouds-south",
+        "kind": "component",
+        "label": "Southern cloud deck",
+        "summary": "The same weather layer south of the equator. It holds the Great Red Spot.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.8
+      },
+      {
+        "id": "part:red-spot",
+        "kind": "component",
+        "label": "Great Red Spot",
+        "summary": "A storm wider than Earth, yet only a few hundred kilometers deep.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.75
+      },
+      {
+        "id": "part:molecular",
+        "kind": "component",
+        "label": "Molecular hydrogen",
+        "summary": "Most of what you would fall through: hydrogen gas that thickens into a hot fluid.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.7
+      },
+      {
+        "id": "part:metallic",
+        "kind": "component",
+        "label": "Metallic hydrogen ocean",
+        "summary": "Hydrogen squeezed until it conducts electricity like a liquid metal.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.95
+      },
+      {
+        "id": "part:core",
+        "kind": "component",
+        "label": "Dilute core",
+        "summary": "Heavy elements mixed into the hydrogen around them, with no sharp edge.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.7
+      },
+      {
+        "id": "part:field",
+        "kind": "component",
+        "label": "Magnetic field",
+        "summary": "The strongest planetary magnetic field in the solar system. It traps charged particles.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.9
+      },
+      {
+        "id": "part:aurora",
+        "kind": "component",
+        "label": "Aurora",
+        "summary": "A ring of glowing gas around the north magnetic pole. The south pole has one too.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.85
+      },
+      {
+        "id": "part:io",
+        "kind": "component",
+        "label": "Io and its plasma ring",
+        "summary": "A volcanic moon that sheds material into the magnetic field.",
+        "parent_id": null,
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model",
+          "ev:license:procedural-geometry"
+        ],
+        "importance": 0.6
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge:transmits:part:core->part:metallic",
+        "source_id": "part:core",
+        "target_id": "part:metallic",
+        "relation": "transmits",
+        "flows": [
+          "heat"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:core->part:metallic",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "deep heat"
+      },
+      {
+        "id": "edge:transmits:part:metallic->part:molecular",
+        "source_id": "part:metallic",
+        "target_id": "part:molecular",
+        "relation": "transmits",
+        "flows": [
+          "heat"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:metallic->part:molecular",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "rising heat"
+      },
+      {
+        "id": "edge:powers:part:molecular->part:clouds-north",
+        "source_id": "part:molecular",
+        "target_id": "part:clouds-north",
+        "relation": "powers",
+        "flows": [
+          "heat"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:molecular->part:clouds-north",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "heat from below"
+      },
+      {
+        "id": "edge:powers:part:molecular->part:clouds-south",
+        "source_id": "part:molecular",
+        "target_id": "part:clouds-south",
+        "relation": "powers",
+        "flows": [
+          "heat"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:molecular->part:clouds-south",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "heat from below"
+      },
+      {
+        "id": "edge:transmits:part:clouds-south->part:red-spot",
+        "source_id": "part:clouds-south",
+        "target_id": "part:red-spot",
+        "relation": "transmits",
+        "flows": [
+          "torque"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:clouds-south->part:red-spot",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "jet winds"
+      },
+      {
+        "id": "edge:powers:part:metallic->part:field",
+        "source_id": "part:metallic",
+        "target_id": "part:field",
+        "relation": "powers",
+        "flows": [
+          "electrical"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:metallic->part:field",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": true,
+        "label": "dynamo"
+      },
+      {
+        "id": "edge:transmits:part:io->part:field",
+        "source_id": "part:io",
+        "target_id": "part:field",
+        "relation": "transmits",
+        "flows": [
+          "electrical"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:transmits:part:io->part:field",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "plasma"
+      },
+      {
+        "id": "edge:powers:part:field->part:aurora",
+        "source_id": "part:field",
+        "target_id": "part:aurora",
+        "relation": "powers",
+        "flows": [
+          "electrical"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:edge:powers:part:field->part:aurora",
+          "ev:rule:jupiter-model"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "charged particles"
+      }
+    ],
+    "paths": [
+      {
+        "id": "path:dynamo-to-aurora",
+        "label": "Dynamo to aurora",
+        "flow": "electrical",
+        "node_ids": [
+          "part:metallic",
+          "part:field",
+          "part:aurora"
+        ],
+        "edge_ids": [
+          "edge:powers:part:metallic->part:field",
+          "edge:powers:part:field->part:aurora"
+        ],
+        "truth_status": "authored_model",
+        "evidence_ids": [
+          "ev:rule:jupiter-model"
+        ]
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev:license:procedural-geometry",
+      "title": "Geometry: procedural primitives",
+      "summary": "Every part is generated at runtime from simple shapes described in spec.json. No third-party meshes are used.",
+      "kind": "asset_license",
+      "truth_status": "authored_model",
+      "license": {
+        "name": "MIT",
+        "spdx": "MIT",
+        "attribution": "Procedural geometry authored for EXPLODE"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:field->part:aurora",
+      "title": "Model rule: charged particles",
+      "summary": "The magnetic field traps charged particles, speeds them up and steers them into the atmosphere around the magnetic poles, where they make the gas glow. How they are sped up is still being worked out.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The magnetic field traps charged particles, speeds them up and steers them into the atmosphere around the magnetic poles, where they make the gas glow. How they are sped up is still being worked out.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:metallic->part:field",
+      "title": "Model rule: dynamo",
+      "summary": "Jupiter's fast spin is thought to drive electric currents in the liquid metallic hydrogen, which acts like a dynamo and generates the magnetic field. If the dynamo stopped, the field would have no source.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Jupiter's fast spin is thought to drive electric currents in the liquid metallic hydrogen, which acts like a dynamo and generates the magnetic field. If the dynamo stopped, the field would have no source.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:molecular->part:clouds-north",
+      "title": "Model rule: heat from below",
+      "summary": "Heat from below reaches the northern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Heat from below reaches the northern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:powers:part:molecular->part:clouds-south",
+      "title": "Model rule: heat from below",
+      "summary": "Heat from below reaches the southern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Heat from below reaches the southern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:clouds-south->part:red-spot",
+      "title": "Model rule: jet winds",
+      "summary": "The Great Red Spot is a storm in the southern weather layer, about 300 to 500 kilometers deep, turning between jet streams that blow in opposite directions.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "The Great Red Spot is a storm in the southern weather layer, about 300 to 500 kilometers deep, turning between jet streams that blow in opposite directions.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:core->part:metallic",
+      "title": "Model rule: deep heat",
+      "summary": "Heat rises out of Jupiter's deep interior. Jupiter gives off more heat than it receives from the Sun; the surplus is largely left over from its formation.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Heat rises out of Jupiter's deep interior. Jupiter gives off more heat than it receives from the Sun; the surplus is largely left over from its formation.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:io->part:field",
+      "title": "Model rule: plasma",
+      "summary": "Io's volcanoes shed roughly a tonne of material every second. Much of it becomes electrically charged and is trapped by the magnetic field as a ring along Io's orbit.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Io's volcanoes shed roughly a tonne of material every second. Much of it becomes electrically charged and is trapped by the magnetic field as a ring along Io's orbit.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:edge:transmits:part:metallic->part:molecular",
+      "title": "Model rule: rising heat",
+      "summary": "Heat from the metallic hydrogen ocean passes up into the molecular hydrogen above it.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "Heat from the metallic hydrogen ocean passes up into the molecular hydrogen above it.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    },
+    {
+      "id": "ev:rule:jupiter-model",
+      "title": "Teaching model: Jupiter",
+      "summary": "A simplified, stylized teaching model of Jupiter, authored from NASA's public descriptions of the planet and of Juno results. Layer depths are approximate and the real boundaries are gradual; nobody has seen the interior directly. The magnetic field, Io, the aurora and the Great Red Spot's depth are not to scale. The clouds are painted by rule, not imaged. Not affiliated with or endorsed by NASA.",
+      "kind": "authored_rule",
+      "truth_status": "authored_model",
+      "rule": {
+        "statement": "A simplified, stylized teaching model of Jupiter, authored from NASA's public descriptions of the planet and of Juno results. Layer depths are approximate and the real boundaries are gradual; nobody has seen the interior directly. The magnetic field, Io, the aurora and the Great Red Spot's depth are not to scale. The clouds are painted by rule, not imaged. Not affiliated with or endorsed by NASA.",
+        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+      }
+    }
+  ],
+  "layout": {
+    "system_id": "system:jupiter",
+    "anchor_distance": 0.65,
+    "cone_deg": {
+      "horizontal": 60,
+      "vertical": 50
+    },
+    "placements": {
+      "part:clouds-north": {
+        "collapsed": [
+          0,
+          0.03,
+          0
+        ],
+        "exploded": [
+          -0.2,
+          0.08,
+          0
+        ],
+        "radius": 0.0304
+      },
+      "part:clouds-south": {
+        "collapsed": [
+          0,
+          -0.03,
+          0
+        ],
+        "exploded": [
+          -0.2,
+          -0.11,
+          0
+        ],
+        "radius": 0.0304
+      },
+      "part:red-spot": {
+        "collapsed": [
+          0,
+          -0.028,
+          0.0742
+        ],
+        "exploded": [
+          -0.115,
+          -0.175,
+          0.08
+        ],
+        "radius": 0.0293
+      },
+      "part:molecular": {
+        "collapsed": [
+          0,
+          0,
+          0
+        ],
+        "exploded": [
+          -0.05,
+          -0.05,
+          0
+        ],
+        "radius": 0.0281
+      },
+      "part:metallic": {
+        "collapsed": [
+          0,
+          0,
+          0
+        ],
+        "exploded": [
+          0.125,
+          -0.05,
+          0
+        ],
+        "radius": 0.0339
+      },
+      "part:core": {
+        "collapsed": [
+          0,
+          0,
+          0
+        ],
+        "exploded": [
+          0.26,
+          -0.05,
+          0.02
+        ],
+        "radius": 0.0281
+      },
+      "part:field": {
+        "collapsed": [
+          0,
+          0,
+          0
+        ],
+        "exploded": [
+          0.11,
+          0.15,
+          0
+        ],
+        "radius": 0.0327
+      },
+      "part:aurora": {
+        "collapsed": [
+          0,
+          0.0735,
+          0
+        ],
+        "exploded": [
+          -0.05,
+          0.15,
+          0.04
+        ],
+        "radius": 0.0315
+      },
+      "part:io": {
+        "collapsed": [
+          0.118,
+          0,
+          0
+        ],
+        "exploded": [
+          0.27,
+          0.15,
+          0.02
+        ],
+        "radius": 0.0258
+      }
+    }
+  },
+  "lessons": [
+    {
+      "id": "lesson:jupiter-aurora",
+      "system_id": "system:jupiter",
+      "title": "Why do Jupiter's poles glow?",
+      "objectives": [
+        "Follow the chain from the metallic hydrogen ocean to the aurora.",
+        "See that the magnetic field and the weather have different sources."
+      ],
+      "break_edge_id": "edge:powers:part:metallic->part:field",
+      "repair_candidates": [
+        "part:aurora",
+        "part:field",
+        "part:red-spot"
+      ],
+      "misconception_on_wrong_prediction": "assumes-failure-is-local",
+      "steps": [
+        {
+          "id": "step:jp-explode",
+          "kind": "explode",
+          "caption": "This is a simplified model of Jupiter. It is a teaching model: the layers are approximate, and nobody has seen the interior directly. Press Explode to open it up, or pinch with both hands and pull apart.",
+          "expect": {
+            "type": "explode_at_least",
+            "factor": 0.8
+          },
+          "on_enter": [],
+          "hint": "Press Explode. You can also pinch with both hands and pull them apart."
+        },
+        {
+          "id": "step:jp-trace",
+          "kind": "trace",
+          "caption": "Press Trace to follow the electric currents from the metallic hydrogen ocean to the glowing poles.",
+          "expect": {
+            "type": "trace",
+            "path_id": "path:dynamo-to-aurora"
+          },
+          "on_enter": [],
+          "hint": "The Trace button is in the panel next to you."
+        },
+        {
+          "id": "step:jp-unplug",
+          "kind": "break",
+          "caption": "Stop the dynamo: unplug the link between the metallic hydrogen ocean and the magnetic field.",
+          "expect": {
+            "type": "unplug",
+            "edge_id": "edge:powers:part:metallic->part:field"
+          },
+          "on_enter": [
+            {
+              "type": "highlight",
+              "target_ids": [
+                "part:metallic",
+                "part:field"
+              ]
+            },
+            {
+              "type": "show_annotation",
+              "target_id": "part:metallic",
+              "text": "Currents here are thought to make the field."
+            }
+          ],
+          "hint": "Select the highlighted link, then press Unplug."
+        },
+        {
+          "id": "step:jp-predict",
+          "kind": "predict",
+          "caption": "Before you look: point at the first part that loses what it needs.",
+          "expect": {
+            "type": "predict"
+          },
+          "on_enter": [
+            {
+              "type": "ask_prediction",
+              "question": "Which part loses its source first?"
+            }
+          ],
+          "hint": "Which part does a dynamo make?",
+          "feedback": {
+            "correct": "Right. With no dynamo there is no magnetic field, so nothing steers charged particles to the poles and the aurora fades.",
+            "incorrect": "Not quite. The magnetic field loses its source first. Without it nothing steers charged particles to the poles, so the aurora fades."
+          }
+        },
+        {
+          "id": "step:jp-observe",
+          "kind": "observe",
+          "caption": "The field and the aurora are gone, but the storms keep turning: the weather runs on heat from below, not on the magnetic field. This is the teaching model's rule, not an observation of Jupiter.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "animate_flow",
+              "path_id": "path:dynamo-to-aurora"
+            }
+          ]
+        },
+        {
+          "id": "step:jp-repair",
+          "kind": "repair",
+          "caption": "Plug the link back into the right socket.",
+          "expect": {
+            "type": "repair",
+            "edge_id": "edge:powers:part:metallic->part:field"
+          },
+          "on_enter": [],
+          "hint": "The link came from the metallic hydrogen ocean. Which part does a dynamo make?"
+        },
+        {
+          "id": "step:jp-collapse",
+          "kind": "transition",
+          "caption": "The poles glow again. Press Collapse to close the planet up, or push your hands together.",
+          "expect": {
+            "type": "collapse_below",
+            "factor": 0.1
+          },
+          "on_enter": [],
+          "hint": "Press Collapse. You can also bring your hands together."
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "parts": {
+      "part:clouds-north": {
+        "shape": "sphere",
+        "size": [
+          0.12,
+          0.12,
+          0.12
+        ],
+        "color": "#c9a57a",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:clouds-south": {
+        "shape": "sphere",
+        "size": [
+          0.12,
+          0.12,
+          0.12
+        ],
+        "color": "#b8875e",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:red-spot": {
+        "shape": "sphere",
+        "size": [
+          0.03,
+          0.03,
+          0.03
+        ],
+        "color": "#b5452c",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:molecular": {
+        "shape": "sphere",
+        "size": [
+          0.148,
+          0.148,
+          0.148
+        ],
+        "color": "#d9a441",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:metallic": {
+        "shape": "sphere",
+        "size": [
+          0.128,
+          0.128,
+          0.128
+        ],
+        "color": "#9aa7b8",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:core": {
+        "shape": "sphere",
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ],
+        "color": "#ff8a3c",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "part:field": {
+        "shape": "torus",
+        "size": [
+          0.232,
+          0.012,
+          0
+        ],
+        "color": "#5aa0ff",
+        "rotation_deg": [
+          100,
+          0,
+          0
+        ]
+      },
+      "part:aurora": {
+        "shape": "torus",
+        "size": [
+          0.05,
+          0.006,
+          0
+        ],
+        "color": "#a06bff",
+        "rotation_deg": [
+          90,
+          0,
+          0
+        ]
+      },
+      "part:io": {
+        "shape": "sphere",
+        "size": [
+          0.024,
+          0.024,
+          0.024
+        ],
+        "color": "#e6d24a",
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  "content_hash": "d9d4afb97cf3f74c5e4d50139e6f92d0c769a485939dd96ec6b612175800015c",
+  "generated_at": "2026-11-13T04:47:30.339Z",
+  "generator": "explode-content-tools@0.1.0"
+}

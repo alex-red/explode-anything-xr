@@ -1,0 +1,115 @@
+{
+  "id": "lesson:jupiter-aurora",
+  "system_id": "system:jupiter",
+  "title": "Why do Jupiter's poles glow?",
+  "objectives": [
+    "Follow the chain from the metallic hydrogen ocean to the aurora.",
+    "See that the magnetic field and the weather have different sources."
+  ],
+  "break_edge_id": "edge:powers:part:metallic->part:field",
+  "repair_candidates": [
+    "part:aurora",
+    "part:field",
+    "part:red-spot"
+  ],
+  "misconception_on_wrong_prediction": "assumes-failure-is-local",
+  "steps": [
+    {
+      "id": "step:jp-explode",
+      "kind": "explode",
+      "caption": "This is a simplified model of Jupiter. It is a teaching model: the layers are approximate, and nobody has seen the interior directly. Press Explode to open it up, or pinch with both hands and pull apart.",
+      "hint": "Press Explode. You can also pinch with both hands and pull them apart.",
+      "expect": {
+        "type": "explode_at_least",
+        "factor": 0.8
+      }
+    },
+    {
+      "id": "step:jp-trace",
+      "kind": "trace",
+      "caption": "Press Trace to follow the electric currents from the metallic hydrogen ocean to the glowing poles.",
+      "hint": "The Trace button is in the panel next to you.",
+      "expect": {
+        "type": "trace",
+        "path_id": "path:dynamo-to-aurora"
+      }
+    },
+    {
+      "id": "step:jp-unplug",
+      "kind": "break",
+      "caption": "Stop the dynamo: unplug the link between the metallic hydrogen ocean and the magnetic field.",
+      "hint": "Select the highlighted link, then press Unplug.",
+      "expect": {
+        "type": "unplug",
+        "edge_id": "edge:powers:part:metallic->part:field"
+      },
+      "on_enter": [
+        {
+          "type": "highlight",
+          "target_ids": [
+            "part:metallic",
+            "part:field"
+          ]
+        },
+        {
+          "type": "show_annotation",
+          "target_id": "part:metallic",
+          "text": "Currents here are thought to make the field."
+        }
+      ]
+    },
+    {
+      "id": "step:jp-predict",
+      "kind": "predict",
+      "caption": "Before you look: point at the first part that loses what it needs.",
+      "hint": "Which part does a dynamo make?",
+      "expect": {
+        "type": "predict"
+      },
+      "on_enter": [
+        {
+          "type": "ask_prediction",
+          "question": "Which part loses its source first?"
+        }
+      ],
+      "feedback": {
+        "correct": "Right. With no dynamo there is no magnetic field, so nothing steers charged particles to the poles and the aurora fades.",
+        "incorrect": "Not quite. The magnetic field loses its source first. Without it nothing steers charged particles to the poles, so the aurora fades."
+      }
+    },
+    {
+      "id": "step:jp-observe",
+      "kind": "observe",
+      "caption": "The field and the aurora are gone, but the storms keep turning: the weather runs on heat from below, not on the magnetic field. This is the teaching model's rule, not an observation of Jupiter.",
+      "expect": {
+        "type": "next"
+      },
+      "on_enter": [
+        {
+          "type": "animate_flow",
+          "path_id": "path:dynamo-to-aurora"
+        }
+      ]
+    },
+    {
+      "id": "step:jp-repair",
+      "kind": "repair",
+      "caption": "Plug the link back into the right socket.",
+      "hint": "The link came from the metallic hydrogen ocean. Which part does a dynamo make?",
+      "expect": {
+        "type": "repair",
+        "edge_id": "edge:powers:part:metallic->part:field"
+      }
+    },
+    {
+      "id": "step:jp-collapse",
+      "kind": "transition",
+      "caption": "The poles glow again. Press Collapse to close the planet up, or push your hands together.",
+      "hint": "Press Collapse. You can also bring your hands together.",
+      "expect": {
+        "type": "collapse_below",
+        "factor": 0.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+{
+  "system_id": "system:jupiter",
+  "display_name": "Jupiter (teaching model)",
+  "model_statement": "A simplified, stylized teaching model of Jupiter, authored from NASA's public descriptions of the planet and of Juno results. Layer depths are approximate and the real boundaries are gradual; nobody has seen the interior directly. The magnetic field, Io, the aurora and the Great Red Spot's depth are not to scale. The clouds are painted by rule, not imaged. Not affiliated with or endorsed by NASA.",
+  "anchor_distance": 0.65,
+  "parts": [
+    {
+      "id": "part:clouds-north",
+      "label": "Northern cloud deck",
+      "summary": "Belts and zones: jet streams blowing in alternating directions.",
+      "importance": 0.8,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.12,
+          0.12,
+          0.12
+        ],
+        "color": "#c9a57a"
+      },
+      "collapsed": [
+        0,
+        0.03,
+        0
+      ],
+      "exploded": [
+        -0.2,
+        0.08,
+        0
+      ]
+    },
+    {
+      "id": "part:clouds-south",
+      "label": "Southern cloud deck",
+      "summary": "The same weather layer south of the equator. It holds the Great Red Spot.",
+      "importance": 0.8,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.12,
+          0.12,
+          0.12
+        ],
+        "color": "#b8875e"
+      },
+      "collapsed": [
+        0,
+        -0.03,
+        0
+      ],
+      "exploded": [
+        -0.2,
+        -0.11,
+        0
+      ]
+    },
+    {
+      "id": "part:red-spot",
+      "label": "Great Red Spot",
+      "summary": "A storm wider than Earth, yet only a few hundred kilometers deep.",
+      "importance": 0.75,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.03,
+          0.03,
+          0.03
+        ],
+        "color": "#b5452c"
+      },
+      "collapsed": [
+        0,
+        -0.028,
+        0.0742
+      ],
+      "exploded": [
+        -0.115,
+        -0.175,
+        0.08
+      ]
+    },
+    {
+      "id": "part:molecular",
+      "label": "Molecular hydrogen",
+      "summary": "Most of what you would fall through: hydrogen gas that thickens into a hot fluid.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.148,
+          0.148,
+          0.148
+        ],
+        "color": "#d9a441"
+      },
+      "collapsed": [
+        0,
+        0,
+        0
+      ],
+      "exploded": [
+        -0.05,
+        -0.05,
+        0
+      ]
+    },
+    {
+      "id": "part:metallic",
+      "label": "Metallic hydrogen ocean",
+      "summary": "Hydrogen squeezed until it conducts electricity like a liquid metal.",
+      "importance": 0.95,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.128,
+          0.128,
+          0.128
+        ],
+        "color": "#9aa7b8"
+      },
+      "collapsed": [
+        0,
+        0,
+        0
+      ],
+      "exploded": [
+        0.125,
+        -0.05,
+        0
+      ]
+    },
+    {
+      "id": "part:core",
+      "label": "Dilute core",
+      "summary": "Heavy elements mixed into the hydrogen around them, with no sharp edge.",
+      "importance": 0.7,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ],
+        "color": "#ff8a3c"
+      },
+      "collapsed": [
+        0,
+        0,
+        0
+      ],
+      "exploded": [
+        0.26,
+        -0.05,
+        0.02
+      ]
+    },
+    {
+      "id": "part:field",
+      "label": "Magnetic field",
+      "summary": "The strongest planetary magnetic field in the solar system. It traps charged particles.",
+      "importance": 0.9,
+      "shape": {
+        "shape": "torus",
+        "size": [
+          0.232,
+          0.012,
+          0
+        ],
+        "color": "#5aa0ff",
+        "rotation_deg": [
+          100,
+          0,
+          0
+        ]
+      },
+      "collapsed": [
+        0,
+        0,
+        0
+      ],
+      "exploded": [
+        0.11,
+        0.15,
+        0
+      ]
+    },
+    {
+      "id": "part:aurora",
+      "label": "Aurora",
+      "summary": "A ring of glowing gas around the north magnetic pole. The south pole has one too.",
+      "importance": 0.85,
+      "shape": {
+        "shape": "torus",
+        "size": [
+          0.05,
+          0.006,
+          0
+        ],
+        "color": "#a06bff",
+        "rotation_deg": [
+          90,
+          0,
+          0
+        ]
+      },
+      "collapsed": [
+        0,
+        0.0735,
+        0
+      ],
+      "exploded": [
+        -0.05,
+        0.15,
+        0.04
+      ]
+    },
+    {
+      "id": "part:io",
+      "label": "Io and its plasma ring",
+      "summary": "A volcanic moon that sheds material into the magnetic field.",
+      "importance": 0.6,
+      "shape": {
+        "shape": "sphere",
+        "size": [
+          0.024,
+          0.024,
+          0.024
+        ],
+        "color": "#e6d24a"
+      },
+      "collapsed": [
+        0.118,
+        0,
+        0
+      ],
+      "exploded": [
+        0.27,
+        0.15,
+        0.02
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "part:core",
+      "target": "part:metallic",
+      "relation": "transmits",
+      "flows": [
+        "heat"
+      ],
+      "label": "deep heat",
+      "mutable": false,
+      "rule": "Heat rises out of Jupiter's deep interior. Jupiter gives off more heat than it receives from the Sun; the surplus is largely left over from its formation."
+    },
+    {
+      "source": "part:metallic",
+      "target": "part:molecular",
+      "relation": "transmits",
+      "flows": [
+        "heat"
+      ],
+      "label": "rising heat",
+      "mutable": false,
+      "rule": "Heat from the metallic hydrogen ocean passes up into the molecular hydrogen above it."
+    },
+    {
+      "source": "part:molecular",
+      "target": "part:clouds-north",
+      "relation": "powers",
+      "flows": [
+        "heat"
+      ],
+      "label": "heat from below",
+      "mutable": false,
+      "rule": "Heat from below reaches the northern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question."
+    },
+    {
+      "source": "part:molecular",
+      "target": "part:clouds-south",
+      "relation": "powers",
+      "flows": [
+        "heat"
+      ],
+      "label": "heat from below",
+      "mutable": false,
+      "rule": "Heat from below reaches the southern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question."
+    },
+    {
+      "source": "part:clouds-south",
+      "target": "part:red-spot",
+      "relation": "transmits",
+      "flows": [
+        "torque"
+      ],
+      "label": "jet winds",
+      "mutable": false,
+      "rule": "The Great Red Spot is a storm in the southern weather layer, about 300 to 500 kilometers deep, turning between jet streams that blow in opposite directions."
+    },
+    {
+      "source": "part:metallic",
+      "target": "part:field",
+      "relation": "powers",
+      "flows": [
+        "electrical"
+      ],
+      "label": "dynamo",
+      "mutable": true,
+      "rule": "Jupiter's fast spin is thought to drive electric currents in the liquid metallic hydrogen, which acts like a dynamo and generates the magnetic field. If the dynamo stopped, the field would have no source."
+    },
+    {
+      "source": "part:io",
+      "target": "part:field",
+      "relation": "transmits",
+      "flows": [
+        "electrical"
+      ],
+      "label": "plasma",
+      "mutable": false,
+      "rule": "Io's volcanoes shed roughly a tonne of material every second. Much of it becomes electrically charged and is trapped by the magnetic field as a ring along Io's orbit."
+    },
+    {
+      "source": "part:field",
+      "target": "part:aurora",
+      "relation": "powers",
+      "flows": [
+        "electrical"
+      ],
+      "label": "charged particles",
+      "mutable": false,
+      "rule": "The magnetic field traps charged particles, speeds them up and steers them into the atmosphere around the magnetic poles, where they make the gas glow. How they are sped up is still being worked out."
+    }
+  ],
+  "path": {
+    "id": "path:dynamo-to-aurora",
+    "label": "Dynamo to aurora",
+    "flow": "electrical",
+    "node_ids": [
+      "part:metallic",
+      "part:field",
+      "part:aurora"
+    ]
+  }
+}

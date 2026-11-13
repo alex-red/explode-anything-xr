@@ -28,7 +28,7 @@ import { makeInteractive } from './interactions.ts';
 import { conduitMaterial, createDust, createStage, haloMaterial, HoloMaterial, nebulaMaterial, setReveal } from './holo.ts';
 import { COLOR, GROUP_HUES } from './palette.ts';
 import { hitGeometry, softwareGeometry, softwareShape } from './shapes.ts';
-import { buildLook } from './looks/registry.ts';
+import { buildLook, tickLooks } from './looks/registry.ts';
 import type { PartLook } from './looks/look.ts';
 import { studioEnvironment } from './looks/studio.ts';
 import type { Store } from './store.ts';
@@ -60,6 +60,8 @@ interface NodeView {
   collapsed: Vector3;
   exploded: Vector3;
   radius: number;
+  /** How far a mechanical part's hit volume reaches above its centre, metres. */
+  top: number;
   baseColor: Color;
   hovered: boolean;
   spinAxis: 'x' | 'y' | 'z' | null;
@@ -86,6 +88,8 @@ interface EdgeView {
 const UP = new Vector3(0, 1, 0);
 const TRAY = new Vector3(0.3, -0.17, 0.1);
 // Each label is its own texture and draw call, so the cap is part of the render budget.
+/** How much of the opening is spent on parts leaving one after another (the rest is each part's own travel). */
+const STAGE_SPREAD = 0.45;
 const MAX_LABELS = 18;
 // Part labels are 15 × 3 cm panels. One that would overlap a more important label (as seen
 // from the eye) moves up by a label's height, at most LABEL_TRIES - 1 times, or is hidden.
@@ -334,6 +338,7 @@ export class GraphView {
 
   update(dt: number, camera: Camera): void {
     this.time += dt;
+    if (this.isMechanical) tickLooks(this.time);
     const s = this.store.state;
     const target = this.pullPreview ?? s.explode_factor;
     this.displayFactor += (target - this.displayFactor) * Math.min(1, dt * 5);
@@ -368,7 +373,10 @@ export class GraphView {
     // Nodes
     const visStep = Math.min(1, dt * SHELF_EASE);
     for (const v of this.nodes.values()) {
-      const p = v.mesh.position.lerpVectors(v.collapsed, v.exploded, f);
+      // A staged model opens part by part: each has its own stretch of the opening, in order.
+      const stage = v.look?.stage ?? null;
+      const fp = stage === null ? f : easeInOut(Math.min(1, Math.max(0, (this.displayFactor - stage * STAGE_SPREAD) / (1 - STAGE_SPREAD))));
+      const p = v.mesh.position.lerpVectors(v.collapsed, v.exploded, fp);
       if (swirl !== 0) {
         const x = p.x;
         p.x = x * swirlCos + p.z * swirlSin;
@@ -390,6 +398,7 @@ export class GraphView {
         // Mechanical part: an invisible hit volume carrying its lifelike model.
         v.mesh.scale.setScalar(selected ? 1.12 : v.hovered ? 1.06 : 1);
         look.group.scale.setScalar(bootIn);
+        look.tick(this.time, fp);
         if (affected.has(v.node.id)) look.set('fault', 0.5 + 0.5 * Math.sin(this.time * 4));
         else if (highlighted.has(v.node.id)) look.set('path');
         else if (dimmed) look.set('dim');
@@ -591,6 +600,11 @@ export class GraphView {
     const look = part ? buildLook(bundle.graph.system_id, node.id, part, studioEnvironment(this.world.renderer)) : null;
     const mesh: Mesh<BufferGeometry, Material> = new Mesh(part ? hitGeometry(part) : softwareGeometry({ kind: node.kind }), this.mats.hit);
     if (look) mesh.add(look.group);
+    let top = 0;
+    if (part) {
+      mesh.geometry.computeBoundingBox();
+      top = mesh.geometry.boundingBox?.max.y ?? 0;
+    }
     const shape = softwareShape(node);
     const batch = part ? null : (this.nodeBatches.get(shape) ?? null);
     const group = this.groupOf.get(node.id);
@@ -618,6 +632,7 @@ export class GraphView {
       collapsed,
       exploded,
       radius: placement.radius,
+      top,
       baseColor,
       hovered: false,
       spinAxis: part?.spin_axis ?? null,
@@ -876,7 +891,8 @@ export class GraphView {
         v.label.draw([{ text, size: 40, color, bold: v.node.kind !== 'function' }]);
       }
       const mesh = v.label.mesh;
-      const lift = this.isMechanical ? 0.05 : v.radius * 1.4 + 0.016;
+      // A part taller than the usual lift (a planet's layer) carries its label clear of its top.
+      const lift = this.isMechanical ? (v.top > 0.05 ? v.top + 0.022 : 0.05) : v.radius * 1.4 + 0.016;
       let placed = false;
       // Above its part, stepping up out of the way of other labels for as long as that stays
       // under the caption panel; after that, under the part, stepping down.

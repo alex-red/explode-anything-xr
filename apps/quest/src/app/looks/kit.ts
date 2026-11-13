@@ -9,8 +9,11 @@ import {
   Path,
   Quaternion,
   Shape,
+  SphereGeometry,
   Vector2,
   Vector3,
+  type MeshPhysicalMaterial,
+  type Texture,
 } from '@iwsdk/core';
 
 /**
@@ -30,6 +33,17 @@ export interface Finish {
   /** Soft fabric response (foam, cloth). */
   readonly sheen?: number;
   readonly envIntensity?: number;
+  /**
+   * A painted surface (made once, shared, never disposed with a part). Every piece given this
+   * finish must carry UVs.
+   */
+  readonly map?: () => Texture;
+  /** With `map`: the painting also glows a little by itself (0..1), so it reads in a dim room. */
+  readonly selfLit?: number;
+  /** Last touch on the finished material (a shader hook for motion). Runs once per part, never per frame. */
+  readonly shade?: (m: MeshPhysicalMaterial) => void;
+  /** A light of its own (a field line, an aurora): when its part stops, it goes dark instead of glowing red. */
+  readonly goesOut?: boolean;
 }
 
 const q = new Quaternion();
@@ -75,11 +89,15 @@ export function merge(list: BufferGeometry[]): BufferGeometry {
   for (const g of flat) count += g.getAttribute('position').count;
   const pos = new Float32Array(count * 3);
   const nor = new Float32Array(count * 3);
+  // UVs are kept only when every piece has them (a painted finish).
+  const uv = flat.every((g) => g.getAttribute('uv')) ? new Float32Array(count * 2) : null;
   let k = 0;
   for (const g of flat) {
     const p = g.getAttribute('position');
     const n = g.getAttribute('normal');
+    const t = uv ? g.getAttribute('uv') : null;
     for (let i = 0; i < p.count; i++, k++) {
+      if (uv && t) uv.set([t.getX(i), t.getY(i)], k * 2);
       pos.set([p.getX(i), p.getY(i), p.getZ(i)], k * 3);
       nor.set([n.getX(i), n.getY(i), n.getZ(i)], k * 3);
     }
@@ -89,6 +107,7 @@ export function merge(list: BufferGeometry[]): BufferGeometry {
   const out = new BufferGeometry();
   out.setAttribute('position', new BufferAttribute(pos, 3));
   out.setAttribute('normal', new BufferAttribute(nor, 3));
+  if (uv) out.setAttribute('uv', new BufferAttribute(uv, 2));
   out.computeBoundingSphere();
   return out;
 }
@@ -202,4 +221,38 @@ export function around(count: number, r: number, y: number, make: () => BufferGe
     out.push(make().translate(v.x, v.y, v.z));
   }
   return out;
+}
+
+/**
+ * A band of a globe about +y, between polar angles `from` and `from + span` (0 is the north
+ * pole), with UVs for a painting of the whole globe: u runs with longitude (u = 0.25 faces +z),
+ * v from the south pole (0) to the north (1).
+ */
+export function globeBand(r: number, from: number, span: number, around = 96, down = 32): BufferGeometry {
+  const g = new SphereGeometry(r, around, down, 0, Math.PI * 2, from, span);
+  const uv = g.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - (from + (1 - uv.getY(i)) * span) / Math.PI);
+  return g;
+}
+
+const UP = new Vector3(0, 1, 0);
+
+/** Turn a piece built about +y so its axis points along the unit direction `to`. */
+export function aim(g: BufferGeometry, to: readonly [number, number, number]): BufferGeometry {
+  return g.applyQuaternion(q.setFromUnitVectors(UP, v.set(to[0], to[1], to[2])));
+}
+
+/**
+ * A round patch of a globe centred on the unit direction `to`, angular radius `angle`, with the
+ * same UVs as `globeBand`. Not for patches that cross the back seam (u = 0).
+ */
+export function globePatch(r: number, to: readonly [number, number, number], angle: number, around = 40, down = 8): BufferGeometry {
+  const g = aim(new SphereGeometry(r, around, down, 0, Math.PI * 2, 0, angle), to);
+  const p = g.getAttribute('position');
+  const uv = g.getAttribute('uv');
+  for (let i = 0; i < p.count; i++) {
+    const lon = Math.atan2(p.getZ(i), -p.getX(i));
+    uv.setXY(i, (lon < 0 ? lon + Math.PI * 2 : lon) / (Math.PI * 2), 1 - Math.acos(Math.max(-1, Math.min(1, p.getY(i) / r))) / Math.PI);
+  }
+  return g;
 }
