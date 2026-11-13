@@ -1,0 +1,32 @@
+# Render blueprint for the tutor proxy and the Explode Anything builder (docs/ANYTHING_PLAN.md §4).
+# Written from Render's blueprint format as understood on Nov 13, 2026; not yet applied. Check the
+# plan name and each key against Render before the first deploy.
+services:
+  - type: web
+    name: explode-proxy
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # An instance that sleeps when idle answers its first request slowly; the app waits and asks
+    # again (apps/quest explode availability), but the live tutor's first turn would fall back to
+    # the scripted one. Choose a plan that stays awake for judging.
+    plan: starter
+    healthCheckPath: /v1/health
+    # The entry is frozen after the release candidate: deploy by hand only.
+    autoDeploy: false
+    envVars:
+      # Exactly the page's origin, no path and no trailing slash.
+      - key: ALLOWED_ORIGINS
+        value: https://alex-red.github.io
+      # Render sits in front of the service, so the caller's address is in x-forwarded-for.
+      - key: TRUST_PROXY
+        value: "1"
+      - key: TUTOR_PROVIDER
+        value: meta
+      # Secrets: set these in the dashboard. They are never written here.
+      - key: META_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Optional: a token with no scopes, for GitHub's higher rate limit on public repositories.
+      - key: GITHUB_TOKEN
+        sync: false

@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+**/dist
+.env
+.env.*
+!.env.example
+.content-work
+.iwsdk
+coverage
+*.log
+release
+docs
