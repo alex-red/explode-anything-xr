@@ -41,6 +41,18 @@ export function partGeometry(part: PartShape): BufferGeometry {
   return g;
 }
 
+/**
+ * The ray target of a mechanical part: its spec shape, filled in. A wheel (torus) becomes a solid
+ * disc, so a pinch on the rim or between the spokes still lands on the wheel.
+ */
+export function hitGeometry(part: PartShape): BufferGeometry {
+  if (part.shape !== 'torus') return partGeometry(part);
+  const [x, y] = part.size;
+  const g = new CylinderGeometry(x / 2, x / 2, y, 20).rotateX(Math.PI / 2); // axis +z, like the torus
+  const [rx, ry, rz] = part.rotation_deg;
+  return g.applyQuaternion(new Quaternion().setFromEuler(new Euler(MathUtils.degToRad(rx), MathUtils.degToRad(ry), MathUtils.degToRad(rz))));
+}
+
 /** A gear: a cylinder whose rim vertices alternate in radius. Axis is +y. */
 function gearGeometry(radius: number, thickness: number, teeth = 14): BufferGeometry {
   const g = new CylinderGeometry(radius, radius, thickness, teeth * 2, 1);

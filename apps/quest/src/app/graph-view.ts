@@ -27,7 +27,10 @@ import { visibleAtDetail, type DetailLevel } from '@explode/lesson-engine';
 import { makeInteractive } from './interactions.ts';
 import { conduitMaterial, createDust, createStage, haloMaterial, HoloMaterial, nebulaMaterial, setReveal } from './holo.ts';
 import { COLOR, GROUP_HUES } from './palette.ts';
-import { partGeometry, softwareGeometry, softwareShape } from './shapes.ts';
+import { hitGeometry, softwareGeometry, softwareShape } from './shapes.ts';
+import { buildLook } from './looks/registry.ts';
+import type { PartLook } from './looks/look.ts';
+import { studioEnvironment } from './looks/studio.ts';
 import type { Store } from './store.ts';
 import { TextPanel } from './text.ts';
 
@@ -47,8 +50,8 @@ interface NodeView {
    * instance in a shared batch (`batch`/`slot`).
    */
   mesh: Mesh<BufferGeometry, Material>;
-  /** Own material of a mechanical part; null for software nodes. */
-  material: HoloMaterial | null;
+  /** The lifelike model of a mechanical part (a child of `mesh`); null for software nodes. */
+  look: PartLook | null;
   batch: InstancedMesh | null;
   slot: number;
   /** This node's instance in the halo batch. */
@@ -343,6 +346,7 @@ export class GraphView {
       setReveal(this.boot < 1 ? this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT : null);
     }
     const glowIn = this.boot * this.boot; // halos fade in behind the scan front
+    const bootIn = Math.max(1e-3, 1 - (1 - this.boot) ** 3); // lifelike parts grow out of the stage as it boots
     // Opening and closing: parts wheel round the vertical axis in mid-flight (nothing at either
     // end, so the layout the cone and target checks were made for is untouched), and the stage
     // throws a shockwave when the model opens.
@@ -381,23 +385,15 @@ export class GraphView {
       const selected = s.selected_id === v.node.id;
       let scale = v.radius * (selected ? 1.3 : v.hovered ? 1.15 : 1) * (dimmed ? 0.6 : 1) * e;
       if (!this.isMechanical && v.node.kind === 'cluster') scale *= 0.25 + 0.75 * (1 - f); // clusters shrink as the system opens
-      const m = v.material;
-      if (m) {
-        // Mechanical part: its own mesh and material.
+      const look = v.look;
+      if (look) {
+        // Mechanical part: an invisible hit volume carrying its lifelike model.
         v.mesh.scale.setScalar(selected ? 1.12 : v.hovered ? 1.06 : 1);
-        if (affected.has(v.node.id)) {
-          m.color.setHex(COLOR.fault);
-          m.emissive.setHex(COLOR.fault).multiplyScalar(0.25 + 0.2 * Math.sin(this.time * 4));
-        } else if (highlighted.has(v.node.id)) {
-          m.color.setHex(COLOR.path);
-          m.emissive.setHex(COLOR.path).multiplyScalar(0.35);
-        } else if (dimmed) {
-          m.color.setHex(COLOR.dim);
-          m.emissive.setHex(0x000000);
-        } else {
-          m.color.copy(v.baseColor);
-          m.emissive.setHex(selected ? 0x445566 : 0x000000);
-        }
+        look.group.scale.setScalar(bootIn);
+        if (affected.has(v.node.id)) look.set('fault', 0.5 + 0.5 * Math.sin(this.time * 4));
+        else if (highlighted.has(v.node.id)) look.set('path');
+        else if (dimmed) look.set('dim');
+        else look.set(selected ? 'selected' : v.hovered ? 'hover' : 'rest');
       } else if (v.batch) {
         // Software node: the hit volume is the drawn size, never under 4 cm across, and steady
         // while the drawn instance carries the state. The layout keeps these volumes from
@@ -423,7 +419,8 @@ export class GraphView {
 
       // Halo: every node glows a little; state decides how much and in what colour.
       const glow = this.tmpColor;
-      let strength = HALO_REST;
+      // Lifelike parts glow only when something is said about them; hologram nodes always shimmer.
+      let strength = look ? 0 : HALO_REST;
       if (affected.has(v.node.id)) {
         glow.copy(NODE_FAULT);
         strength = HALO_FAULT * (0.75 + 0.25 * Math.sin(this.time * 4));
@@ -440,7 +437,7 @@ export class GraphView {
         } else if (v.hovered) strength = HALO_HOVER;
       }
       strength *= e;
-      const drawn = m ? v.radius : scale;
+      const drawn = look ? v.radius : scale;
       this.halos.setMatrixAt(v.halo, strength > 0.001 ? this.tmpM.compose(p, IDENTITY, this.tmpS.setScalar(drawn * HALO_SIZE)) : this.tmpM.makeScale(0, 0, 0));
       this.halos.setColorAt(v.halo, glow.multiplyScalar(strength * glowIn));
 
@@ -511,6 +508,7 @@ export class GraphView {
   dispose(): void {
     for (const v of this.nodes.values()) {
       v.label?.dispose();
+      v.look?.dispose();
       // Software hit volumes use shared geometry (shapes.ts) and the shared hit material.
       v.entity.dispose({ disposeResources: this.isMechanical });
     }
@@ -587,10 +585,12 @@ export class GraphView {
     const part = bundle.assets?.parts[node.id];
     if (this.isMechanical && !part) return; // cluster-only nodes in mechanical systems are not rendered
     const baseColor = new Color(part ? part.color : this.softwareColor(node));
-    const material = part ? new HoloMaterial(baseColor, 0.62) : null;
-    // The ray target of a software node is always a plain round volume, whatever shape is drawn:
-    // a knot or a gear has gaps a ray could slip through.
-    const mesh: Mesh<BufferGeometry, Material> = material && part ? new Mesh(partGeometry(part), material) : new Mesh(softwareGeometry({ kind: node.kind }), this.mats.hit);
+    // The ray target is always a plain, invisible volume, whatever is drawn: a knot, a gear or a
+    // spoked wheel has gaps a ray could slip through. A mechanical part's volume is its spec
+    // shape and carries the lifelike model as a child; a software node's is a round volume.
+    const look = part ? buildLook(bundle.graph.system_id, node.id, part, studioEnvironment(this.world.renderer)) : null;
+    const mesh: Mesh<BufferGeometry, Material> = new Mesh(part ? hitGeometry(part) : softwareGeometry({ kind: node.kind }), this.mats.hit);
+    if (look) mesh.add(look.group);
     const shape = softwareShape(node);
     const batch = part ? null : (this.nodeBatches.get(shape) ?? null);
     const group = this.groupOf.get(node.id);
@@ -610,7 +610,7 @@ export class GraphView {
     this.nodes.set(node.id, {
       node,
       mesh,
-      material,
+      look,
       batch,
       slot,
       halo: this.nodes.size,

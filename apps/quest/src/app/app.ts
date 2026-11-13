@@ -305,6 +305,7 @@ export class ExplodeApp {
       this.anchorEntity,
     );
     this.view.detail = this.detail;
+    this.ui.setSubject(...subjectOf(this.store.ctx.bundle));
     this.hands.gestures.flickEnabled = !this.onMechanical;
     this.view.displayFactor = this.store.state.explode_factor;
     this.hands.gestures.reset();
@@ -610,6 +611,12 @@ export class ExplodeApp {
     this.dispatch({ type: 'next' });
   }
 
+  /** Open or close the model a quarter of the way (the dock's Spread buttons). */
+  private stepExplode(dir: 1 | -1): void {
+    const f = Math.round(this.store.state.explode_factor * 4) / 4 + dir * 0.25;
+    this.dispatch({ type: 'set_explode', factor: Math.min(1, Math.max(0, f)) });
+  }
+
   private trace(): void {
     const path = this.store.ctx.bundle.graph.paths[0];
     if (path) this.dispatch({ type: 'trace', path_id: path.id });
@@ -692,6 +699,19 @@ export class ExplodeApp {
         enabled: () => this.moreTarget() !== null,
         onPress: () => this.openMore(),
       },
+      // The view dock: what the hand gestures do to the model, as buttons (ui.ts DOCK_GROUPS).
+      { id: 'spread-in', label: () => 'Spread −', enabled: () => st().explode_factor > 0, onPress: () => this.stepExplode(-1) },
+      { id: 'spread-out', label: () => 'Spread +', enabled: () => st().explode_factor < 1, onPress: () => this.stepExplode(1) },
+      { id: 'turn-left', label: () => 'Turn ◂', enabled: () => true, onPress: () => this.hands.gestures.turnBy(Math.PI / 8) },
+      { id: 'turn-right', label: () => 'Turn ▸', enabled: () => true, onPress: () => this.hands.gestures.turnBy(-Math.PI / 8) },
+      { id: 'tilt-up', label: () => 'Tilt ▲', enabled: () => true, onPress: () => this.hands.gestures.tiltBy(-Math.PI / 12) },
+      { id: 'tilt-down', label: () => 'Tilt ▼', enabled: () => true, onPress: () => this.hands.gestures.tiltBy(Math.PI / 12) },
+      { id: 'raise', label: () => 'Raise', enabled: () => true, onPress: () => this.hands.gestures.panBy(0, 0.03, 0) },
+      { id: 'lower', label: () => 'Lower', enabled: () => true, onPress: () => this.hands.gestures.panBy(0, -0.03, 0) },
+      // Zoom works on the open model, as the two-hand pull does (view-gestures).
+      { id: 'zoom-out', label: () => 'Zoom −', enabled: () => this.hands.pose.zoom > 1.001, onPress: () => this.hands.gestures.zoomBy(0.8) },
+      { id: 'zoom-in', label: () => 'Zoom +', enabled: () => st().explode_factor >= 0.999, onPress: () => this.hands.gestures.zoomBy(1.25) },
+      { id: 'home-view', label: () => 'Home view', enabled: () => true, onPress: () => this.hands.gestures.reset() },
       {
         id: 'live',
         label: () => (this.tutor.liveConfigured ? `Live AI: ${this.liveAllowed ? 'on' : 'off'}` : 'Live AI: n/a'),
@@ -809,6 +829,18 @@ export class ExplodeApp {
 function shortName(b: ContentBundle): string {
   const word = b.graph.display_name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/**
+ * The nameplate's two lines: the kind of thing on the stage, and its name. The display name's
+ * qualifier ("(teaching model)", "(meta/immersive-web-sdk)") goes on the kind line.
+ */
+export function subjectOf(b: ContentBundle): [kind: string, name: string] {
+  const name = b.graph.display_name;
+  const qualifier = /\(([^)]*)\)\s*$/.exec(name)?.[1] ?? '';
+  const bare = name.replace(/\s*\(.*\)\s*$/, '');
+  if (b.graph.system_kind === 'mechanical') return [(qualifier || 'model').toUpperCase(), bare];
+  return [qualifier ? `CODEBASE · ${qualifier}` : 'CODEBASE', bare];
 }
 
 function readDetail(): DetailLevel {

@@ -15,6 +15,7 @@ import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/inter
 import { TextPanel } from '../src/app/text.ts';
 import { FakeAudioContext } from './fake-audio.ts';
 import { FOV_BUDGET } from '../src/app/fov.ts';
+import { hasLook } from '../src/app/looks/registry.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
 /** The shipped set (src/index.ts): the headset opens, the drivetrain is under "More". */
@@ -1749,6 +1750,58 @@ describe('scene harness: a real SDK, from its most relevant parts', () => {
     expect(draws, 'draw calls with the whole SDK selection open').toBeLessThanOrEqual(120);
     for (const v of (h.view().nodes as Map<string, { node: { kind: string }; mesh: Mesh }>).values()) {
       if (v.node.kind !== 'cluster' && v.mesh.visible) expect(v.mesh.scale.x * 2).toBeGreaterThanOrEqual(0.04);
+    }
+  });
+});
+
+describe('scene harness: nameplate, view dock and lifelike parts', () => {
+  it('names what is on the stage, front and centre, and follows a switch of system', () => {
+    const h = setup(false, { bundles: shipped });
+    const plate = () => h.panels().find((p) => /^TEACHING MODEL |^CODEBASE/.test(p.text))?.text;
+    expect(plate()).toBe('TEACHING MODEL Mixed-reality headset');
+    h.press(h.button(/^More: Drivetrain/));
+    expect(plate()).toBe('TEACHING MODEL Simplified EV drivetrain');
+    h.press(h.button(/^Skip tutorial$|^Software/));
+    expect(plate()).toBe('CODEBASE · sample TypeScript service auth-service');
+  });
+
+  it('the dock opens the model in quarters, turns, tilts, raises and zooms it, and Home view puts it back', () => {
+    const h = setup(false, { bundles: shipped });
+    const pose = (h.app as unknown as { hands: { pose: { yaw: number; pitch: number; y: number; zoom: number } } }).hands.pose;
+    expect(h.state().explode_factor).toBe(0);
+    h.press(h.button(/^Spread \+$/));
+    expect(h.state().explode_factor).toBe(0.25);
+    h.press(h.button(/^Spread −$/));
+    expect(h.state().explode_factor).toBe(0);
+    h.press(h.button(/^Turn ▸$/));
+    expect(pose.yaw).toBeLessThan(0);
+    h.press(h.button(/^Tilt ▲$/));
+    expect(pose.pitch).toBeLessThan(0);
+    h.press(h.button(/^Raise$/));
+    expect(pose.y).toBeGreaterThan(0);
+    for (let i = 0; i < 4; i++) h.press(h.button(/^Spread \+$/));
+    expect(h.state().explode_factor).toBe(1);
+    h.press(h.button(/^Zoom \+$/));
+    expect(pose.zoom).toBeGreaterThan(1);
+    h.press(h.button(/^Home view$/));
+    expect([pose.yaw, pose.pitch, pose.y, pose.zoom]).toEqual([0, 0, 0, 1]);
+  });
+
+  it('draws every headset and drivetrain part as its own lifelike model that rays pass through', () => {
+    for (const b of [headsetJson, drivetrainJson]) {
+      const bundle = ContentBundle.parse(b);
+      for (const id of Object.keys(bundle.assets?.parts ?? {})) expect(hasLook(bundle.graph.system_id, id), id).toBe(true);
+    }
+    const h = setup(false, { bundles: shipped });
+    const nodes = h.view().nodes as unknown as Map<string, { mesh: Mesh; look: { group: Object3D } | null }>;
+    for (const [id, v] of nodes) {
+      expect(v.look, id).not.toBeNull();
+      expect((v.mesh.material as unknown as { visible: boolean }).visible, `${id}: the hit volume is invisible`).toBe(false);
+      v.look!.group.traverse((o) => {
+        const hits: unknown[] = [];
+        o.raycast({ ray: { intersectsBox: () => true } } as never, hits as never);
+        expect(hits, `${id}: its model takes no ray hits`).toEqual([]);
+      });
     }
   });
 });

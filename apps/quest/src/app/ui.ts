@@ -32,7 +32,9 @@ const GAP = 0.006;
 const GUIDE_W = 0.38;
 const GUIDE_H = 0.166;
 const CONTROLS_Y = -0.06;
-const GUIDE_Y = -0.27;
+const GUIDE_Y = -0.25;
+const PLATE_Y = -0.222;
+const DOCK_Y = -0.268;
 const GUIDE_TILT = -0.45;
 /** On a desk the gesture card lies mostly flat, tipped about 30° up toward the eyes. */
 const GUIDE_DESK_TILT = -1.05;
@@ -56,6 +58,31 @@ const NARROW_COLUMNS = 4;
  */
 const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'live']);
 const SETTINGS_COLUMNS = 5;
+/**
+ * The view dock: a row of buttons centred under the model's front rim that move the model the
+ * way the hand gestures do, for anyone who would rather press than pull. Grouped in pairs, with
+ * Home view on its own at the end. Wide layout only: the narrow one has no room below the model.
+ */
+const DOCK_GROUPS: ReadonlyArray<readonly string[]> = [
+  ['spread-in', 'spread-out'],
+  ['turn-left', 'turn-right'],
+  ['tilt-up', 'tilt-down'],
+  ['raise', 'lower'],
+  ['zoom-out', 'zoom-in'],
+  ['home-view'],
+];
+const DOCK_BUTTONS = new Set(DOCK_GROUPS.flat());
+const DOCK_W = 0.05;
+const DOCK_H = 0.03;
+const DOCK_GAP = 0.004;
+const DOCK_GROUP_GAP = 0.012;
+const DOCK_TILT = -0.6;
+/** The nameplate: what is on the stage, front and centre, just in front of its rim. */
+const PLATE_W = 0.34;
+const PLATE_H = 0.054;
+const PLATE_TILT = -0.45;
+/** On a desk the plate and the dock lie back on the surface like the gesture card. */
+const DESK_TILT = -1.05;
 /** Where the eye is assumed to be, in the anchor's frame, until the app reports it (floating placement). */
 const DEFAULT_EYE = new Vector3(0, 0.14, 0.7);
 /**
@@ -67,11 +94,12 @@ const NARROW = {
   caption: [0, 23, 0.75],
   evidence: [16, -1, 0.6], // between the caption above and the toolbar strip below, its Close button clear of both
   guide: [-12, 0, 0.5],
+  plate: [0, -19.2, 0.72], // in the gap between the evidence panel and the toolbar strip
 } as const;
 
 /**
  * Spatial UI: lesson controls (left), caption panel (top) with the settings strip above it,
- * evidence panel (right).
+ * evidence panel (right), and the nameplate over the view dock (front, under the model).
  * Everything sits within the seated reach budget and the 60°×50° cone (ADR-0014).
  */
 export class SpatialUI {
@@ -85,6 +113,10 @@ export class SpatialUI {
   private readonly settings = new Group();
   private readonly evidenceGroup = new Group();
   private readonly guide: TextPanel;
+  /** Nameplate and view dock, centred in front of the stage. */
+  private readonly dock = new Group();
+  private readonly plate: TextPanel;
+  private plateText: [string, string] = ['', ''];
   private guideDrawn = false;
   private controlsHalfHeight = 0;
   private mode: LayoutMode = 'wide';
@@ -99,10 +131,14 @@ export class SpatialUI {
     // Controls: one column, tilted toward the user, at the left; settings: a strip above the caption.
     const controlsEntity = world.createTransformEntity(this.controls, { parent: groupEntity });
     const settingsEntity = world.createTransformEntity(this.settings, { parent: groupEntity });
+    const dockEntity = world.createTransformEntity(this.dock, { parent: groupEntity });
     defs.forEach((def) => {
-      const panel = new TextPanel({ width: BTN_W, height: BTN_H, pxPerMeter: PPM, padding: 10, radius: 22, align: 'center' });
+      const docked = DOCK_BUTTONS.has(def.id);
+      const panel = docked
+        ? new TextPanel({ width: DOCK_W, height: DOCK_H, pxPerMeter: PPM, padding: 6, radius: 18, align: 'center' })
+        : new TextPanel({ width: BTN_W, height: BTN_H, pxPerMeter: PPM, padding: 10, radius: 22, align: 'center' });
       const entry = { def, panel, hovered: false, hidden: false, entity: null as unknown as Entity };
-      entry.entity = makeInteractive(world, panel.mesh, SETTINGS_BUTTONS.has(def.id) ? settingsEntity : controlsEntity, {
+      entry.entity = makeInteractive(world, panel.mesh, docked ? dockEntity : SETTINGS_BUTTONS.has(def.id) ? settingsEntity : controlsEntity, {
         press: () => {
           if (entry.hidden) return; // not in this layout: a ray can still reach the hidden mesh
           if (def.enabled()) def.onPress();
@@ -117,11 +153,15 @@ export class SpatialUI {
       this.buttons.push(entry);
     });
 
-    // Gesture guide: a wide card below the model, tipped up toward the eyes, hidden until asked
-    // for (the Gestures button). It sits just under the lowest parts and left of the sandbox tray.
+    // Gesture guide: a wide card low on the right, tipped up toward the eyes, hidden until asked
+    // for (the Gestures button). The nameplate and the view dock have the place under the model.
     this.guide = new TextPanel({ width: GUIDE_W, height: GUIDE_H, pxPerMeter: PPM, padding: 24, radius: 24 });
     this.guide.mesh.visible = false;
     world.createTransformEntity(this.guide.mesh, { parent: groupEntity });
+
+    // Nameplate: what is being exploded, in front of the stage (drawn by setSubject).
+    this.plate = new TextPanel({ width: PLATE_W, height: PLATE_H, pxPerMeter: PPM, padding: 10, radius: 26, align: 'center' });
+    world.createTransformEntity(this.plate.mesh, { parent: groupEntity });
 
     // Captions: above the system.
     this.caption = new TextPanel({ width: 0.52, height: 0.19, pxPerMeter: PPM, padding: 36, radius: 30 });
@@ -197,12 +237,14 @@ export class SpatialUI {
       placeFacing(this.caption.mesh, this.eye, ...NARROW.caption);
       placeFacing(this.evidenceGroup, this.eye, ...NARROW.evidence);
       placeFacing(this.guide.mesh, this.eye, ...NARROW.guide);
+      placeFacing(this.plate.mesh, this.eye, ...NARROW.plate);
       this.syncEvidence();
       this.dirty = true;
       return;
     }
     this.showButtons(() => true);
-    this.controlsHalfHeight = this.layoutGrid(1, (id) => !SETTINGS_BUTTONS.has(id));
+    this.controlsHalfHeight = this.layoutGrid(1, (id) => !SETTINGS_BUTTONS.has(id) && !DOCK_BUTTONS.has(id));
+    this.layoutDock();
     this.layoutGrid(SETTINGS_COLUMNS, (id) => SETTINGS_BUTTONS.has(id));
     // The column's inner edge is about 32° left of the gaze, just outside the open model's reach
     // (31°), and its outer edge about 41°, inside the wide budget (fov.ts).
@@ -218,9 +260,17 @@ export class SpatialUI {
     this.evidenceGroup.rotation.order = 'XYZ';
     this.evidenceGroup.position.set(0.43, 0.04, 0.14);
     this.evidenceGroup.rotation.set(0, -0.62, 0);
-    this.guide.mesh.rotation.order = 'XYZ';
-    this.guide.mesh.rotation.set(GUIDE_TILT, 0, 0);
-    this.guide.mesh.position.set(-0.02, GUIDE_Y, 0.17);
+    // The gesture card opens low on the right, beside the dock, turned toward the eyes.
+    this.guide.mesh.rotation.order = 'YXZ';
+    this.guide.mesh.rotation.set(GUIDE_TILT, -0.6, 0);
+    this.guide.mesh.position.set(0.47, GUIDE_Y, 0.15);
+    // Nameplate just in front of the stage's rim; the dock below and nearer, tipped up to the eyes.
+    this.plate.mesh.rotation.order = 'XYZ';
+    this.plate.mesh.rotation.set(PLATE_TILT, 0, 0);
+    this.plate.mesh.position.set(0, PLATE_Y, 0.275);
+    this.dock.rotation.order = 'XYZ';
+    this.dock.rotation.set(DOCK_TILT, 0, 0);
+    this.dock.position.set(0, DOCK_Y, 0.295);
     this.syncEvidence();
     if (this.floor !== null) {
       // On a desk nothing may sit below the surface: the toolbar rises so its lowest button
@@ -229,7 +279,11 @@ export class SpatialUI {
       this.controls.position.y = Math.max(CONTROLS_Y, this.floor + reach + FLOOR_MARGIN);
       this.guide.mesh.rotation.x = GUIDE_DESK_TILT;
       // A card tipped back by the tilt rises |cos(tilt)| × half its height above its centre.
-      this.guide.mesh.position.set(-0.02, this.floor + (GUIDE_H / 2) * Math.abs(Math.cos(GUIDE_DESK_TILT)) + FLOOR_MARGIN, 0.2);
+      this.guide.mesh.position.set(0.44, this.floor + (GUIDE_H / 2) * Math.abs(Math.cos(GUIDE_DESK_TILT)) + FLOOR_MARGIN, 0.2);
+      this.plate.mesh.rotation.x = DESK_TILT;
+      this.plate.mesh.position.set(0, this.floor + (PLATE_H / 2) * Math.abs(Math.cos(DESK_TILT)) + FLOOR_MARGIN, 0.28);
+      this.dock.rotation.x = DESK_TILT;
+      this.dock.position.set(0, this.floor + (DOCK_H / 2) * Math.abs(Math.cos(DESK_TILT)) + FLOOR_MARGIN, 0.335);
     }
     this.dirty = true;
   }
@@ -244,11 +298,41 @@ export class SpatialUI {
     this.applyLayout();
   }
 
-  /** Lowest point of the toolbar and the gesture card, in the anchor's frame (tests). */
+  /** Lowest point of the toolbar, the gesture card, the nameplate and the dock, in the anchor's frame (tests). */
   lowestPanelY(): number {
     const c = this.controls.position.y - this.controlsHalfHeight * Math.cos(this.controls.rotation.x);
     const g = this.guide.mesh.position.y - (GUIDE_H / 2) * Math.abs(Math.cos(this.guide.mesh.rotation.x));
-    return Math.min(c, g);
+    const p = this.plate.mesh.position.y - (PLATE_H / 2) * Math.abs(Math.cos(this.plate.mesh.rotation.x));
+    const d = this.dock.position.y - (DOCK_H / 2) * Math.abs(Math.cos(this.dock.rotation.x));
+    return this.mode === 'narrow' ? Math.min(c, g, p) : Math.min(c, g, p, d);
+  }
+
+  /** The dock's buttons in one row, centred, a wider gap between pairs. */
+  private layoutDock(): void {
+    const byId = new Map(this.buttons.map((b) => [b.def.id, b]));
+    const groups = DOCK_GROUPS.map((ids) => ids.map((id) => byId.get(id)).filter((b) => b !== undefined));
+    const width = groups.reduce((w, g) => w + g.length * DOCK_W + (g.length - 1) * DOCK_GAP, 0) + (groups.length - 1) * DOCK_GROUP_GAP;
+    let x = -width / 2;
+    for (const g of groups) {
+      for (const b of g) {
+        b.panel.mesh.position.set(x + DOCK_W / 2, 0, 0);
+        x += DOCK_W + DOCK_GAP;
+      }
+      x += DOCK_GROUP_GAP - DOCK_GAP;
+    }
+  }
+
+  /**
+   * Name what is on the stage: a small kind line ("TEACHING MODEL", "CODEBASE · …") over the
+   * system's name. Drawn only when it changes.
+   */
+  setSubject(kind: string, name: string): void {
+    if (kind === this.plateText[0] && name === this.plateText[1]) return;
+    this.plateText = [kind, name];
+    this.plate.draw([
+      { text: kind, size: 28, color: CSS.action, bold: true, gap: 2 },
+      { text: name, size: 50, bold: true },
+    ]);
   }
 
   get guideVisible(): boolean {
@@ -280,7 +364,7 @@ export class SpatialUI {
       const enabled = b.def.enabled();
       const primary = enabled && (b.def.primary?.() ?? false);
       const bg = !enabled ? CSS.buttonDisabled : primary ? CSS.buttonPrimary : b.hovered ? CSS.buttonHover : CSS.buttonBg;
-      b.panel.draw([{ text: b.def.label(), size: 38, bold: true, color: enabled ? CSS.text : '#6d7886' }], bg);
+      b.panel.draw([{ text: b.def.label(), size: DOCK_BUTTONS.has(b.def.id) ? 30 : 38, bold: true, color: enabled ? CSS.text : '#6d7886' }], bg);
       b.panel.mesh.scale.setScalar(b.hovered && enabled ? 1.05 : 1);
     }
 
