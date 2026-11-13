@@ -24,10 +24,11 @@ export class Server {
 `,
   'src/Api/handlers.ts': `import { authenticate } from '../core/auth';
 import { endSession } from '@store/sessions';
+import { formatName } from '../util/format';
 
 /** Checks a login and opens a session. */
 export function handleLogin(name: string): string {
-  return authenticate(name);
+  return authenticate(formatName(name));
 }
 
 export function handleLogout(id: string): string {
@@ -98,6 +99,19 @@ export function $stamp(message: string): string {
 export function loadConfig(): string {
   return log('config');
 }
+`,
+  'src/util/format.ts': `import { log } from './log';
+
+/** Written the modern way: a function held in a const. */
+export const formatName = (name: string): string => {
+  return trim(log(name));
+};
+
+const trim = function (text: string): string {
+  return text.trim();
+};
+
+export const VERSION = '1.0.0';
 `,
   'src/util/query.ts': `/** Same name as the store's query: only one of the two can be drawn. */
 export function query(text: string): string {

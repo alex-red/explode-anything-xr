@@ -10,7 +10,7 @@ import { neutralize } from '../context.ts';
 import { DEFAULT_MODEL, type Env, type KVLike } from '../env.ts';
 import { checkRateLimit, estimateTokens, MAX_BODY_BYTES, parseCap, recordSpend, spentToday } from '../limits.ts';
 import { DEFAULT_META_MODEL } from '../meta.ts';
-import { Refusal, downloadSource, parseRepoQuery, researchRepository } from './github.ts';
+import { Refusal, downloadSource, parseRepoQuery, repoNameIn, researchRepository, searchRepository } from './github.ts';
 import { askJson, type ModelMessage } from './model.ts';
 import type { BuildRunner } from './runner.ts';
 import { OUTLINE_PROMPT, OUTLINE_SCHEMA, Outline, PLAN_PROMPT, PLAN_SCHEMA, Plan, planMessage, researchMessage } from './subject.ts';
@@ -46,7 +46,7 @@ const PLANNING_TIMEOUT_MS = 30_000;
 const NO_MODEL = 'Drafting a subject needs an AI model, and none is set up on this server.';
 const SUBJECT_DISCLOSURE =
   'Everything in it will be written by an AI model and marked as a hypothesis. Nobody checks it. It is a draft to explore, not a reference: where it matters, check it against a source you trust.';
-const NOT_A_REPO = 'That does not look like a GitHub repository. Give its address (github.com/owner/name) or just owner/name.';
+const NOT_A_REPO = 'That does not look like a GitHub repository. Give its address (github.com/owner/name), owner/name, or just its name.';
 
 const DISCLOSURE =
   'Parts and connections come from the source at that commit and cite their lines. The groups are chosen by an AI model and are marked as hypotheses. None of the code is run, so nothing is marked observed and no connection can be unplugged.';
@@ -331,9 +331,18 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
 
   async function research(job: Job, query: string, env: Env): Promise<void> {
     try {
-      const ref = parseRepoQuery(query);
-      if (!ref) return fail(job, 'refused', NOT_A_REPO);
-      const found = await researchRepository(ref, { ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}), ...(env.GITHUB_TOKEN ? { token: env.GITHUB_TOKEN } : {}) });
+      const github = { ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}), ...(env.GITHUB_TOKEN ? { token: env.GITHUB_TOKEN } : {}) };
+      let ref = parseRepoQuery(query);
+      // No address: look the name up, and say on the proposal that it was found by searching.
+      let searched: string | null = null;
+      if (!ref) {
+        searched = repoNameIn(query);
+        if (!searched || searched.includes('/')) return fail(job, 'refused', NOT_A_REPO);
+        ref = await searchRepository(searched, github);
+        if (job.cancelled) return;
+        if (!ref) return fail(job, 'refused', `No public repository named "${searched}" was found on GitHub. Give its address (github.com/owner/name) if you know it.`);
+      }
+      const found = await researchRepository(ref, github);
       if (job.cancelled) return;
       job.source = found.source;
       const proposal: RepositoryProposal = {
@@ -346,6 +355,7 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
           default_branch: found.default_branch,
           license: found.source.license?.name ?? null,
         },
+        found_by_search: searched,
         counts: found.counts,
         creates: [
           `A model of ${found.source.full_name} from its ${found.counts.files_readable} TypeScript and JavaScript source files, as they are at commit ${found.source.commit.slice(0, 7)}.`,
@@ -450,6 +460,7 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
       if (err instanceof Refusal) return fail(job, 'failed', err.message);
       log(`explode build failed: ${(err as Error).message}`);
       const message = (err as Error).message;
+      if (/kept stalling/.test(message)) return fail(job, 'failed', 'The download from GitHub kept stalling. Try again in a moment.');
       // Limits are worth telling the learner about; anything else is ours to read in the log.
       fail(job, 'failed', /longer than|more memory|larger than|unpacks to more/.test(message) ? `This repository is too much for this server: ${message}.` : 'The build failed. Nothing was created.');
     } finally {

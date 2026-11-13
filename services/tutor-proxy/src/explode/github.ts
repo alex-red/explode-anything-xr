@@ -75,6 +75,30 @@ async function get(url: string, accept: string, opts: GitHubOptions, timeoutMs =
   return res;
 }
 
+/** Words people put around a repository's name when they ask for it; they are not part of the name. */
+const FILLER = /\b(the|a|an|my|some|please|explode|open|show|me|see|look|at|up|find|build|of|for|from|on|github|git|repo|repos|repository|codebase|code|project|library|package|source)\b/gi;
+
+/** The name inside a loose request ("the zod repo" → "zod"). Empty when nothing is left. */
+export function repoNameIn(query: string): string {
+  return query.replace(FILLER, ' ').replace(/[^A-Za-z0-9._\-/ ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+/**
+ * Find a repository by name, for a request that gave no address: GitHub's own search, most
+ * starred first. The result is only ever proposed, with its exact owner, name and commit shown to
+ * the learner and the words that were searched for, so a wrong match is seen before anything is
+ * built. Null when nothing matches.
+ */
+export async function searchRepository(name: string, opts: GitHubOptions = {}): Promise<RepoRef | null> {
+  const res = await get(`${API}/search/repositories?${new URLSearchParams({ q: `${name} in:name`, sort: 'stars', order: 'desc', per_page: '1' })}`, 'application/vnd.github+json', opts);
+  if (res.status === 422) return null;
+  if (!res.ok) throw new Error(`GitHub answered ${res.status} for the search`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
+  const [owner, repo] = String(data?.items?.[0]?.full_name ?? '').split('/');
+  return owner && repo && OWNER.test(owner) && NAME.test(repo) ? { owner, name: repo } : null;
+}
+
 export interface Research {
   source: RepoSource;
   default_branch: string;
@@ -145,17 +169,61 @@ export async function researchRepository(ref: RepoRef, opts: GitHubOptions = {})
   };
 }
 
+/** A download that goes this long without a byte is abandoned and started again. */
+export const DOWNLOAD_STALL_MS = 5_000;
+const DOWNLOAD_ATTEMPTS = 3;
+
+class StalledDownload extends Error {}
+
+/**
+ * The body's chunks, giving up when none arrives for `stallMs`. Seen on Nov 13: the same archive
+ * from GitHub took about 20 s in some runs and under 1 s in others, with nothing of ours involved.
+ */
+async function* unstalled(body: AsyncIterable<Uint8Array>, stallMs: number): AsyncGenerator<Uint8Array> {
+  const chunks = body[Symbol.asyncIterator]();
+  try {
+    for (;;) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const quiet = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new StalledDownload('the download went quiet')), stallMs);
+      });
+      let next: IteratorResult<Uint8Array>;
+      try {
+        next = await Promise.race([chunks.next(), quiet]);
+      } finally {
+        clearTimeout(timer);
+      }
+      if (next.done) return;
+      yield next.value;
+    }
+  } finally {
+    // Let go of the connection whether it finished, stalled or was refused part-way.
+    void chunks.return?.()?.catch(() => undefined);
+  }
+}
+
 /**
  * Download the repository at `source.commit` and write its readable source files under `dir`.
  * Only regular files that pass `isReadableSource` (and package manifests) are written; the
- * repository's code is never installed or run. Returns how many source files were written.
+ * repository's code is never installed or run. A download that stalls is started again, up to
+ * three times in all. Returns how many source files were written.
  */
-export async function downloadSource(source: RepoSource, dir: string, opts: GitHubOptions = {}): Promise<number> {
+export async function downloadSource(source: RepoSource, dir: string, opts: GitHubOptions & { stallMs?: number } = {}): Promise<number> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await downloadOnce(source, dir, opts);
+    } catch (err) {
+      if (!(err instanceof StalledDownload) || attempt >= DOWNLOAD_ATTEMPTS) throw err instanceof StalledDownload ? new Error('the download from GitHub kept stalling') : err;
+    }
+  }
+}
+
+async function downloadOnce(source: RepoSource, dir: string, opts: GitHubOptions & { stallMs?: number }): Promise<number> {
   const res = await get(`${CODELOAD}/${source.full_name}/tar.gz/${source.commit}`, 'application/x-gzip', opts, DOWNLOAD_TIMEOUT_MS);
   if (!res.ok || !res.body) throw new Error(`GitHub answered ${res.status} for the download`);
   let sourceFiles = 0;
   let sourceBytes = 0;
-  await unpackTarGz(res.body as unknown as AsyncIterable<Uint8Array>, {
+  await unpackTarGz(unstalled(res.body as unknown as AsyncIterable<Uint8Array>, opts.stallMs ?? DOWNLOAD_STALL_MS), {
     strip: 1,
     maxCompressedBytes: MAX_TARBALL_BYTES,
     maxUnpackedBytes: MAX_UNPACKED_BYTES,

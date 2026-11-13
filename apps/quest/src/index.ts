@@ -97,9 +97,25 @@ async function main(): Promise<void> {
       }
       projectSelect.value = app.currentProject;
     };
+    // A system built in this browser can be forgotten from here; shipped ones cannot.
+    const remove = document.getElementById('project-remove') as HTMLButtonElement | null;
+    const showRemove = () => {
+      if (remove) remove.hidden = !app.isBuilt(app.currentProject);
+    };
     listProjects();
-    app.onProjectsChange = listProjects;
-    app.onProjectChange = (id) => (projectSelect.value = id);
+    showRemove();
+    app.onProjectsChange = () => {
+      listProjects();
+      showRemove();
+    };
+    app.onProjectChange = (id) => {
+      projectSelect.value = id;
+      showRemove();
+    };
+    remove?.addEventListener('click', () => {
+      app.removeBuilt(app.currentProject);
+      remove.blur();
+    });
     projectSelect.addEventListener('change', () => {
       app.openProject(projectSelect.value);
       projectSelect.value = app.currentProject; // a change already under way keeps its target

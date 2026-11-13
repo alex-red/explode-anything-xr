@@ -65,6 +65,23 @@ describe('a subject drafted by a model', () => {
     expect(xs[1]![0]).toBeLessThan(xs[2]![0]);
   });
 
+  it('leaves room for the plug of the cut link between its two parts, whatever their sizes', () => {
+    const clear = (b: ReturnType<typeof buildSubjectBundle>, from: string, to: string) => {
+      const [a, z] = [b.layout.placements[from]!.exploded, b.layout.placements[to]!.exploded];
+      const half = Math.hypot(a[0] - z[0], a[1] - z[1]) / 2; // the plug is halfway
+      return Math.min(half - b.assets!.parts[from]!.size[0] / 2, half - b.assets!.parts[to]!.size[0] / 2);
+    };
+    // The fixture cuts crust -> air: the largest layer next to a large ring.
+    expect(clear(bundle, 'part:crust', 'part:air')).toBeGreaterThanOrEqual(0.04 - 1e-4);
+    // Two layers side by side on the chain, cut between them.
+    const layers = buildSubjectBundle(change((d) => {
+      d.chain = ['core', 'mantle', 'crust'];
+      d.cut = { from: 'core', to: 'mantle' };
+    }), META);
+    expect(clear(layers, 'part:core', 'part:mantle')).toBeGreaterThanOrEqual(0.04 - 1e-4);
+    expect(targetOverlaps(layers.graph, layers.layout)).toEqual([]);
+  });
+
   it('writes a lesson that says at every turn that this is a draft, and that the engine can run to the end', () => {
     const lesson = bundle.lessons[0]!;
     const text = lesson.steps.map((s) => s.caption).join(' ');

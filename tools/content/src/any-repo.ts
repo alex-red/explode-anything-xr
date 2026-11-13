@@ -147,6 +147,7 @@ export function indexAnyRepo(root: string, source: RepoSource): RepoIndex {
     include: [...SOURCE_GLOBS, ...JS_GLOBS],
     allowJs: true,
     bundlerResolution: true,
+    constFunctions: true,
     normalizeIds: true,
     gitRevision: source.commit,
     ...(Object.keys(tsPaths).length ? { tsPaths } : {}),

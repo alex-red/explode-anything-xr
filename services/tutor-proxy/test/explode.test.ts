@@ -10,7 +10,7 @@ import { FIXTURE_ANSWER, FIXTURE_FILES, FIXTURE_SOURCE } from '../../../tools/co
 import { DRAFT } from '../../../tools/content/test/subject-fixture.ts';
 import { createRegistry } from '../src/bundles.ts';
 import type { Env } from '../src/env.ts';
-import { parseRepoQuery } from '../src/explode/github.ts';
+import { downloadSource, parseRepoQuery, repoNameIn } from '../src/explode/github.ts';
 import { inlineRunner, workerRunner, type BuildRunner } from '../src/explode/runner.ts';
 import { createExplodeService } from '../src/explode/service.ts';
 import { isManifest, isReadableSource, safePath } from '../src/explode/source-files.ts';
@@ -165,6 +165,46 @@ describe('the tarball reader', () => {
   });
 });
 
+describe('a download that stalls', () => {
+  const archive = makeTarGz([{ path: 'repo-abc/src/a.ts', data: 'export const a = 1;\n' }, { path: 'repo-abc/src/b.ts', data: 'export const b = 2;\n' }]);
+  /** A fetch whose first `stalls` answers send half the archive and then nothing. */
+  const stalling = (stalls: number) => {
+    let asked = 0;
+    const fetchImpl = (async (input: Parameters<typeof fetch>[0]) => {
+      const stall = asked++ < stalls;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(archive.subarray(0, stall ? Math.floor(archive.length / 2) : archive.length)));
+          if (!stall) controller.close(); // a stalled one is simply never finished
+        },
+      });
+      const res = new Response(body, { status: 200 });
+      Object.defineProperty(res, 'url', { value: String(input) });
+      return res;
+    }) as typeof fetch;
+    return { fetchImpl, asked: () => asked };
+  };
+  const into = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'explode-stall-test-'));
+    dirs.push(dir);
+    return dir;
+  };
+
+  it('is abandoned and started again on a fresh connection', async () => {
+    const s = stalling(2);
+    const dir = into();
+    expect(await downloadSource(FIXTURE_SOURCE, dir, { fetchImpl: s.fetchImpl, stallMs: 40 })).toBe(2);
+    expect(s.asked()).toBe(3);
+    expect(readdirSync(join(dir, 'src')).sort()).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('gives up after three tries, with a reason', async () => {
+    const s = stalling(9);
+    await expect(downloadSource(FIXTURE_SOURCE, into(), { fetchImpl: s.fetchImpl, stallMs: 40 })).rejects.toThrow('the download from GitHub kept stalling');
+    expect(s.asked()).toBe(3);
+  });
+});
+
 // ── The whole flow, against a pretend GitHub and a pretend model ──────────────────────────────
 
 interface World {
@@ -217,6 +257,11 @@ function fakeFetch(world: World): typeof fetch {
       return reply({ query: { pages: [{ pageid: all.indexOf(page) + 100, title: page.title, extract: page.text, ...(page.disambiguation ? { pageprops: { disambiguation: '' } } : {}) }] } });
     }
     if (world.githubStatus) return reply({ message: 'no' }, world.githubStatus);
+    if (url.startsWith('https://api.github.com/search/repositories?')) {
+      const q = (new URL(url).searchParams.get('q') ?? '').replace(' in:name', '').toLowerCase();
+      const hit = Object.keys(world.repos).find((k) => k.split('/')[1] === q);
+      return reply({ items: hit ? [{ full_name: hit === FULL.toLowerCase() ? FULL : hit }] : [] });
+    }
     const api = /^https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)(\/.*)?$/.exec(url);
     if (api) {
       const repo = world.repos[api[1]!.toLowerCase()];
@@ -281,13 +326,32 @@ describe('proposing a repository', () => {
     expect(job).toMatchObject({ kind: 'repository', status: 'proposed', stage: null, refusal: null, error: null, system_id: null, build_seconds: null });
     const p = RepositoryProposal.parse(job.proposal);
     expect(p.repository).toEqual({ full_name: FULL, url: `https://github.com/${FULL}`, commit: SHA, default_branch: 'main', license: 'MIT License' });
-    // 10 source files; the test file, the manifests and the docs are not counted as readable.
-    expect(p.counts).toMatchObject({ files_total: 15, files_readable: 10 });
-    expect(p.creates.join(' ')).toContain('10 TypeScript and JavaScript source files');
-    expect(p.leaves_out.join(' ')).toContain('5 of 15 files');
+    // 11 source files; the test file, the manifests and the docs are not counted as readable.
+    expect(p.counts).toMatchObject({ files_total: 16, files_readable: 11 });
+    expect(p.creates.join(' ')).toContain('11 TypeScript and JavaScript source files');
+    expect(p.leaves_out.join(' ')).toContain('5 of 16 files');
     expect(p.disclosure).toMatch(/marked as hypotheses/);
     expect(p.disclosure).toMatch(/None of the code is run/);
     expect(s.world.calls.some((c) => c.includes('codeload') || c.includes('anthropic'))).toBe(false);
+  });
+
+  it('looks a repository up by name when no address is given, and says on the proposal that it searched', async () => {
+    expect(repoNameIn('explode the Fixture.Shop repo on GitHub, please')).toBe('Fixture.Shop');
+    expect(repoNameIn('the repository')).toBe('');
+    const s = setup();
+    const job = await s.propose('the fixture.shop repo');
+    const p = RepositoryProposal.parse(job.proposal);
+    expect(p.repository.full_name).toBe(FULL);
+    expect(p.repository.commit).toBe(SHA);
+    expect(p.found_by_search).toBe('fixture.shop');
+    expect(s.world.calls[0]).toContain('/search/repositories?q=fixture.shop+in%3Aname&sort=stars');
+    // An address is never searched for, and its proposal says nothing about a search.
+    const direct = setup();
+    expect(RepositoryProposal.parse((await direct.propose()).proposal).found_by_search).toBeNull();
+    expect(direct.world.calls.some((c) => c.includes('/search/'))).toBe(false);
+    // Nothing by that name, or no name at all.
+    expect((await s.propose('the left-pad-nine repo')).refusal).toBe('No public repository named "left-pad-nine" was found on GitHub. Give its address (github.com/owner/name) if you know it.');
+    expect((await s.propose('the repository please')).refusal).toMatch(/does not look like a GitHub repository/);
   });
 
   it('says the time is unknown until this server has timed a build, then estimates from its own builds', async () => {
@@ -318,7 +382,7 @@ describe('proposing a repository', () => {
     expect((await s.propose('secret/thing')).refusal).toMatch(/private/);
     expect((await s.propose('nobody/nothing')).refusal).toMatch(/no public repository nobody\/nothing/);
     expect((await s.propose('big/one')).refusal).toMatch(/1501 source files, which is more than this server reads/);
-    expect((await s.propose('explain how transformers work')).refusal).toMatch(/does not look like a GitHub repository/);
+    expect((await s.propose('a/b/c')).refusal).toMatch(/does not look like a GitHub repository/);
     // A refusal cannot be confirmed into a build.
     expect((await s.confirm(python.id)).status).toBe(409);
     expect(s.world.calls.some((c) => c.includes('codeload') || c.includes('anthropic'))).toBe(false);

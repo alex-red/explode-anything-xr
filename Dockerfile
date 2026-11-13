@@ -9,10 +9,9 @@ WORKDIR /app
 RUN npm install --global bun@1.4.4
 
 # Workspace packages are consumed as TypeScript source (Node's type stripping), so the whole
-# repository is needed, not a build of it. bun.lock is not committed, so this resolves afresh: the
-# proxy's own dependencies are pinned to exact versions, some of the app's dev tools are ranges.
+# repository is needed, not a build of it. The committed bun.lock fixes every version.
 COPY . .
-RUN bun install
+RUN bun install --frozen-lockfile
 
 ENV NODE_ENV=production
 # The host sets PORT. Keys and settings come from its secret store, never from the image:

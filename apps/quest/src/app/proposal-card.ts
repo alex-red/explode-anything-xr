@@ -81,7 +81,10 @@ export function cardLines(view: FlowView): TextLine[] {
         p.kind === 'repository'
           ? [
               { text: p.repository.full_name, size: 46, bold: true, gap: 2 },
-              { text: `commit ${p.repository.commit.slice(0, 7)} of ${p.repository.default_branch}  ·  licence: ${p.repository.license ?? 'none reported'}`, size: LABEL, color: CSS.muted, gap: 12 },
+              { text: `commit ${p.repository.commit.slice(0, 7)} of ${p.repository.default_branch}  ·  licence: ${p.repository.license ?? 'none reported'}`, size: LABEL, color: CSS.muted, gap: p.found_by_search ? 4 : 12 },
+              ...(p.found_by_search
+                ? [{ text: `Found by searching GitHub for "${p.found_by_search}", most starred first. Check it is the one you meant.`, size: LABEL, bold: true, color: CSS.path, gap: 12 } satisfies TextLine]
+                : []),
             ]
           : [
               { text: `${p.subject.name}  ·  an AI draft`, size: 46, bold: true, gap: 2 },

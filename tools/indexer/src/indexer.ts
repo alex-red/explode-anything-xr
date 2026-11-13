@@ -41,6 +41,11 @@ export interface IndexOptions {
    * the path as written.
    */
   normalizeIds?: boolean;
+  /**
+   * Also read a function assigned to a top-level `const` (`const load = async () => …`), the way
+   * much modern code is written. Default: off, only `function` declarations, classes and methods.
+   */
+  constFunctions?: boolean;
 }
 
 /** Structural facts about a declaration, for ranking and roles. Never evidence. */
@@ -197,6 +202,29 @@ export function indexRepository(opts: IndexOptions): IndexResult {
       const name = fn.getName();
       if (!name) continue;
       registerDecl(fn, `fn:${idFile}#${idName(name)}`, 'function', name, modId, file);
+    }
+    if (opts.constFunctions) {
+      for (const statement of sf.getVariableStatements()) {
+        for (const decl of statement.getDeclarations()) {
+          const init = decl.getInitializer();
+          const nameNode = decl.getNameNode();
+          if (!init || !Node.isIdentifier(nameNode) || !(Node.isArrowFunction(init) || Node.isFunctionExpression(init))) continue;
+          const name = nameNode.getText();
+          const id = `fn:${idFile}#${idName(name)}`;
+          if (nodes.has(id) || id.length > MAX_ID - 8) continue;
+          // The statement is what a reader sees and what carries the doc comment and `export`.
+          const start = statement.getStartLineNumber();
+          const end = statement.getEndLineNumber();
+          const docs = statement.getJsDocs();
+          const doc = docs[docs.length - 1]?.getDescription().trim() ?? '';
+          const evId = sourceEvidence(`ev:src:${id}`, file, start, end, `Source: ${file}:${start}-${end}`, `Declaration of ${name}.`);
+          addNode({ id, kind: 'function', label: name, summary: /^copyright\b/i.test(doc) ? '' : doc.replace(/\s+/g, ' '), parent_id: modId, truth_status: 'static_verified', evidence_ids: [evId] });
+          // A call to it resolves to the variable's declaration; a call inside it has that declaration as an ancestor.
+          declToId.set(decl, id);
+          facts[id] = { exported: statement.isExported(), lines: end - start + 1, has_update: false };
+          declRanges.push({ node_id: id, kind: 'function', name, file, start: statement.getStart(), end: statement.getEnd() });
+        }
+      }
     }
     for (const cls of sf.getClasses()) {
       const name = cls.getName();

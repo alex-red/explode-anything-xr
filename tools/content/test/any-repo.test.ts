@@ -42,12 +42,25 @@ describe('indexing a repository nobody prepared', () => {
     expect(workspacePaths(root)).toEqual({ '@store/*': ['src/store/*'] });
   });
 
+  it('reads a function held in a const, with its calls in and out, and leaves other consts alone', () => {
+    const calls = (from: string, to: string) => repo.pg.links.some((l) => l.source === from && l.target === to);
+    const format = repo.pg.parts.get('fn:src/util/format.ts#formatname')!;
+    expect(format).toMatchObject({ kind: 'function', label: 'formatName', exported: true, doc: 'Written the modern way: a function held in a const.' });
+    expect(repo.pg.parts.get('fn:src/util/format.ts#trim')).toMatchObject({ exported: false });
+    expect(repo.pg.parts.has('fn:src/util/format.ts#version')).toBe(false);
+    expect(calls('fn:src/api/handlers.ts#handlelogin', 'fn:src/util/format.ts#formatname')).toBe(true); // called from elsewhere
+    expect(calls('fn:src/util/format.ts#formatname', 'fn:src/util/log.ts#log')).toBe(true); // calls out
+    expect(calls('fn:src/util/format.ts#formatname', 'fn:src/util/format.ts#trim')).toBe(true); // a function expression
+    const ev = repo.index.evidence.find((e) => e.id === 'ev:src:fn:src/util/format.ts#formatname');
+    expect(ev?.kind === 'source_range' && ev.source.excerpt.startsWith('export const formatName = (name: string): string => {')).toBe(true);
+  });
+
   it('never reads a test file', () => {
     expect(repo.index.graph.nodes.some((n) => n.id.includes('auth.test') || n.label === 'neverIndexed')).toBe(false);
   });
 
   it('counts what it read', () => {
-    expect(repo.counts).toEqual({ files: 10, declarations: 16, parts: 14, connections: repo.pg.links.length });
+    expect(repo.counts).toEqual({ files: 11, declarations: 18, parts: 16, connections: repo.pg.links.length });
     expect(tooSmall(repo)).toBeNull();
   });
 
@@ -89,7 +102,7 @@ describe('building from a model answer', () => {
   it('draws only one of two parts with the same name, and keeps the one the model singled out', () => {
     const queries = bundle.graph.nodes.filter((n) => n.label === 'query');
     expect(queries.map((n) => n.id)).toEqual(['fn:src/store/db.ts#query']);
-    expect(stats.shown.parts).toBe(13);
+    expect(stats.shown.parts).toBe(15);
   });
 
   it('traces a chain in which every hop is a call in the source', () => {
@@ -111,7 +124,7 @@ describe('building from a model answer', () => {
     const text = lesson.steps.map((s) => s.caption).join(' ');
     expect(text).toContain('Example-Org/Fixture.Shop');
     expect(text).toContain('commit c0ffee1');
-    expect(text).toContain('10 files, 16 declarations');
+    expect(text).toContain('11 files, 18 declarations');
     expect(text).toContain('test-model-1');
     expect(text).toContain('None of it was run');
     expect(lesson.steps.every((s) => s.caption.length <= 280)).toBe(true);

@@ -685,9 +685,10 @@ export class ExplodeApp {
   proposeSystem(query: string, kind?: 'repository' | 'subject'): void {
     const q = query.trim().slice(0, 300);
     if (!q) return;
-    // A GitHub address is a repository; anything else is a subject for a model to draft.
+    // A GitHub address is a repository, and so is anything asked for as one ("the zod repo"),
+    // which the server looks up by name. Anything else is a subject for a model to draft.
     const repo = repoQueryIn(q);
-    const what = kind ?? (repo ? 'repository' : 'subject');
+    const what = kind ?? (repo || /\b(repo|repos|repository|github|codebase)\b/i.test(q) ? 'repository' : 'subject');
     if (!this.flow || !this.explodeAvailable) return this.voiceSay('Building something new is not available right now. Everything in the project list still works.');
     if (this.flow.busy) return this.voiceSay('One proposal at a time: answer the one in front of you first.');
     this.picker.close();
@@ -695,6 +696,27 @@ export class ExplodeApp {
     this.voiceSay(null);
     this.sfx.click();
     this.flow.propose({ kind: what, query: what === 'repository' ? (repo ?? q) : q });
+  }
+
+  /** Whether a project was built on request in this browser, and so can be removed from it. */
+  isBuilt(id: string): boolean {
+    return !!this.projects.find((p) => p.id === id)?.built;
+  }
+
+  /**
+   * Forget a system that was built on request: out of the list, and out of this browser's
+   * storage. If it is on the stage, the opening tutorial takes its place. Shipped systems cannot
+   * be removed. It can always be built again.
+   */
+  removeBuilt(id: string): void {
+    const at = this.projects.findIndex((p) => p.id === id && p.built);
+    if (at === -1 || this.switching) return;
+    if (this.store.systemId === id) this.openProject(this.opening.id);
+    this.projects.splice(at, 1);
+    this.saved?.remove(id).catch((err: unknown) => console.warn('[explode:remove]', err));
+    this.picker.close();
+    this.onProjectsChange?.();
+    this.ui.dirty = true;
   }
 
   /** The picker's Explode anything row: say how to ask. In a headset there is nothing to type on. */

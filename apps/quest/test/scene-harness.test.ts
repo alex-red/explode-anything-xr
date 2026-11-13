@@ -2143,6 +2143,7 @@ describe('scene harness: explode anything', () => {
     kind: 'repository',
     title: 'Explode Example-Org/Fixture.Shop',
     repository: { full_name: 'Example-Org/Fixture.Shop', url: 'https://github.com/Example-Org/Fixture.Shop', commit: FIXTURE_SOURCE.commit, default_branch: 'main', license: 'MIT License' },
+    found_by_search: null,
     counts: { files_total: 15, files_readable: 10, bytes_readable: 2400 },
     creates: [
       'A model of Example-Org/Fixture.Shop from its 10 TypeScript and JavaScript source files, as they are at commit c0ffee1.',
@@ -2581,5 +2582,45 @@ describe('scene harness: explode anything', () => {
     expect(t.h.caption()).toMatch(/That was an AI draft, and nobody has checked it/);
     expectFinite(t.h.scene);
     expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('asking for a repository by name is a repository request, and the card warns that it was found by searching', async () => {
+    const t = await start({ research: [job({}), job({ status: 'proposed', proposal: { ...proposal, found_by_search: 'fixture.shop' } })] });
+    t.h.app.proposeSystem('the fixture.shop repo');
+    expect(t.calls).toEqual(['propose repository the fixture.shop repo']);
+    await t.wait();
+    expect(t.card()).toContain('Found by searching GitHub for "fixture.shop", most starred first. Check it is the one you meant.');
+    expect(TextPanel.clipEvents).toEqual([]);
+    // With an address there is no such line.
+    const direct = await start();
+    direct.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await direct.wait();
+    expect(direct.card()).not.toContain('Found by searching');
+  });
+
+  it('a built system can be removed: from the list, from storage, and from the stage', async () => {
+    const t = await start();
+    t.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await t.wait();
+    t.h.press(t.h.button(/^Build$/));
+    await t.wait(6);
+    expect(t.h.state().system_id).toBe(BUILT_ID);
+    expect(t.h.app.isBuilt(BUILT_ID)).toBe(true);
+    // A shipped system cannot be removed.
+    expect(t.h.app.isBuilt('system:jupiter')).toBe(false);
+    t.h.app.removeBuilt('system:jupiter');
+    expect(t.projects()).toHaveLength(6);
+
+    let told = 0;
+    t.h.app.onProjectsChange = () => told++;
+    t.h.app.removeBuilt(BUILT_ID);
+    await t.wait(2);
+    expect(t.projects()).not.toContain(BUILT_ID);
+    expect(await t.saved.list()).toEqual([]);
+    expect(t.h.state().system_id).toBe('system:mr-headset'); // the opening tutorial took its place
+    expect(told).toBe(1);
+    t.h.press(plate(t.h));
+    t.h.frames(60);
+    expect(pickerOf(t.h).names).not.toContain('Fixture.Shop');
   });
 });

@@ -54,6 +54,11 @@ export const RepositoryProposal = z.object({
     /** The licence as GitHub reports it; null when it reports none. */
     license: z.string().max(80).nullable(),
   }),
+  /**
+   * The words that were searched for when the learner gave a name and no address; null when they
+   * gave the address. A search can find the wrong repository, so the card says it was one.
+   */
+  found_by_search: z.string().max(80).nullable().default(null),
   counts: z.object({
     files_total: z.number().int().nonnegative(),
     /** TypeScript and JavaScript source files that would be read. */

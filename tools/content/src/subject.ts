@@ -203,6 +203,13 @@ const ROW_WIDTH = 0.6;
 const ROW_GAP = 0.024;
 /** Narrowest slot a part gets in its row, so its ray target (4 cm) never touches its neighbour's. */
 const MIN_SLOT = 0.046;
+/**
+ * The link the learner cuts has a plug halfway between its two parts (apps/quest graph-view), and
+ * a ray comes at it from a hand held to one side. Each of the two parts must end this far short
+ * of that midpoint, or the ray lands on a part instead: the plug's own reach (2.5 cm) and a
+ * little more for the angle.
+ */
+const PLUG_CLEARANCE = 0.04;
 
 function round(v: number): number {
   const r = Math.round(v * 10000) / 10000;
@@ -247,18 +254,26 @@ function place(draft: SubjectDraft): Placed[] {
 
   // One scale for the whole model, so the widest row fits and the parts keep their proportions.
   const slot = (id: string, k: number) => Math.max(MIN_SLOT, diameter.get(id)! * k);
-  const width = (row: string[], k: number) => row.reduce((w, id) => w + slot(id, k), 0) + ROW_GAP * Math.max(0, row.length - 1);
+  /** Space between a part and the next in its row: wider where the plug of the cut link has to fit. */
+  const gapAfter = (row: string[], i: number, k: number) => {
+    const a = row[i]!;
+    const b = row[i + 1]!;
+    if (!((a === draft.cut.from && b === draft.cut.to) || (a === draft.cut.to && b === draft.cut.from))) return ROW_GAP;
+    const apart = Math.max(diameter.get(a)!, diameter.get(b)!) * k + 2 * PLUG_CLEARANCE; // centre to centre
+    return Math.max(ROW_GAP, apart - slot(a, k) / 2 - slot(b, k) / 2);
+  };
+  const width = (row: string[], k: number) => row.reduce((w, id, i) => w + slot(id, k) + (i < row.length - 1 ? gapAfter(row, i, k) : 0), 0);
   let scale = 1;
   while (scale > 0.4 && rows.some((row) => width(row, scale) > ROW_WIDTH)) scale -= 0.05;
 
   const exploded = new Map<string, [number, number, number]>();
   rows.forEach((row, r) => {
     let x = -width(row, scale) / 2;
-    for (const id of row) {
+    row.forEach((id, i) => {
       const w = slot(id, scale);
       exploded.set(id, [round(x + w / 2), ROW_Y[r]!, 0]);
-      x += w + ROW_GAP;
-    }
+      x += w + (i < row.length - 1 ? gapAfter(row, i, scale) : 0);
+    });
   });
 
   const ring = layers.length ? RING_RADIUS : 0.07;
