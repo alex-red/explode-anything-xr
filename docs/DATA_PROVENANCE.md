@@ -47,3 +47,14 @@ Every asset in a PWA is publicly downloadable, so everything shipped must be our
 | `zod` | 4.6.7 | MIT |
 | `ts-morph` | 28.0.0 | MIT |
 | `@meta-quest/metavr` (dev only) | ^1.8.1 | Meta Platform Technologies SDK License, collects usage data — dev dependency only, not shipped |
+
+## Built on request (ADR-0026)
+
+Nothing below ships with the app. It is fetched when a learner asks, shown to that learner, and kept only in their browser and, for a few hours, in the server's memory.
+
+| What | Source | How it is used | Licence |
+|---|---|---|---|
+| A repository's source excerpts | A public GitHub repository, at one commit, through GitHub's API and tarball hosts | Parsed, never run; excerpts cited with path, lines and commit | The repository's own, shown as GitHub reports it |
+| Text about a subject | English Wikipedia, through its public API | Read by an AI model to draft a model; not copied into the result | CC BY-SA 4.0; the articles read are named in the draft |
+| A subject's parts, connections and lesson | Written by an AI model on request | Every part and connection marked a hypothesis; checked by no one | — |
+

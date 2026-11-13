@@ -7,6 +7,7 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [WIN_PLAN.md](WIN_PLAN.md) | **Current plan (v5, Nov 11):** the judging criteria as read, room anchoring, a headset model to pull apart on your desk, Quest 3S test protocol, phases to Nov 18. Supersedes FINAL_PLAN's scope and phases |
 | [EXPLORE_PLAN.md](EXPLORE_PLAN.md) | **Adds to WIN_PLAN (Nov 11):** W11, key parts first and a detail level you can swipe down; W12, Meta's Model API as a tutor provider |
 | [RELEVANCE_PLAN.md](RELEVANCE_PLAN.md) | **Adds to WIN_PLAN (Nov 12):** a real Meta repository (the Immersive Web SDK) drawn from its most relevant parts, parent nodes chosen by a model, special shapes, and the reworked look |
+| [ANYTHING_PLAN.md](ANYTHING_PLAN.md) | **Proposed (Nov 13), nothing built:** Explode Anything. A GitHub repository or a new subject, built on request behind a proposal the learner confirms. Reopens WIN_PLAN's "no bring-your-own-repo" |
 | [FINAL_PLAN.md](FINAL_PLAN.md) | Previous plan (v4, Nov 9), still current for hosting and freeze: actual state, link-based submission, code-review findings, day-by-day to Nov 18. Supersedes PLAN.md's schedule and the APK packaging steps |
 | [DEVPOST_DRAFT.md](DEVPOST_DRAFT.md) | Draft Devpost text under the four judging criteria; `[TODO]` and **VERIFY** items to resolve before submitting |
 | [REVIEW.md](REVIEW.md) | Review of the original handoff: corrections, gaps, cuts, open **VERIFY** items, traceability |
@@ -48,3 +49,4 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [0023](adr/0023-room-anchoring.md) | The stage stands on the real desk, remembers its spot, and falls back to floating |
 | [0024](adr/0024-headset-model-and-dimming.md) | Open on the headset you are wearing; dim the real room when its camera link is cut |
 | [0025](adr/0025-real-repo-relevance.md) | A real repository, drawn from its most relevant parts under parent nodes a model chose |
+| [0026](adr/0026-explode-anything.md) | **Proposed:** Explode Anything, systems built on request behind a proposal the learner confirms |

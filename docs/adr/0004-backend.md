@@ -35,6 +35,10 @@ Decided by the owner on Nov 12: the proxy no longer depends on Cloudflare or wra
 - With only `META_API_KEY` set, the server answers turns with the Meta provider.
 - **Where it is hosted for the submission is undecided.** Any host that runs Node 24 and holds secrets will do; it must set `ALLOWED_ORIGINS` to the Pages origin, and `TRUST_PROXY=1` if it sits behind a reverse proxy.
 
+## Note, 2026-11-13: hosted on Render
+
+Decided by the owner on Nov 13: the proxy is hosted on Render, as the same Node server, developed and tested locally first. The details and what is still to verify are in [ANYTHING_PLAN.md](../ANYTHING_PLAN.md) §4. Nothing is deployed yet.
+
 ## Revisit trigger
 
 User-imported repos (P2+), which would need server-side indexing.
