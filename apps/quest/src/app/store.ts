@@ -24,7 +24,21 @@ export class Store {
   private lessonId: string | null = null;
   private listeners = new Set<Listener>();
 
-  constructor(private readonly bundles: ReadonlyMap<string, ContentBundle>) {}
+  private readonly bundles: Map<string, ContentBundle>;
+
+  constructor(bundles: ReadonlyMap<string, ContentBundle>) {
+    this.bundles = new Map(bundles);
+  }
+
+  /** A bundle fetched after start (the project picker loads them on demand). */
+  add(bundle: ContentBundle): void {
+    this.bundles.set(bundle.graph.system_id, bundle);
+  }
+
+  /** True once this system's bundle is in hand. */
+  has(systemId: string): boolean {
+    return this.bundles.has(systemId);
+  }
 
   get log(): readonly EngineEvent[] {
     return this.events;

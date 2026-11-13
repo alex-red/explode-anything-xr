@@ -137,6 +137,12 @@ export const STAGE_Y = -0.2;
 // Boot-up: the scan front climbs this far above the stage in this many seconds.
 const BOOT_SECONDS = 1.3;
 const BOOT_HEIGHT = 0.9;
+/**
+ * Seconds for a model to leave its stage when another project is opened: the boot run backwards,
+ * the scan front sweeping down and the parts sinking into the stage. Short, so a switch between
+ * loaded projects feels immediate; the new model's boot carries the moment.
+ */
+export const LEAVE_SECONDS = 0.24;
 // How far a software connection arcs out of the straight line, as a fraction of its length
 // (the conduit shader and arcPoint share it).
 const EDGE_ARC = 0.08;
@@ -194,8 +200,9 @@ export class GraphView {
   /** 0 → 1 while the stage's shockwave runs; above 1 when idle. */
   private burst = 2;
   private wasOpen = false;
-  /** 0 → 1 while the model materialises from its stage. */
+  /** 0 → 1 while the model materialises from its stage; back to 0 as it leaves. */
   private boot = 0;
+  private leaving = false;
   private tray: Group;
   private hasPlugs = false;
   private trayLabel: TextPanel;
@@ -315,6 +322,18 @@ export class GraphView {
     });
   }
 
+  /** Start leaving the stage (another project is opening): the boot runs backwards and the stage throws a ring. */
+  depart(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.burst = 0;
+  }
+
+  /** True once a departing model has gone; the app then disposes it. */
+  get departed(): boolean {
+    return this.leaving && this.boot <= 0;
+  }
+
   /** How much of a software graph is shown: key parts, plus supporting parts, or everything. */
   get detail(): DetailLevel {
     return this.detailLevel;
@@ -340,13 +359,17 @@ export class GraphView {
     this.time += dt;
     if (this.isMechanical) tickLooks(this.time);
     const s = this.store.state;
-    const target = this.pullPreview ?? s.explode_factor;
+    // Leaving, the model closes as it sinks away.
+    const target = this.leaving ? 0 : (this.pullPreview ?? s.explode_factor);
     this.displayFactor += (target - this.displayFactor) * Math.min(1, dt * 5);
     if (Math.abs(target - this.displayFactor) < 0.001) this.displayFactor = target;
     const f = easeInOut(this.displayFactor);
     camera.getWorldPosition(this.camPos);
     this.camera = camera;
-    if (this.boot < 1) {
+    if (this.leaving) {
+      this.boot = Math.max(0, this.boot - dt / LEAVE_SECONDS);
+      setReveal(this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT);
+    } else if (this.boot < 1) {
       this.boot = Math.min(1, this.boot + dt / BOOT_SECONDS);
       setReveal(this.boot < 1 ? this.stage.group.getWorldPosition(this.tmpB).y + this.boot * BOOT_HEIGHT : null);
     }

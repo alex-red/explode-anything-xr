@@ -17,6 +17,7 @@ import { TextPanel } from '../src/app/text.ts';
 import { FakeAudioContext } from './fake-audio.ts';
 import { FOV_BUDGET } from '../src/app/fov.ts';
 import { hasLook } from '../src/app/looks/registry.ts';
+import { PROJECTS, type LoadProgress, type Project } from '../src/app/projects.ts';
 
 const bundles = [ContentBundle.parse(drivetrainJson), ContentBundle.parse(repoJson)];
 /** The shipped set (src/index.ts): the headset opens, the drivetrain is under "More". */
@@ -137,9 +138,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown; tutorUrl?: string } = {}) {
+function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown; tutorUrl?: string; projects?: Project[] } = {}) {
   const w = makeWorld();
-  const app = startApp(w.world as never, opts.bundles ?? bundles, opts.tutorUrl ?? null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never);
+  const app = startApp(w.world as never, opts.bundles ?? bundles, opts.tutorUrl ?? null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never, opts.projects);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -753,7 +754,6 @@ describe('scene harness: software hero lesson', () => {
     });
   });
 
-  it('keeps the exploded layout inside the 60°×50° cone and labels capped at 30', () => {
   it('a typed question can act for the learner: it presses, traces and unplugs through the same handlers', async () => {
     const h = setup(false, { tutorUrl: 'https://proxy.example' });
     h.press(h.button(/Skip tutorial/));
@@ -832,6 +832,7 @@ describe('scene harness: software hero lesson', () => {
     });
   });
 
+  it('keeps the exploded layout inside the 60°×50° cone and labels capped at 30', () => {
     localStorage.setItem('explode:detail:v1', 'all'); // the worst case: every part shown
     const h = setup();
     h.press(h.button(/Skip tutorial/));
@@ -1297,7 +1298,7 @@ describe('scene harness: field-of-view layouts', () => {
   function busiest(h: ReturnType<typeof setup>) {
     h.press(h.button(/^Next/)); // headset intro is an explode step; go straight to software via keys
     keyListeners.at(-1)!({ key: 's' });
-    h.frames(5);
+    h.frames(30); // the headset leaves the stage first
     keyListeners.at(-1)!({ key: 'n' });
     keyListeners.at(-1)!({ key: 'e' });
     h.frames(60);
@@ -1331,8 +1332,8 @@ describe('scene harness: field-of-view layouts', () => {
     for (const e of lessonButtons) expect(e.h[1], `${e.name} is left of the model`).toBeLessThanOrEqual(modelLeft);
 
     const caption = all.find((e) => /^What happens when/.test(e.name))!; // the lesson's title heads the caption panel
-    const settings = all.filter((e) => /^(Reset|Recenter|Gestures|Hide gestures|Sound|Layout|View|◂|More|Live AI)/.test(e.name));
-    expect(settings).toHaveLength(9);
+    const settings = all.filter((e) => /^(Reset|Recenter|Gestures|Hide gestures|Sound|Layout|View|◂|More|Projects|Live AI)/.test(e.name));
+    expect(settings).toHaveLength(10);
     for (const e of settings) expect(e.v[0], `${e.name} is above the caption`).toBeGreaterThanOrEqual(caption.v[1]);
 
     // The caption panel's lower edge is 0.24 m above the model's centre (ui.ts): every part label stays under it.
@@ -1846,11 +1847,11 @@ describe('scene harness: nameplate, view dock and lifelike parts', () => {
   it('names what is on the stage, front and centre, and follows a switch of system', () => {
     const h = setup(false, { bundles: shipped });
     const plate = () => h.panels().find((p) => /^TEACHING MODEL |^CODEBASE/.test(p.text))?.text;
-    expect(plate()).toBe('TEACHING MODEL Mixed-reality headset');
+    expect(plate()).toBe('TEACHING MODEL Mixed-reality headset  ▾');
     h.press(h.button(/^More: Drivetrain/));
-    expect(plate()).toBe('TEACHING MODEL Simplified EV drivetrain');
+    expect(plate()).toBe('TEACHING MODEL Simplified EV drivetrain  ▾');
     h.press(h.button(/^Skip tutorial$|^Software/));
-    expect(plate()).toBe('CODEBASE · sample TypeScript service auth-service');
+    expect(plate()).toBe('CODEBASE · sample TypeScript service auth-service  ▾');
   });
 
   it('the dock opens the model in quarters, turns, tilts, raises and zooms it, and Home view puts it back', () => {
@@ -2009,5 +2010,110 @@ describe('scene harness: Jupiter', () => {
     expect(seen).toBe(true);
     for (const id of Object.keys(layout)) expect(node(id).mesh.position.toArray().map((n) => +n.toFixed(5)), id).toEqual(layout[id]!.exploded);
     expect(node('part:field').look.group.rotation.y).toBeGreaterThan(turnedBefore);
+  });
+});
+
+describe('scene harness: choosing a project, and loading it', () => {
+  const parsed = new Map([headsetJson, drivetrainJson, jupiterJson, repoJson, sdkJson].map((j) => {
+    const b = ContentBundle.parse(j);
+    return [b.graph.system_id, b] as const;
+  }));
+  /** The shipped catalog, every bundle fetched on demand through a load the test settles by hand. */
+  function lazy() {
+    const loads: Array<{ id: string; progress: (p: LoadProgress) => void; resolve: () => void; reject: (e: Error) => void }> = [];
+    const projects: Project[] = PROJECTS.map((p) => ({
+      ...p,
+      load: (progress) =>
+        new Promise<ContentBundle>((resolve, reject) => {
+          loads.push({ id: p.id, progress, resolve: () => resolve(parsed.get(p.id)!), reject });
+        }),
+    }));
+    const h = setup(false, { bundles: [parsed.get('system:mr-headset')!], projects });
+    return { h, loads };
+  }
+  const plate = (h: ReturnType<typeof setup>) => h.panels().find((p) => isInteractive(p.mesh) && /^TEACHING MODEL |^CODEBASE/.test(p.text))!.mesh;
+  const pickerOf = (h: ReturnType<typeof setup>) => (h.app as unknown as { picker: { isOpen: boolean; names: string[] } }).picker;
+  const dial = (h: ReturnType<typeof setup>) => h.panels().find((p) => /^(LOADING|COULD NOT LOAD) /.test(p.text) && p.mesh.parent?.parent?.visible);
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it('the nameplate drops down every project, marks the one on the stage, and closes again', () => {
+    const { h } = lazy();
+    h.press(plate(h));
+    h.frames(40); // the rows unfold one after another
+    expect(pickerOf(h).isOpen).toBe(true);
+    expect(pickerOf(h).names).toEqual(['Mixed-reality headset', 'Simplified EV drivetrain', 'Jupiter', 'auth-service', 'Immersive Web SDK']);
+    expect(h.button(/ON THE STAGE Mixed-reality headset/)).toBeDefined();
+    expect(h.button(/LOADS ON OPEN Jupiter/)).toBeDefined();
+    h.press(h.button(/^CHOOSE WHAT TO EXPLODE/));
+    expect(pickerOf(h).isOpen).toBe(false);
+    expect(h.button(/LOADS ON OPEN Jupiter/)).toBeUndefined(); // folded away and out of a ray's reach
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('opening an unloaded project: the model leaves, the dial shows the download, and the new model boots', async () => {
+    const { h, loads } = lazy();
+    h.press(plate(h));
+    h.frames(40);
+    h.press(h.button(/LOADS ON OPEN Jupiter/));
+    expect(pickerOf(h).isOpen).toBe(false);
+    const load = loads.find((l) => l.id === 'system:jupiter')!;
+    expect(load).toBeDefined();
+    expect(h.state().system_id).toBe('system:mr-headset'); // nothing changes until the bundle is in hand
+    // Nothing presses through to the model that is leaving.
+    h.press(h.button(/^Explode$/));
+    expect(h.state().explode_factor).toBe(0);
+
+    load.progress({ phase: 'fetch', fraction: 0.5, bytes: 12_000 });
+    h.frames(30);
+    expect(h.view()).toBeNull(); // the headset has gone; the dial stands in its place
+    expect(dial(h)?.text).toMatch(/^LOADING Jupiter Downloading its parts\s+·\s+\d+%\s+·\s+12 KB$/);
+    load.resolve();
+    await settle();
+    h.frames(60);
+    expect(h.state().system_id).toBe('system:jupiter');
+    expect(h.caption()).toMatch(/nobody has seen the interior directly/);
+    h.frames(60);
+    expect(dial(h)).toBeUndefined();
+    h.press(h.button(/^Explode$/));
+    expect(h.state().explode_factor).toBe(1);
+
+    h.press(plate(h));
+    h.frames(40);
+    expect(h.button(/ON THE STAGE Jupiter/)).toBeDefined();
+    expect(h.button(/^TEACHING MODEL Mixed-reality headset/)).toBeDefined(); // loaded now: no download mark
+    expectFinite(h.scene);
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('a failed download says so on the dial, then brings back what was there', async () => {
+    const { h, loads } = lazy();
+    h.press(h.button(/^Skip tutorial$/));
+    loads.find((l) => l.id === 'system:auth-service')!.reject(new Error('404'));
+    await settle();
+    h.frames(30);
+    expect(dial(h)?.text).toMatch(/^COULD NOT LOAD auth-service Check the connection/);
+    h.frames(72 * 3);
+    expect(h.state().system_id).toBe('system:mr-headset');
+    expect(h.view()).not.toBeNull();
+    expect(h.caption()).toMatch(/auth-service could not be loaded/);
+    // And it can be tried again.
+    h.press(h.button(/^Skip tutorial$/));
+    loads.filter((l) => l.id === 'system:auth-service').at(-1)!.resolve();
+    await settle();
+    h.frames(80);
+    expect(h.state().system_id).toBe('system:auth-service');
+    expect(h.caption()).not.toMatch(/could not be loaded/);
+  });
+
+  it('a prefetched project opens without the dial', async () => {
+    const { h, loads } = lazy();
+    h.app.prefetch('system:ev-drivetrain');
+    loads.find((l) => l.id === 'system:ev-drivetrain')!.resolve();
+    await settle();
+    h.app.openProject('system:ev-drivetrain');
+    expect(loads.filter((l) => l.id === 'system:ev-drivetrain')).toHaveLength(1); // one download, shared
+    h.frames(20);
+    expect(dial(h)).toBeUndefined();
+    expect(h.state().system_id).toBe('system:ev-drivetrain');
   });
 });

@@ -90,6 +90,7 @@ IWSDK facts that shaped this ([ADR-0001](adr/0001-engine.md)): `GrabSystem.useHa
 | Caption bar | Below the object, ~0.55 m | Current step caption and feedback |
 | Toolbar | Low and to the right, within reach | Explode, Collapse, Trace, Unplug, Undo, Reset, Next, Skip, chips |
 | Evidence panel | Right of the object | Source excerpt (≤ 12 lines, large monospace), path:line, revision, badge; or the run record (command, failing tests, recorded at) |
+| Project picker | Drops down in front of the object from the nameplate (also the **Projects** button, the O key, and a selector on the 2D page) | Every system, with its kind, a one-line blurb, and whether it is on the stage, done before, or not downloaded yet. Choosing one: the model sinks into its stage, a dial shows the bundle's download (bytes, or an honest sweep when the size is unknown) and contract check, then the new model boots. A failed download says so on the dial and brings back the previous system |
 
 ## 6. Tutor persona and teaching policy
 

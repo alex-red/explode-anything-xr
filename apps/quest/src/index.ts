@@ -1,17 +1,20 @@
 import { SceneUnderstandingSystem, SessionMode, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
-import { ContentBundle } from '@explode/contracts';
-import drivetrain from './content/drivetrain.bundle.json';
-import headset from './content/headset.bundle.json';
-import jupiter from './content/jupiter.bundle.json';
-import iwsdk from './content/iwsdk.bundle.json';
-import repoDemo from './content/repo-demo.bundle.json';
+// Bundles ship as separate files and are fetched when first opened, so the page starts on one
+// model instead of parsing all five. `?url` makes Vite emit each as a hashed asset.
+import drivetrainUrl from './content/drivetrain.bundle.json?url';
+import headsetUrl from './content/headset.bundle.json?url';
+import jupiterUrl from './content/jupiter.bundle.json?url';
+import iwsdkUrl from './content/iwsdk.bundle.json?url';
+import repoDemoUrl from './content/repo-demo.bundle.json?url';
 import { startApp } from './app/app.ts';
+import { fetchBundle, PROJECTS, type Project } from './app/projects.ts';
+import { Store } from './app/store.ts';
 import { SdkAnchorFrame } from './app/desk-memory.ts';
 import { InteractionSystem } from './app/interactions.ts';
 import { RoomSystem } from './app/room.ts';
-
 import { VoiceCapture } from './app/voice.ts';
+
 const status = document.getElementById('status');
 const landing = document.getElementById('landing');
 const enter = document.getElementById('enter-xr') as HTMLButtonElement | null;
@@ -26,14 +29,36 @@ const setEnter = (label: string, enabled: boolean) => {
   enter.disabled = !enabled;
 };
 
-const DESKTOP_PREVIEW = 'Desktop preview: click parts. Keys: E explode, T trace, N next, U undo, R reset, X explain, D debug readout.';
+const DESKTOP_PREVIEW = 'Desktop preview: click parts, or the nameplate to change project. Keys: E explode, T trace, N next, O projects, U undo, R reset, X explain, D debug readout.';
+
+const BUNDLE_URLS: Record<string, string> = {
+  'system:mr-headset': headsetUrl,
+  'system:ev-drivetrain': drivetrainUrl,
+  'system:jupiter': jupiterUrl,
+  'system:auth-service': repoDemoUrl,
+  'system:iwsdk': iwsdkUrl,
+};
+const PROJECT_LIST: Project[] = PROJECTS.map((p) => ({ ...p, load: (onProgress) => fetchBundle(BUNDLE_URLS[p.id]!, onProgress) }));
+/** The main lesson path: fetched in the background once the first model is up, so Continue never waits. */
+const PREFETCH = ['system:mr-headset', 'system:auth-service'];
 
 async function main(): Promise<void> {
   // Bundles are imported statically, so they ship inside the build. The first tutorial is the
   // opening lesson (the headset); the drivetrain and Jupiter stay reachable from the toolbar's "More".
   // The sample service carries the lessons; the real SDK after it is explored from its most relevant parts.
-  const bundles = [ContentBundle.parse(headset), ContentBundle.parse(drivetrain), ContentBundle.parse(jupiter), ContentBundle.parse(repoDemo), ContentBundle.parse(iwsdk)];
-  const world = await World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions);
+  // Only the system the visitor will see first is fetched before start: the one used last on this
+  // device, else the opening tutorial. The rest load when opened (the picker shows the dial).
+  const last = Store.lastActiveSystem();
+  const first = PROJECT_LIST.find((p) => p.id === last) ?? PROJECT_LIST[0]!;
+  const firstName = first.name.replace(/\s*\(.*\)\s*$/, '');
+  setEnter(`Loading ${firstName}…`, false);
+  const [world, bundle] = await Promise.all([
+    World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions),
+    first.load!((p) => {
+      if (p.phase === 'fetch' && p.fraction !== null) setEnter(`Loading ${firstName}… ${Math.round(p.fraction * 100)}%`, false);
+      else if (p.phase === 'check') setEnter(`Checking ${firstName}…`, false);
+    }),
+  ]);
   world.registerSystem(InteractionSystem);
   // Reads the planes the headset detected, so the stage can stand on the real desk.
   world.registerSystem(RoomSystem);
@@ -41,7 +66,30 @@ async function main(): Promise<void> {
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
   // The persistent anchor lets the stage return to the same spot on the desk next session.
   const anchors = new SdkAnchorFrame(world.getSystem(SceneUnderstandingSystem) ?? null);
-  const app = startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors);
+  const app = startApp(world, [bundle], tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors, PROJECT_LIST);
+  for (const id of PREFETCH) app.prefetch(id);
+
+  // The 2D page's project selector: the same change as the nameplate's picker, for the desktop
+  // preview and before entering. Hidden in a session, where the in-world picker takes over.
+  const projectBar = document.getElementById('project-bar');
+  const projectSelect = document.getElementById('project') as HTMLSelectElement | null;
+  if (projectBar && projectSelect) {
+    for (const p of app.projectList) {
+      const option = document.createElement('option');
+      option.value = p.id;
+      option.textContent = `${p.name.replace(/\s*\(.*\)\s*$/, '')}${p.kind === 'software' ? ' · codebase' : ''}`;
+      projectSelect.append(option);
+    }
+    projectSelect.value = app.currentProject;
+    app.onProjectChange = (id) => (projectSelect.value = id);
+    projectSelect.addEventListener('change', () => {
+      app.openProject(projectSelect.value);
+      projectSelect.value = app.currentProject; // a change already under way keeps its target
+      projectSelect.blur(); // so the keyboard shortcuts work again
+    });
+    projectBar.hidden = false;
+    world.visibilityState.subscribe((v) => (projectBar.hidden = v !== 'non-immersive'));
+  }
   // Typed questions for the assistant, on the 2D page. Only with a live tutor: offline it could
   // answer nothing, and a control that does nothing is worse than none.
   const askForm = document.getElementById('ask') as HTMLFormElement | null;
@@ -71,7 +119,6 @@ async function main(): Promise<void> {
       .catch((err: unknown) => console.error('[explode:webcam]', err));
   }
 
-  const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
   // Asking aloud needs the microphone. Offer to grant it here, on the 2D page: what a permission
   // prompt does inside an immersive session on a headset is unknown.
   const enableVoice = document.getElementById('enable-voice') as HTMLButtonElement | null;
@@ -85,6 +132,7 @@ async function main(): Promise<void> {
     });
   }
 
+  const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
   const supports = async (mode: string): Promise<boolean> =>
     world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported(mode).catch(() => false));
   const arSupported = await supports('immersive-ar');

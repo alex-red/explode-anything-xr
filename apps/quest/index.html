@@ -42,6 +42,14 @@
       #ask input:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 2px; }
       #ask button { min-height: 44px; padding: 0 16px; font: 600 16px system-ui, sans-serif; border-radius: 12px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
       #ask button:disabled { background: #283850; color: #a9b6c6; cursor: default; }
+      /* The project selector: what is on the stage, and a drop-down to put another there. */
+      #project-bar { position: fixed; top: 16px; right: 16px; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 14px; background: rgba(12, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; letter-spacing: 0.08em; color: #8fb6cf; }
+      #project-bar[hidden] { display: none; }
+      #project { min-height: 40px; padding: 0 34px 0 12px; font: 600 16px system-ui, sans-serif; letter-spacing: 0; border-radius: 10px; border: 1px solid rgba(70, 214, 255, 0.5); color: #f4f7fb; cursor: pointer; appearance: none;
+        background: #0b1c30 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232fe6d6' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center; }
+      #project:hover { border-color: #2fe6d6; }
+      #project:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 2px; }
+      @media (max-width: 760px) { #project-bar { top: auto; bottom: 84px; } }
       @media (max-height: 520px) { #steps { display: none; } #card { padding: 20px; } }
     </style>
   </head>
@@ -68,6 +76,7 @@
         </p>
       </section>
     </main>
+    <label id="project-bar" hidden>EXPLODE <select id="project" aria-label="What to explode"></select></label>
     <form id="ask" hidden>
       <input id="ask-text" type="text" maxlength="300" autocomplete="off" aria-label="Ask the assistant" placeholder="Ask, or tell it what to do…" />
       <button id="ask-send" type="submit">Ask</button>

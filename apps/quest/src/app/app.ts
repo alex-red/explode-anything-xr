@@ -19,6 +19,9 @@ import { setInputTrace } from './interactions.ts';
 import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
 import { NodeMenu, type MenuItem } from './node-menu.ts';
+import { LoadingView } from './loading-view.ts';
+import { ProjectPicker, type PickerItem } from './project-picker.ts';
+import { projectsFrom, type LoadProgress, type Project } from './projects.ts';
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
@@ -43,6 +46,29 @@ const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up 
 const ROOM_LINK = { system: 'system:mr-headset', edge: 'edge:transmits:part:cameras->part:board' };
 const ROOM_DIM_NOTE = 'We dimmed your view of the room to show what this link carries. Your headset is fine, and your hands still work.';
 
+/** Seconds the loading dial stays up at least once it has had to appear, so it reads as a moment, not a flicker. */
+const MIN_LOADER_SECONDS = 0.6;
+/** Seconds a failed load is shown on the dial before the previous project comes back. */
+const FAILED_LOAD_SECONDS = 2.6;
+
+/**
+ * A change of project in flight: the old model leaves, the new bundle loads (when it is not in
+ * hand yet) with the dial up, then the new model boots on the stage.
+ */
+interface ProjectSwitch {
+  project: Project;
+  restore: boolean;
+  /** The system to come back to if the load fails. */
+  from: string;
+  phase: 'leave' | 'load' | 'failed';
+  /** Seconds in the current phase. */
+  t: number;
+  ready: boolean;
+  /** Its bundle was not in hand when the change began: the dial comes up, however fast the download. */
+  fetched: boolean;
+  error: string | null;
+}
+
 /** Why the assistant is not listening, in the learner's terms. */
 const VOICE_NOTE = {
   nothing: "I didn't hear anything. Press Ask and speak; I stop listening when you do.",
@@ -64,11 +90,22 @@ export class ExplodeApp {
   private readonly fovMask = new FovMask();
   private readonly eyeLocal = new Vector3();
   private readonly sfx = new Sfx();
-  private readonly software: ContentBundle;
+  /** Every system the app can open, loaded or not, in picker order. */
+  private readonly projects: Project[];
+  private readonly software: Project;
   /** Tutorial systems in the order given; the first is the opening lesson, the rest are under "More". */
-  private readonly tutorials: ContentBundle[];
+  private readonly tutorials: Project[];
   /** Further software systems after the lesson codebase (the real SDK): explored, not broken. */
-  private readonly showcases: ContentBundle[];
+  private readonly showcases: Project[];
+  private readonly picker: ProjectPicker;
+  private readonly loading: LoadingView;
+  private switching: ProjectSwitch | null = null;
+  /** Bundles on their way, so a prefetch and an open of the same project share one download. */
+  private readonly inFlight = new Map<string, Promise<ContentBundle>>();
+  /** The latest progress of each download, read by the dial every frame. */
+  private readonly progress = new Map<string, LoadProgress>();
+  /** Told whenever the system on the stage changes (the 2D page's project selector follows it). */
+  onProjectChange: ((systemId: string) => void) | null = null;
   private roomDimmed = false;
   /** The broken edge whose spreading failure has already been played, so it plays once. */
   private cascadePlayedFor: string | null = null;
@@ -113,13 +150,17 @@ export class ExplodeApp {
     debug = false,
     private readonly room: RoomSystem | null = null,
     private readonly anchors: (AnchorFrame & { tick?(): void }) | null = null,
+    projects: Project[] = projectsFrom(bundles),
   ) {
-    const software = bundles.find((b) => b.graph.system_kind === 'software');
-    const tutorials = bundles.filter((b) => b.graph.system_kind === 'mechanical');
-    if (!software || tutorials.length === 0) throw new Error('expected one software bundle and at least one mechanical bundle');
+    // A project that has no loader must have come in already loaded.
+    this.projects = projects.filter((p) => p.load || bundles.some((b) => b.graph.system_id === p.id));
+    const software = this.projects.find((p) => p.kind === 'software');
+    const tutorials = this.projects.filter((p) => p.kind === 'mechanical');
+    if (!software || tutorials.length === 0) throw new Error('expected one software project and at least one mechanical project');
+    if (bundles.length === 0) throw new Error('expected at least one loaded bundle to open on');
     this.software = software;
     this.tutorials = tutorials;
-    this.showcases = bundles.filter((b) => b.graph.system_kind === 'software' && b !== software);
+    this.showcases = this.projects.filter((p) => p.kind === 'software' && p !== software);
     this.store = new Store(new Map(bundles.map((b) => [b.graph.system_id, b])));
     this.tutor = new TutorClient(tutorUrl);
     this.anchorEntity = world.createTransformEntity(this.anchor);
@@ -127,9 +168,19 @@ export class ExplodeApp {
     this.debug = new DebugReadout(world, this.anchorEntity);
     this.debug.enabled = debug;
     setInputTrace(debug);
-    this.ui = new SpatialUI(world, this.anchorEntity, (this.buttonDefs = this.buttons()), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
+    // While a project is changing nothing presses through to the one that is leaving.
+    this.buttonDefs = this.buttons().map((d) => ({ ...d, onPress: () => (this.switching ? undefined : d.onPress()) }));
+    this.ui = new SpatialUI(
+      world,
+      this.anchorEntity,
+      this.buttonDefs,
+      () => this.dispatch({ type: 'open_evidence', evidence_id: null }),
+      () => this.togglePicker(),
+    );
     this.ui.setLayout(readLayout());
     this.menu = new NodeMenu(world, this.anchorEntity);
+    this.picker = new ProjectPicker(world, this.anchorEntity, (id) => this.openProject(id));
+    this.loading = new LoadingView(world, this.anchorEntity);
     this.orb = this.tutor.liveConfigured ? new AssistantOrb(world, this.anchorEntity, () => void this.toggleVoice()) : null;
     this.placeOrb();
     world.createTransformEntity(this.fovMask.group, { parent: this.anchorEntity });
@@ -149,8 +200,10 @@ export class ExplodeApp {
       this.syncRoomDim();
       this.syncSound();
     });
+    // Open on the system used last, else the opening tutorial, else whatever came in loaded.
     const last = Store.lastActiveSystem();
-    this.loadSystem(last && bundles.some((b) => b.graph.system_id === last) ? last : this.opening.graph.system_id);
+    const start = [last, this.opening.id, bundles[0]!.graph.system_id].find((id) => !!id && this.store.has(id))!;
+    this.loadSystem(start);
 
     world.visibilityState.subscribe((v) => {
       this.paused = v === VisibilityState.Hidden || v === VisibilityState.VisibleBlurred;
@@ -215,6 +268,9 @@ export class ExplodeApp {
       this.view.update(clamped, camera);
     }
     this.syncMenu();
+    this.picker.update(clamped, this.eyeLocal);
+    this.tickSwitch(clamped);
+    this.loading.update(clamped, this.eyeLocal);
     this.trackInput(clamped);
     // Panels repaint at most at ~10 Hz, and only when something they show may have changed
     // (plus a 1 Hz safety refresh), so idle frames build no view models and upload no textures.
@@ -352,6 +408,7 @@ export class ExplodeApp {
     // ZXY: spin about the model's vertical, then tilt, then roll about the viewer's line of sight.
     this.view.root.rotation.order = 'ZXY';
     this.applyViewPose(Infinity);
+    this.onProjectChange?.(systemId);
   }
 
   /**
@@ -374,7 +431,7 @@ export class ExplodeApp {
     root.scale.setScalar(root.scale.x + (pose.zoom - root.scale.x) * a);
   }
 
-  private get opening(): ContentBundle {
+  private get opening(): Project {
     return this.tutorials[0]!;
   }
 
@@ -382,33 +439,172 @@ export class ExplodeApp {
     return this.store.ctx.bundle.graph.system_kind === 'mechanical';
   }
 
+  /** The project on the stage. */
+  private get here(): Project {
+    return this.projects.find((p) => p.id === this.store.systemId)!;
+  }
+
   /** On a software system other than the lesson codebase. */
   private get onShowcase(): boolean {
-    return this.showcases.some((b) => b.graph.system_id === this.store.systemId);
+    return this.showcases.some((p) => p.id === this.store.systemId);
+  }
+
+  // ---------------------------------------------------------------- changing project
+
+  /** The systems the app can open, in picker order (the 2D page's selector lists these). */
+  get projectList(): ReadonlyArray<Pick<Project, 'id' | 'kind' | 'name'>> {
+    return this.projects;
+  }
+
+  /** The system on the stage, or the one on its way there. */
+  get currentProject(): string {
+    return this.switching?.project.id ?? this.store.systemId;
+  }
+
+  /**
+   * Put another project on the stage: the current model leaves, its bundle is fetched if it is
+   * not in hand yet (the dial shows how far it has got), and the new model boots in its place.
+   * Every way of changing project comes through here: the picker, the toolbar, Next, the
+   * assistant, the 2D page. A change already under way is not interrupted.
+   */
+  openProject(id: string, restore = true): void {
+    const project = this.projects.find((p) => p.id === id);
+    if (!project || this.switching) return;
+    if (id === this.store.systemId && restore) return;
+    this.picker.close();
+    this.menu.hide();
+    this.sfx.collapse(this.modelAt());
+    const sw: ProjectSwitch = { project, restore, from: this.store.systemId, phase: 'leave', t: 0, ready: this.store.has(id), fetched: !this.store.has(id), error: null };
+    this.switching = sw;
+    this.view?.depart();
+    this.ui.dirty = true;
+    if (sw.ready) return;
+    const loading = this.fetchProject(project);
+    if (!loading) {
+      sw.error = 'It is not part of this build.';
+      return;
+    }
+    loading.then(
+      () => (sw.ready = true),
+      (err: unknown) => {
+        console.error('[explode:load]', err);
+        sw.error = navigator.onLine === false ? 'You are offline. Connect, then try again.' : 'Check the connection, then try again.';
+      },
+    );
+  }
+
+  /**
+   * Fetch a project's bundle in the background, so opening it later needs no wait (the main
+   * lesson path is fetched this way once the first model is up). Errors are left for an open of
+   * it to report.
+   */
+  prefetch(id: string): void {
+    const project = this.projects.find((p) => p.id === id);
+    if (project) this.fetchProject(project)?.catch(() => {});
+  }
+
+  /** Start (or join) the download of a project's bundle; null when it has no loader. */
+  private fetchProject(project: Project): Promise<ContentBundle> | null {
+    const going = this.inFlight.get(project.id);
+    if (going) return going;
+    if (!project.load) return null;
+    const promise = project
+      .load((p) => this.progress.set(project.id, p))
+      .then((bundle) => {
+        this.store.add(bundle);
+        return bundle;
+      })
+      .finally(() => this.inFlight.delete(project.id));
+    this.inFlight.set(project.id, promise);
+    return promise;
+  }
+
+  /** Move a project change on by one frame. */
+  private tickSwitch(dt: number): void {
+    const sw = this.switching;
+    if (!sw) return;
+    sw.t += dt;
+    if (sw.phase === 'leave') {
+      if (this.view && !this.view.departed) return;
+      if (sw.ready && !sw.fetched) return this.arrive(sw);
+      // Still on its way: the dial comes up where the model will stand.
+      sw.phase = 'load';
+      sw.t = 0;
+      this.view?.dispose();
+      this.view = null;
+      this.loading.show(shortTitle(sw.project.name));
+    }
+    if (sw.phase === 'load') {
+      const progress = this.progress.get(sw.project.id);
+      if (progress) this.loading.set(progress);
+      if (sw.error) {
+        sw.phase = 'failed';
+        sw.t = 0;
+        this.loading.fail(sw.error);
+        this.sfx.reject(this.modelAt());
+        return;
+      }
+      if (sw.ready && this.loading.shownFor >= MIN_LOADER_SECONDS) {
+        this.loading.set({ phase: 'build', fraction: 1, bytes: 0 });
+        this.loading.finish();
+        this.arrive(sw);
+      }
+      return;
+    }
+    // Failed: after a moment, bring back what was there and say what happened.
+    if (sw.t >= FAILED_LOAD_SECONDS) {
+      this.loading.finish();
+      this.switching = null;
+      this.loadSystem(sw.from);
+      this.voiceSay(`${shortTitle(sw.project.name)} could not be loaded. ${sw.error ?? ''} Open it again from the nameplate.`.trim());
+    }
+  }
+
+  private arrive(sw: ProjectSwitch): void {
+    this.switching = null;
+    this.voiceSay(null);
+    this.loadSystem(sw.project.id, sw.restore);
+  }
+
+  /** The nameplate (or the Projects button, or P) opens the picker; pressed again it closes. */
+  private togglePicker(): void {
+    if (this.switching) return;
+    this.sfx.click();
+    this.menu.hide();
+    this.picker.toggle(() => this.pickerItems());
+  }
+
+  private pickerItems(): PickerItem[] {
+    return this.projects.map((p) => ({
+      id: p.id,
+      kind: subjectKind(p),
+      name: shortTitle(p.name),
+      blurb: p.blurb,
+      current: p.id === this.store.systemId,
+      done: this.doneBefore(p),
+      loaded: this.store.has(p.id),
+    }));
   }
 
   /** Tutorial ⇄ software. From the software system it goes back to the opening tutorial. */
   private switchSystem(): void {
-    this.sfx.collapse(this.modelAt());
-    this.loadSystem(this.onMechanical ? this.software.graph.system_id : this.opening.graph.system_id);
+    this.openProject(this.onMechanical ? this.software.id : this.opening.id);
   }
 
   /**
    * What "More" opens next. The round goes through the tutorials, then the showcase systems; from
    * the lesson codebase it opens the first thing after the opening tutorial.
    */
-  private moreTarget(): ContentBundle | null {
+  private moreTarget(): Project | null {
     const round = [...this.tutorials, ...this.showcases];
     if (round.length < 2) return null;
-    const i = round.findIndex((b) => b.graph.system_id === this.store.systemId);
+    const i = round.findIndex((p) => p.id === this.store.systemId);
     return round[i < 0 ? 1 : (i + 1) % round.length]!;
   }
 
   private openMore(): void {
     const target = this.moreTarget();
-    if (!target) return;
-    this.sfx.collapse(this.modelAt());
-    this.loadSystem(target.graph.system_id);
+    if (target) this.openProject(target.id);
   }
 
   /**
@@ -442,8 +638,8 @@ export class ExplodeApp {
   }
 
   /** True when this bundle's first lesson has been finished before, on this device. */
-  private doneBefore(b: ContentBundle): boolean {
-    const id = b.lessons[0]?.id;
+  private doneBefore(p: Project): boolean {
+    const id = p.firstLesson;
     return !!id && this.done.has(id);
   }
 
@@ -488,6 +684,7 @@ export class ExplodeApp {
   // ---------------------------------------------------------------- input
 
   private dispatch(event: EngineEvent): void {
+    if (this.switching) return; // the system on the stage is leaving
     this.store.dispatch(event);
   }
 
@@ -718,7 +915,7 @@ export class ExplodeApp {
   private viewContext(): ViewContext {
     const s = this.store.state;
     const hidden = this.consequencesHidden();
-    const systems = [...this.tutorials, this.software, ...this.showcases];
+    const systems = this.projects;
     return {
       explode_factor: s.explode_factor,
       detail: this.onMechanical ? 'all' : this.detail,
@@ -729,7 +926,7 @@ export class ExplodeApp {
       visible_node_ids: [...visibleAtDetail(this.store.ctx, s, this.onMechanical ? 'all' : this.detail, !hidden)].slice(0, 40),
       awaiting_prediction: hidden,
       buttons: this.buttonDefs.slice(0, 48).map((d) => ({ id: d.id, label: d.label().slice(0, 40), enabled: d.enabled() })),
-      systems: systems.slice(0, 8).map((b) => ({ id: b.graph.system_id, name: b.graph.display_name.slice(0, 80), current: b.graph.system_id === this.store.systemId })),
+      systems: systems.slice(0, 8).map((p) => ({ id: p.id, name: p.name.slice(0, 80), current: p.id === this.store.systemId })),
     };
   }
 
@@ -772,10 +969,7 @@ export class ExplodeApp {
         this.setDetail(c.level);
         break;
       case 'open_system':
-        if (c.system_id !== this.store.systemId && [...this.tutorials, this.software, ...this.showcases].some((b) => b.graph.system_id === c.system_id)) {
-          this.sfx.collapse(this.modelAt());
-          this.loadSystem(c.system_id);
-        }
+        this.openProject(c.system_id);
         break;
     }
     this.ui.dirty = true;
@@ -815,6 +1009,7 @@ export class ExplodeApp {
     else if (k === '0') this.forgetProgress();
     else if (k === 's') this.switchSystem();
     else if (k === 'm') this.openMore();
+    else if (k === 'o') this.togglePicker();
     else if (k === 'v') this.world.launchXR({ sessionMode: SessionMode.ImmersiveVR }); // testing: the VR fallback path
   }
 
@@ -836,7 +1031,9 @@ export class ExplodeApp {
     Store.clearSaved();
     this.done.clear();
     DeskMemory.forget();
-    this.loadSystem(this.opening.graph.system_id, false);
+    if (this.switching) return;
+    if (this.store.has(this.opening.id)) this.loadSystem(this.opening.id, false);
+    else this.openProject(this.opening.id, false);
     this.recenterByUser(); // a forgotten spot must not keep the stage: place it afresh
   }
 
@@ -850,10 +1047,7 @@ export class ExplodeApp {
         if (following) {
           this.sfx.collapse(this.modelAt());
           this.store.restart(following.id);
-        } else if (showcase) {
-          this.sfx.collapse(this.modelAt());
-          this.loadSystem(showcase.graph.system_id);
-        }
+        } else if (showcase) this.openProject(showcase.id);
       }
       return;
     }
@@ -935,7 +1129,7 @@ export class ExplodeApp {
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
-        label: () => (this.onMechanical ? (lessonDone() || this.doneBefore(this.store.ctx.bundle) ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
+        label: () => (this.onMechanical ? (lessonDone() || this.doneBefore(this.here) ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
         enabled: () => true,
         onPress: () => this.switchSystem(),
       },
@@ -948,6 +1142,7 @@ export class ExplodeApp {
         enabled: () => this.moreTarget() !== null,
         onPress: () => this.openMore(),
       },
+      { id: 'projects', label: () => (this.picker.isOpen ? 'Projects ▴' : 'Projects ▾'), enabled: () => true, onPress: () => this.togglePicker() },
       // The view dock: what the hand gestures do to the model, as buttons (ui.ts DOCK_GROUPS).
       { id: 'spread-in', label: () => 'Spread −', enabled: () => st().explode_factor > 0, onPress: () => this.stepExplode(-1) },
       { id: 'spread-out', label: () => 'Spread +', enabled: () => st().explode_factor < 1, onPress: () => this.stepExplode(1) },
@@ -1075,16 +1270,26 @@ export class ExplodeApp {
 }
 
 /** A button-sized name: the last word of the display name before its qualifier ("… headset (teaching model)" → "Headset"). */
-function shortName(b: ContentBundle): string {
-  const word = b.graph.display_name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
+function shortName(p: Pick<Project, 'name'>): string {
+  const word = p.name.replace(/\s*\(.*\)\s*$/, '').split(/\s+/).pop() ?? '';
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** The display name without its qualifier: "Jupiter (teaching model)" → "Jupiter". */
+function shortTitle(name: string): string {
+  return name.replace(/\s*\(.*\)\s*$/, '');
+}
+
+/** The picker's kind line for a project: the nameplate's, from metadata alone. */
+function subjectKind(p: Project): string {
+  return subjectOf({ graph: { display_name: p.name, system_kind: p.kind } })[0];
 }
 
 /**
  * The nameplate's two lines: the kind of thing on the stage, and its name. The display name's
  * qualifier ("(teaching model)", "(meta/immersive-web-sdk)") goes on the kind line.
  */
-export function subjectOf(b: ContentBundle): [kind: string, name: string] {
+export function subjectOf(b: { graph: Pick<ContentBundle['graph'], 'display_name' | 'system_kind'> }): [kind: string, name: string] {
   const name = b.graph.display_name;
   const qualifier = /\(([^)]*)\)\s*$/.exec(name)?.[1] ?? '';
   const bare = name.replace(/\s*\(.*\)\s*$/, '');
@@ -1125,8 +1330,9 @@ export function startApp(
   debug = false,
   room: RoomSystem | null = null,
   anchors: (AnchorFrame & { tick?(): void }) | null = null,
+  projects?: Project[],
 ): ExplodeApp {
-  app = new ExplodeApp(world, bundles, tutorUrl, debug, room, anchors);
+  app = new ExplodeApp(world, bundles, tutorUrl, debug, room, anchors, projects);
   world.registerSystem(AppSystem);
   world.renderer.xr.addEventListener('sessionstart', () => app?.onSessionChange(true));
   world.renderer.xr.addEventListener('sessionend', () => app?.onSessionChange(false));

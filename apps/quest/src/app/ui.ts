@@ -56,7 +56,7 @@ const NARROW_COLUMNS = 4;
  * which set up the session and are pressed rarely, form a strip above the caption. Two columns
  * at the left stood in front of the open model's leftmost group.
  */
-const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'live']);
+const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'projects', 'live']);
 const SETTINGS_COLUMNS = 5;
 /**
  * The view dock: a row of buttons centred under the model's front rim that move the model the
@@ -117,6 +117,7 @@ export class SpatialUI {
   private readonly dock = new Group();
   private readonly plate: TextPanel;
   private plateText: [string, string] = ['', ''];
+  private plateHovered = false;
   private guideDrawn = false;
   private controlsHalfHeight = 0;
   private mode: LayoutMode = 'wide';
@@ -125,7 +126,7 @@ export class SpatialUI {
   /** True when something a panel shows may have changed; render() is skipped otherwise. */
   dirty = true;
 
-  constructor(world: World, parent: Entity, defs: ButtonDef[], onCloseEvidence: () => void) {
+  constructor(world: World, parent: Entity, defs: ButtonDef[], onCloseEvidence: () => void, onPlatePressed: () => void = () => {}) {
     const groupEntity = world.createTransformEntity(this.group, { parent });
 
     // Controls: one column, tilted toward the user, at the left; settings: a strip above the caption.
@@ -159,9 +160,17 @@ export class SpatialUI {
     this.guide.mesh.visible = false;
     world.createTransformEntity(this.guide.mesh, { parent: groupEntity });
 
-    // Nameplate: what is being exploded, in front of the stage (drawn by setSubject).
+    // Nameplate: what is being exploded, in front of the stage (drawn by setSubject). It is also
+    // the project picker's handle: press it to choose another thing to explode.
     this.plate = new TextPanel({ width: PLATE_W, height: PLATE_H, pxPerMeter: PPM, padding: 10, radius: 26, align: 'center' });
-    world.createTransformEntity(this.plate.mesh, { parent: groupEntity });
+    makeInteractive(world, this.plate.mesh, groupEntity, {
+      press: onPlatePressed,
+      hover: (on) => {
+        this.plateHovered = on;
+        this.drawPlate();
+      },
+      ui: true,
+    });
 
     // Captions: above the system.
     this.caption = new TextPanel({ width: 0.52, height: 0.19, pxPerMeter: PPM, padding: 36, radius: 30 });
@@ -329,10 +338,19 @@ export class SpatialUI {
   setSubject(kind: string, name: string): void {
     if (kind === this.plateText[0] && name === this.plateText[1]) return;
     this.plateText = [kind, name];
-    this.plate.draw([
-      { text: kind, size: 28, color: CSS.action, bold: true, gap: 2 },
-      { text: name, size: 50, bold: true },
-    ]);
+    this.drawPlate();
+  }
+
+  private drawPlate(): void {
+    const [kind, name] = this.plateText;
+    this.plate.draw(
+      [
+        { text: kind, size: 28, color: CSS.action, bold: true, gap: 2 },
+        { text: `${name}  ▾`, size: 50, bold: true },
+      ],
+      this.plateHovered ? CSS.buttonHover : undefined,
+    );
+    this.plate.mesh.scale.setScalar(this.plateHovered ? 1.03 : 1);
   }
 
   get guideVisible(): boolean {
