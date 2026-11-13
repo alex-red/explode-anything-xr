@@ -43,6 +43,14 @@
       #ask button { min-height: 44px; padding: 0 16px; font: 600 16px system-ui, sans-serif; border-radius: 12px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
       #ask button:disabled { background: #283850; color: #a9b6c6; cursor: default; }
       /* The project selector: what is on the stage, and a drop-down to put another there. */
+      #explode { position: fixed; left: 24px; bottom: 24px; display: grid; grid-template-columns: 1fr auto; gap: 8px; width: min(440px, calc(100% - 48px)); padding: 12px; box-sizing: border-box; border-radius: 14px; background: rgba(12, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); }
+      #explode[hidden] { display: none; }
+      #explode label { grid-column: 1 / -1; font-size: 13px; letter-spacing: 0.08em; color: #8fb6cf; }
+      #explode input { min-width: 0; min-height: 44px; padding: 0 14px; font: 16px system-ui, sans-serif; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(12, 18, 30, 0.92); color: #f4f7fb; }
+      #explode input:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 2px; }
+      #explode button { min-height: 44px; padding: 0 16px; font: 600 16px system-ui, sans-serif; border-radius: 12px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
+      #explode p { grid-column: 1 / -1; margin: 0; font-size: 13px; line-height: 1.4; color: #a9b6c6; }
+      @media (max-width: 960px) { #explode { bottom: 84px; } }
       #project-bar { position: fixed; top: 16px; right: 16px; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 14px; background: rgba(12, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; letter-spacing: 0.08em; color: #8fb6cf; }
       #project-bar[hidden] { display: none; }
       #project { min-height: 40px; padding: 0 34px 0 12px; font: 600 16px system-ui, sans-serif; letter-spacing: 0; border-radius: 10px; border: 1px solid rgba(70, 214, 255, 0.5); color: #f4f7fb; cursor: pointer; appearance: none;
@@ -77,6 +85,12 @@
       </section>
     </main>
     <label id="project-bar" hidden>EXPLODE <select id="project" aria-label="What to explode"></select></label>
+    <form id="explode" hidden>
+      <label for="explode-text">EXPLODE ANYTHING</label>
+      <input id="explode-text" type="text" maxlength="300" autocomplete="off" spellcheck="false" placeholder="github.com/owner/name, or a subject: Mars" />
+      <button type="submit">Look it up</button>
+      <p>A public TypeScript or JavaScript repository, or the name of something for an AI model to draft. You will see a proposal first; nothing is built until you press Build. A repository's code is read, never run. Everything an AI model chooses or writes is marked as a hypothesis, and a drafted subject is checked by no one.</p>
+    </form>
     <form id="ask" hidden>
       <input id="ask-text" type="text" maxlength="300" autocomplete="off" aria-label="Ask the assistant" placeholder="Ask, or tell it what to do…" />
       <button id="ask-send" type="submit">Ask</button>

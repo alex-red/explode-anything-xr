@@ -19,9 +19,14 @@ import { setInputTrace } from './interactions.ts';
 import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
 import { NodeMenu, type MenuItem } from './node-menu.ts';
+import { repoQueryIn, type ExplodeApi } from './explode-client.ts';
+import { ExplodeFlow } from './explode-flow.ts';
 import { LoadingView } from './loading-view.ts';
+import { ProposalCard, cardButtons } from './proposal-card.ts';
+import type { SavedSystems } from './saved-systems.ts';
 import { ProjectPicker, type PickerItem } from './project-picker.ts';
-import { projectsFrom, type LoadProgress, type Project } from './projects.ts';
+import { builtProject, projectsFrom, type LoadProgress, type Project } from './projects.ts';
+import { MAX_PICKER_ITEMS } from './project-picker.ts';
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
@@ -69,6 +74,26 @@ interface ProjectSwitch {
   error: string | null;
 }
 
+/** The picker row that starts Explode Anything; not a project id. */
+const EXPLODE_ROW = 'action:explode-anything';
+/** The proposal card's two buttons, listed for the assistant like every other button; the card draws them itself. */
+const CARD_BUTTONS = new Set(['build-system', 'cancel-build']);
+const EXPLODE_HOW_2D = 'Type a GitHub address (github.com/owner/name), or the name of something to draft (Mars, a bicycle), in the Explode box on this page.';
+const EXPLODE_HOW_VOICE = 'Press Ask and say what to explode, for example "explode Mars" or "explode github.com/honojs/hono". You will see a proposal before anything is built.';
+
+/** What Explode Anything needs from outside the app (ADR-0026). Absent: only shipped systems exist. */
+export interface ExplodeDeps {
+  api: ExplodeApi;
+  saved: SavedSystems;
+  /**
+   * When to ask the server again whether it can build, in ms after a "no", one entry per try.
+   * A host that sleeps when idle says nothing for a while and then wakes. Default: 15 s, then 45 s.
+   */
+  retryMs?: readonly number[];
+}
+
+const AVAILABILITY_RETRY_MS = [15_000, 45_000] as const;
+
 /** Why the assistant is not listening, in the learner's terms. */
 const VOICE_NOTE = {
   nothing: "I didn't hear anything. Press Ask and speak; I stop listening when you do.",
@@ -100,6 +125,20 @@ export class ExplodeApp {
   private readonly picker: ProjectPicker;
   private readonly loading: LoadingView;
   private switching: ProjectSwitch | null = null;
+  /** Explode Anything: the conversation about a new system, and the card that shows it. Null without a build server. */
+  private readonly flow: ExplodeFlow | null;
+  private readonly card: ProposalCard | null;
+  private readonly saved: SavedSystems | null;
+  /** True once the build server has said it can build. Until then no way in is offered. */
+  private explodeAvailable = false;
+  /** Resolves to whether new systems can be built here (the 2D page shows its box on true). */
+  readonly explodeReady: Promise<boolean>;
+  /** A system just built, waiting for a project change in flight to finish before it opens. */
+  private pendingOpen: string | null = null;
+  /** Told when the learner asks how to explode something new (the 2D page focuses its box). */
+  onExplodeAsked: (() => void) | null = null;
+  /** Told when the list of projects grows (the 2D page's selector follows it). */
+  onProjectsChange: (() => void) | null = null;
   /** Bundles on their way, so a prefetch and an open of the same project share one download. */
   private readonly inFlight = new Map<string, Promise<ContentBundle>>();
   /** The latest progress of each download, read by the dial every frame. */
@@ -151,16 +190,19 @@ export class ExplodeApp {
     private readonly room: RoomSystem | null = null,
     private readonly anchors: (AnchorFrame & { tick?(): void }) | null = null,
     projects: Project[] = projectsFrom(bundles),
+    explode: ExplodeDeps | null = null,
   ) {
     // A project that has no loader must have come in already loaded.
     this.projects = projects.filter((p) => p.load || bundles.some((b) => b.graph.system_id === p.id));
     const software = this.projects.find((p) => p.kind === 'software');
-    const tutorials = this.projects.filter((p) => p.kind === 'mechanical');
+    // An AI draft the learner had built is a model too, and is no part of the tutorials.
+    const tutorials = this.projects.filter((p) => p.kind === 'mechanical' && !p.built);
     if (!software || tutorials.length === 0) throw new Error('expected one software project and at least one mechanical project');
     if (bundles.length === 0) throw new Error('expected at least one loaded bundle to open on');
     this.software = software;
     this.tutorials = tutorials;
-    this.showcases = this.projects.filter((p) => p.kind === 'software' && p !== software);
+    // Systems the learner had built are in the picker, never on the lesson path.
+    this.showcases = this.projects.filter((p) => p.kind === 'software' && p !== software && !p.built);
     this.store = new Store(new Map(bundles.map((b) => [b.graph.system_id, b])));
     this.tutor = new TutorClient(tutorUrl);
     this.anchorEntity = world.createTransformEntity(this.anchor);
@@ -173,13 +215,17 @@ export class ExplodeApp {
     this.ui = new SpatialUI(
       world,
       this.anchorEntity,
-      this.buttonDefs,
+      this.buttonDefs.filter((d) => !CARD_BUTTONS.has(d.id)),
       () => this.dispatch({ type: 'open_evidence', evidence_id: null }),
       () => this.togglePicker(),
     );
     this.ui.setLayout(readLayout());
     this.menu = new NodeMenu(world, this.anchorEntity);
-    this.picker = new ProjectPicker(world, this.anchorEntity, (id) => this.openProject(id));
+    this.picker = new ProjectPicker(world, this.anchorEntity, (id) => (id === EXPLODE_ROW ? this.explainExplode() : this.openProject(id)));
+    this.saved = explode?.saved ?? null;
+    this.flow = explode ? new ExplodeFlow(explode.api, (bundle) => this.onBuilt(bundle), () => this.onFlowChange()) : null;
+    this.card = explode ? new ProposalCard(world, this.anchorEntity, (id) => this.pressCard(id)) : null;
+    this.explodeReady = explode ? this.askAvailable(explode.api, [...(explode.retryMs ?? AVAILABILITY_RETRY_MS)]) : Promise.resolve(false);
     this.loading = new LoadingView(world, this.anchorEntity);
     this.orb = this.tutor.liveConfigured ? new AssistantOrb(world, this.anchorEntity, () => void this.toggleVoice()) : null;
     this.placeOrb();
@@ -269,6 +315,13 @@ export class ExplodeApp {
     }
     this.syncMenu();
     this.picker.update(clamped, this.eyeLocal);
+    this.flow?.tick(clamped);
+    this.card?.update(this.eyeLocal);
+    if (this.pendingOpen && !this.switching) {
+      const id = this.pendingOpen;
+      this.pendingOpen = null;
+      this.openProject(id);
+    }
     this.tickSwitch(clamped);
     this.loading.update(clamped, this.eyeLocal);
     this.trackInput(clamped);
@@ -279,7 +332,7 @@ export class ExplodeApp {
     if (this.uiClock >= 0.1 && (this.ui.dirty || this.uiRefresh >= 1)) {
       this.uiClock = 0;
       this.uiRefresh = 0;
-      this.ui.render(this.captionModel(), this.openEvidence());
+      this.ui.render(this.captionModel(), this.openEvidence(), this.store.ctx.bundle.graph.revision.kind);
     }
   }
 
@@ -444,9 +497,9 @@ export class ExplodeApp {
     return this.projects.find((p) => p.id === this.store.systemId)!;
   }
 
-  /** On a software system other than the lesson codebase. */
+  /** On a software system other than the lesson codebase: the SDK, or one built on request. */
   private get onShowcase(): boolean {
-    return this.showcases.some((p) => p.id === this.store.systemId);
+    return this.showcases.some((p) => p.id === this.store.systemId) || !!this.here.built;
   }
 
   // ---------------------------------------------------------------- changing project
@@ -575,15 +628,103 @@ export class ExplodeApp {
   }
 
   private pickerItems(): PickerItem[] {
-    return this.projects.map((p) => ({
+    // Shipped systems first, then the newest built ones that fit, then the row that starts another.
+    const room = MAX_PICKER_ITEMS - (this.explodeAvailable ? 1 : 0);
+    const shipped = this.projects.filter((p) => !p.built);
+    const built = this.projects.filter((p) => p.built).slice(-Math.max(0, room - shipped.length));
+    const items: PickerItem[] = [...shipped, ...built].slice(0, room).map((p) => ({
       id: p.id,
-      kind: subjectKind(p),
+      kind: p.built ? builtKind(p) : subjectKind(p),
       name: shortTitle(p.name),
       blurb: p.blurb,
       current: p.id === this.store.systemId,
       done: this.doneBefore(p),
       loaded: this.store.has(p.id),
     }));
+    if (this.explodeAvailable) {
+      items.push({ id: EXPLODE_ROW, kind: 'NEW', name: 'Explode anything…', blurb: 'A GitHub repository, or a subject drafted by AI', current: false, done: false, loaded: true, action: true });
+    }
+    return items;
+  }
+
+  // ---------------------------------------------------------------- explode anything (ADR-0026)
+
+  /**
+   * Ask the server whether it can build, and again after each wait in `waits` while it says no
+   * or says nothing (a sleeping host wakes on the first request and answers a later one).
+   */
+  private async askAvailable(api: ExplodeApi, waits: number[]): Promise<boolean> {
+    for (;;) {
+      const ok = await api.available();
+      if (ok) {
+        this.explodeAvailable = true;
+        this.ui.dirty = true;
+        return true;
+      }
+      const wait = waits.shift();
+      if (wait === undefined) return false;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  }
+
+  /** True when a new system can be proposed here right now. */
+  get canPropose(): boolean {
+    return this.explodeAvailable && !!this.flow;
+  }
+
+  /** What the proposal card says right now; empty when it is closed (tests and the walkthrough). */
+  get proposalText(): string {
+    return this.card?.text ?? '';
+  }
+
+  /**
+   * Look up something the app does not ship and put a proposal in front of the learner. Every
+   * way of asking comes through here: the 2D page's box, a typed or spoken address, the
+   * assistant. It builds nothing; only Build on the card does.
+   */
+  proposeSystem(query: string, kind?: 'repository' | 'subject'): void {
+    const q = query.trim().slice(0, 300);
+    if (!q) return;
+    // A GitHub address is a repository; anything else is a subject for a model to draft.
+    const repo = repoQueryIn(q);
+    const what = kind ?? (repo ? 'repository' : 'subject');
+    if (!this.flow || !this.explodeAvailable) return this.voiceSay('Building something new is not available right now. Everything in the project list still works.');
+    if (this.flow.busy) return this.voiceSay('One proposal at a time: answer the one in front of you first.');
+    this.picker.close();
+    this.menu.hide();
+    this.voiceSay(null);
+    this.sfx.click();
+    this.flow.propose({ kind: what, query: what === 'repository' ? (repo ?? q) : q });
+  }
+
+  /** The picker's Explode anything row: say how to ask. In a headset there is nothing to type on. */
+  private explainExplode(): void {
+    this.onExplodeAsked?.();
+    this.voiceSay(this.world.session ? (this.orb ? EXPLODE_HOW_VOICE : 'Leave the session to type a GitHub address on the page, then come back.') : EXPLODE_HOW_2D);
+  }
+
+  private pressCard(id: 'build' | 'cancel'): void {
+    this.sfx.click();
+    if (id === 'build') this.flow?.build();
+    else this.flow?.cancel();
+  }
+
+  private onFlowChange(): void {
+    if (!this.flow) return;
+    this.card?.show(this.flow.view);
+    if (this.flow.view.phase === 'stopped') this.sfx.reject(this.modelAt());
+    this.ui.dirty = true;
+  }
+
+  /** A build finished and its bundle passed the checks here: keep it, list it, and open it. */
+  private onBuilt(bundle: ContentBundle): void {
+    const id = bundle.graph.system_id;
+    this.store.add(bundle);
+    if (!this.projects.some((p) => p.id === id)) this.projects.push(builtProject(bundle));
+    // Kept in this browser for next time; if storage refuses, it still opens now.
+    this.saved?.save(bundle).catch((err: unknown) => console.warn('[explode:save]', err));
+    this.onProjectsChange?.();
+    this.pendingOpen = id;
   }
 
   /** Tutorial ⇄ software. From the software system it goes back to the opening tutorial. */
@@ -733,7 +874,7 @@ export class ExplodeApp {
     if (!node) return;
     if (this.menu.openFor !== sel || this.menuState !== s) {
       this.menuState = s;
-      this.menu.open(sel, node.label, kindLabel(node.kind, this.onMechanical), this.menuItems(sel));
+      this.menu.open(sel, node.label, kindLabel(node.kind, this.onMechanical, node.truth_status === 'inferred'), this.menuItems(sel));
     }
     if (!view.nodeWorldPosition(sel, this.menuAt)) return;
     const radius = (this.store.ctx.bundle.layout.placements[sel]?.radius ?? 0.02) * view.root.scale.x;
@@ -830,6 +971,12 @@ export class ExplodeApp {
   async ask(text: string): Promise<TutorAnswer | null> {
     const q = text.trim().slice(0, 300);
     if (!q || this.asking) return null;
+    // A GitHub address is unambiguous: propose it directly, with or without a live assistant.
+    const repo = this.canPropose ? repoQueryIn(q) : null;
+    if (repo) {
+      this.proposeSystem(repo);
+      return null;
+    }
     this.asking = true;
     try {
       const system = this.store.systemId;
@@ -926,7 +1073,8 @@ export class ExplodeApp {
       visible_node_ids: [...visibleAtDetail(this.store.ctx, s, this.onMechanical ? 'all' : this.detail, !hidden)].slice(0, 40),
       awaiting_prediction: hidden,
       buttons: this.buttonDefs.slice(0, 48).map((d) => ({ id: d.id, label: d.label().slice(0, 40), enabled: d.enabled() })),
-      systems: systems.slice(0, 8).map((p) => ({ id: p.id, name: p.name.slice(0, 80), current: p.id === this.store.systemId })),
+      can_propose: this.canPropose,
+      systems: systems.slice(0, 12).map((p) => ({ id: p.id, name: p.name.slice(0, 80), current: p.id === this.store.systemId })),
     };
   }
 
@@ -970,6 +1118,9 @@ export class ExplodeApp {
         break;
       case 'open_system':
         this.openProject(c.system_id);
+        break;
+      case 'propose_system':
+        this.proposeSystem(c.query, c.kind);
         break;
     }
     this.ui.dirty = true;
@@ -1129,7 +1280,8 @@ export class ExplodeApp {
       { id: 'backdrop', label: () => `View: ${this.backdrop.mode}`, enabled: () => this.backdrop.passthroughAvailable, onPress: () => this.backdrop.cycle() },
       {
         id: 'switch',
-        label: () => (this.onMechanical ? (lessonDone() || this.doneBefore(this.here) ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
+        // A draft the learner had built is not a tutorial to skip.
+        label: () => (this.onMechanical ? (lessonDone() || this.doneBefore(this.here) || this.here.built ? 'Software ▸' : 'Skip tutorial') : `◂ ${shortName(this.opening)}`),
         enabled: () => true,
         onPress: () => this.switchSystem(),
       },
@@ -1143,6 +1295,19 @@ export class ExplodeApp {
         onPress: () => this.openMore(),
       },
       { id: 'projects', label: () => (this.picker.isOpen ? 'Projects ▴' : 'Projects ▾'), enabled: () => true, onPress: () => this.togglePicker() },
+      // The proposal card's buttons (CARD_BUTTONS): enabled only while the card offers them.
+      {
+        id: 'build-system',
+        label: () => 'Build',
+        enabled: () => !!this.flow && cardButtons(this.flow.view).some((b) => b.id === 'build'),
+        onPress: () => this.pressCard('build'),
+      },
+      {
+        id: 'cancel-build',
+        label: () => (this.flow ? (cardButtons(this.flow.view).find((b) => b.id === 'cancel')?.label ?? 'Cancel') : 'Cancel'),
+        enabled: () => !!this.flow && cardButtons(this.flow.view).some((b) => b.id === 'cancel'),
+        onPress: () => this.pressCard('cancel'),
+      },
       // The view dock: what the hand gestures do to the model, as buttons (ui.ts DOCK_GROUPS).
       { id: 'spread-in', label: () => 'Spread −', enabled: () => st().explode_factor > 0, onPress: () => this.stepExplode(-1) },
       { id: 'spread-out', label: () => 'Spread +', enabled: () => st().explode_factor < 1, onPress: () => this.stepExplode(1) },
@@ -1195,7 +1360,9 @@ export class ExplodeApp {
     if (step) caption = step.caption;
     else if (s.lesson?.status === 'complete')
       caption = this.onMechanical
-        ? 'Tutorial complete. Same gestures, different world: continue to the software system.'
+        ? this.here.built
+          ? 'Lesson complete. That was an AI draft, and nobody has checked it. Explore it freely, or press Continue for the software system.'
+          : 'Tutorial complete. Same gestures, different world: continue to the software system.'
         : this.nextLesson()
           ? 'Lesson complete. Ready for an incident? Press Incident drill: something will be broken, and only the symptom will tell you where.'
           : !this.onShowcase && this.showcases[0]
@@ -1280,6 +1447,12 @@ function shortTitle(name: string): string {
   return name.replace(/\s*\(.*\)\s*$/, '');
 }
 
+/** The picker's kind line for a system built on request: where it came from, short enough to share the line with its mark. */
+function builtKind(p: Project): string {
+  const from = /\(([^)]*)\)\s*$/.exec(p.name)?.[1] ?? '';
+  return from ? `BUILT HERE · ${from.length > 26 ? `${from.slice(0, 25)}…` : from}` : 'BUILT HERE';
+}
+
 /** The picker's kind line for a project: the nameplate's, from metadata alone. */
 function subjectKind(p: Project): string {
   return subjectOf({ graph: { display_name: p.name, system_kind: p.kind } })[0];
@@ -1298,8 +1471,9 @@ export function subjectOf(b: { graph: Pick<ContentBundle['graph'], 'display_name
 }
 
 /** The menu's kind line: what sort of part this is, in plain words. */
-function kindLabel(kind: string, mechanical: boolean): string {
-  if (mechanical) return 'Part · teaching model';
+function kindLabel(kind: string, mechanical: boolean, hypothesis = false): string {
+  // A part an AI drafted is never called a teaching model: nobody validated it (ADR-0026).
+  if (mechanical) return hypothesis ? 'Part · AI draft, not checked' : 'Part · teaching model';
   const words: Record<string, string> = { function: 'Function', method: 'Method', class: 'Class', module: 'File', cluster: 'Folder', route: 'Route', test: 'Test' };
   return `${words[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1)} · in the code`;
 }
@@ -1331,8 +1505,9 @@ export function startApp(
   room: RoomSystem | null = null,
   anchors: (AnchorFrame & { tick?(): void }) | null = null,
   projects?: Project[],
+  explode: ExplodeDeps | null = null,
 ): ExplodeApp {
-  app = new ExplodeApp(world, bundles, tutorUrl, debug, room, anchors, projects);
+  app = new ExplodeApp(world, bundles, tutorUrl, debug, room, anchors, projects, explode);
   world.registerSystem(AppSystem);
   world.renderer.xr.addEventListener('sessionstart', () => app?.onSessionChange(true));
   world.renderer.xr.addEventListener('sessionend', () => app?.onSessionChange(false));

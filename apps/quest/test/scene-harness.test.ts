@@ -11,7 +11,16 @@ import headsetJson from '../src/content/headset.bundle.json';
 import jupiterJson from '../src/content/jupiter.bundle.json';
 import repoJson from '../src/content/repo-demo.bundle.json';
 import sdkJson from '../src/content/iwsdk.bundle.json';
-import { startApp, type ExplodeApp } from '../src/app/app.ts';
+import { startApp, type ExplodeApp, type ExplodeDeps } from '../src/app/app.ts';
+import { ExplodeError, type ExplodeApi } from '../src/app/explode-client.ts';
+import { MemorySavedSystems } from '../src/app/saved-systems.ts';
+import type { ExplodeJob, ExplodeProposal, RepositoryProposal, SubjectProposal } from '@explode/contracts';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildFromCuration, buildSubjectBundle, indexAnyRepo } from '../../../tools/content/src/index.ts';
+import { DRAFT, META } from '../../../tools/content/test/subject-fixture.ts';
+import { FIXTURE_ANSWER, FIXTURE_FILES, FIXTURE_SOURCE, writeFixture } from '../../../tools/content/test/any-repo-fixture.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
 import { FakeAudioContext } from './fake-audio.ts';
@@ -138,9 +147,9 @@ function makeWorld() {
 
 // ---------------------------------------------------------------- helpers
 
-function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown; tutorUrl?: string; projects?: Project[] } = {}) {
+function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown; anchors?: unknown; tutorUrl?: string; projects?: Project[]; explode?: ExplodeDeps } = {}) {
   const w = makeWorld();
-  const app = startApp(w.world as never, opts.bundles ?? bundles, opts.tutorUrl ?? null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never, opts.projects);
+  const app = startApp(w.world as never, opts.bundles ?? bundles, opts.tutorUrl ?? null, debug, (opts.room ?? null) as never, (opts.anchors ?? null) as never, opts.projects, opts.explode ?? null);
   const frames = (n = 30) => {
     for (let i = 0; i < n; i++) {
       w.scene.updateMatrixWorld(true);
@@ -2115,5 +2124,462 @@ describe('scene harness: choosing a project, and loading it', () => {
     h.frames(20);
     expect(dial(h)).toBeUndefined();
     expect(h.state().system_id).toBe('system:ev-drivetrain');
+  });
+});
+
+// ---------------------------------------------------------------- explode anything (ADR-0026)
+
+describe('scene harness: explode anything', () => {
+  // A real bundle, built by the real builder from the fixture repository (no network, no model).
+  const dir = mkdtempSync(join(tmpdir(), 'explode-harness-'));
+  writeFixture(dir);
+  const out = buildFromCuration(indexAnyRepo(dir, FIXTURE_SOURCE), FIXTURE_SOURCE, JSON.stringify(FIXTURE_ANSWER), { provider: 'test', model: 'test-model-1', created_at: '2026-11-13T00:00:00.000Z' });
+  rmSync(dir, { recursive: true, force: true });
+  if (!out.ok) throw new Error(out.problems.join('\n'));
+  const built = out.result.bundle;
+  const BUILT_ID = 'system:gh/example-org/fixture.shop@c0ffee123456';
+
+  const proposal: RepositoryProposal = {
+    kind: 'repository',
+    title: 'Explode Example-Org/Fixture.Shop',
+    repository: { full_name: 'Example-Org/Fixture.Shop', url: 'https://github.com/Example-Org/Fixture.Shop', commit: FIXTURE_SOURCE.commit, default_branch: 'main', license: 'MIT License' },
+    counts: { files_total: 15, files_readable: 10, bytes_readable: 2400 },
+    creates: [
+      'A model of Example-Org/Fixture.Shop from its 10 TypeScript and JavaScript source files, as they are at commit c0ffee1.',
+      'At most 46 classes and functions, the ones the call graph ranks highest, in 4 to 8 groups.',
+      'A short tour: explode it, read the groups, follow one real chain of calls, and check a part against its source lines.',
+    ],
+    leaves_out: [
+      'Nothing in the repository is installed or run, so there are no test results and nothing to break and repair.',
+      'Tests, build output, configuration and other languages are not read (5 of 15 files).',
+      'The model stays on this server for a few hours and in your browser; it is not published.',
+    ],
+    disclosure: 'Parts and connections come from the source at that commit and cite their lines. The groups are chosen by an AI model and are marked as hypotheses. None of the code is run, so nothing is marked observed and no connection can be unplugged.',
+    estimate: null,
+  };
+  const job = (over: Partial<ExplodeJob>): ExplodeJob => ({ id: 'job-0001-0001', kind: 'repository', status: 'researching', stage: null, proposal: null, refusal: null, error: null, system_id: null, build_seconds: null, ...over });
+
+  /** A build server that answers from a script: each poll takes the next job state. */
+  function server(script: { research?: ExplodeJob[]; build?: ExplodeJob[]; bundle?: unknown; available?: boolean | boolean[]; retryMs?: number[]; estimate?: ExplodeProposal['estimate']; proposal?: ExplodeProposal; builtId?: string } = {}) {
+    const calls: string[] = [];
+    const withEstimate: ExplodeProposal = { ...(script.proposal ?? proposal), estimate: script.estimate ?? null };
+    const research = [...(script.research ?? [job({ stage: { id: 'research', fraction: null } }), job({ status: 'proposed', proposal: withEstimate })])];
+    const build = [
+      ...(script.build ?? [
+        job({ status: 'building', proposal: withEstimate, stage: { id: 'download', fraction: null }, build_seconds: 0.4 }),
+        job({ status: 'building', proposal: withEstimate, stage: { id: 'index', fraction: null }, build_seconds: 1.6 }),
+        job({ status: 'building', proposal: withEstimate, stage: { id: 'curate', fraction: null }, build_seconds: 3.2 }),
+        job({ status: 'done', proposal: withEstimate, system_id: script.builtId ?? BUILT_ID, build_seconds: 5.5 }),
+      ]),
+    ];
+    let confirmed = false;
+    const api: ExplodeApi = {
+      available: async () => {
+        calls.push('available');
+        const a = script.available ?? true;
+        return Array.isArray(a) ? (a.length > 1 ? a.shift()! : a[0]!) : a;
+      },
+      propose: async (request) => {
+        calls.push(`propose ${request.kind} ${request.query}`);
+        return research.shift()!;
+      },
+      job: async () => {
+        calls.push('job');
+        const queue = confirmed ? build : research;
+        return queue.length > 1 ? queue.shift()! : queue[0]!;
+      },
+      confirm: async (id) => {
+        calls.push(`confirm ${id}`);
+        confirmed = true;
+        return build.shift()!;
+      },
+      cancel: async (id) => void calls.push(`cancel ${id}`),
+      bundle: async (id) => {
+        calls.push(`bundle ${id}`);
+        const raw = script.bundle ?? built;
+        // The real client checks what it is sent before handing it over (explode-client.ts).
+        const { checkedBundle } = await import('../src/app/explode-client.ts');
+        return checkedBundle(structuredClone(raw));
+      },
+    };
+    return { api, calls };
+  }
+
+  const parsed = [headsetJson, drivetrainJson, jupiterJson, repoJson, sdkJson].map((j) => ContentBundle.parse(j));
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  async function start(script: Parameters<typeof server>[0] = {}) {
+    const s = server(script);
+    const saved = new MemorySavedSystems();
+    const h = setup(false, { bundles: parsed, explode: { api: s.api, saved, retryMs: script.retryMs ?? [] } });
+    await settle();
+    /** Let the answers arrive and the app poll again: a second of frames, twice. */
+    const wait = async (rounds = 2) => {
+      for (let i = 0; i < rounds; i++) {
+        await settle();
+        h.frames(72);
+        await settle();
+      }
+    };
+    const card = () => h.app.proposalText;
+    const projects = () => h.app.projectList.map((p) => p.id);
+    // The availability checks at start are not part of what a test does.
+    s.calls.length = 0;
+    return { ...s, saved, h, wait, card, projects };
+  }
+  const plate = (h: ReturnType<typeof setup>) => h.panels().find((p) => isInteractive(p.mesh) && /^TEACHING MODEL |^CODEBASE/.test(p.text))!.mesh;
+  const pickerOf = (h: ReturnType<typeof setup>) => (h.app as unknown as { picker: { isOpen: boolean; names: string[] } }).picker;
+  /** Every object the renderer would issue a draw call for (the same count the shipped scenes are held to). */
+  const drawCalls = (h: ReturnType<typeof setup>) => {
+    let draws = 0;
+    const walk = (o: Object3D) => {
+      if (!o.visible) return;
+      const m = o as Mesh & { isMesh?: boolean; isPoints?: boolean; material?: { visible?: boolean } };
+      if ((m.isMesh || m.isPoints) && m.material?.visible !== false) draws++;
+      o.children.forEach(walk);
+    };
+    walk(h.scene);
+    return draws;
+  };
+  /** A button on the proposal card itself (the evidence panel has a Close of its own). */
+  const onCard = (h: ReturnType<typeof setup>, label: RegExp) => h.panels().find((p) => isInteractive(p.mesh) && p.mesh.visible && p.mesh.renderOrder === 41 && label.test(p.text))?.mesh;
+
+  it('offers no way in without a build server, or while the server says it cannot build', async () => {
+    const plain = setup(false, { bundles: parsed });
+    plain.press(plate(plain));
+    plain.frames(40);
+    expect(pickerOf(plain).names).toHaveLength(5);
+    expect(plain.app.canPropose).toBe(false);
+    plain.app.proposeSystem('honojs/hono');
+    expect(plain.app.proposalText).toBe('');
+
+    const off = await start({ available: false });
+    off.h.press(plate(off.h));
+    off.h.frames(40);
+    expect(pickerOf(off.h).names).not.toContain('Explode anything…');
+    off.h.app.proposeSystem('honojs/hono');
+    await off.wait(1);
+    expect(off.calls).toEqual([]);
+    expect(off.card()).toBe('');
+    expect(off.h.caption()).toMatch(/not available right now/);
+  });
+
+  it('asks a server that was asleep again, and opens the way in once it answers', async () => {
+    const t = await start({ available: [false, false, true], retryMs: [5, 5] });
+    expect(t.h.app.canPropose).toBe(false);
+    expect(await t.h.app.explodeReady).toBe(true);
+    expect(t.h.app.canPropose).toBe(true);
+    t.h.press(plate(t.h));
+    t.h.frames(60);
+    expect(pickerOf(t.h).names.at(-1)).toBe('Explode anything…');
+
+    // It gives up after the last wait, and the app stays as it was.
+    const never = await start({ available: false, retryMs: [5] });
+    expect(await never.h.app.explodeReady).toBe(false);
+    expect(never.h.app.canPropose).toBe(false);
+  });
+
+  it('the picker ends with a row that says how to ask', async () => {
+    const t = await start();
+    t.h.press(plate(t.h));
+    t.h.frames(60);
+    expect(pickerOf(t.h).names.at(-1)).toBe('Explode anything…');
+    t.h.press(t.h.button(/^NEW Explode anything… A GitHub repository, or a subject drafted by AI/));
+    expect(pickerOf(t.h).isOpen).toBe(false);
+    expect(t.h.caption()).toMatch(/Type a GitHub address/);
+    expect(t.calls).toEqual([]); // the row explains; it looks nothing up
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('shows a proposal before anything is built, and Cancel leaves nothing behind', async () => {
+    const t = await start();
+    const before = t.projects();
+    t.h.app.proposeSystem('  https://github.com/Example-Org/Fixture.Shop  ');
+    expect(t.card()).toMatch(/^LOOKING IT UP\nhttps:\/\/github.com\/Example-Org\/Fixture.Shop\n.*Nothing is being built/);
+    await t.wait();
+    const text = t.card();
+    expect(text).toMatch(/^PROPOSAL {2}· {2}NOTHING IS BUILT YET\nExample-Org\/Fixture.Shop\ncommit c0ffee1 of main {2}· {2}licence: MIT License/);
+    expect(text).toContain('WILL CREATE');
+    expect(text).toContain('10 TypeScript and JavaScript source files');
+    expect(text).toContain('WILL NOT');
+    expect(text).toContain('Nothing in the repository is installed or run');
+    expect(text).toMatch(/◌ .*marked as hypotheses/);
+    expect(text).toContain('How long: unknown. This server has not timed a build yet.');
+    expect(t.h.button(/^Build$/)).toBeDefined();
+    expect(t.h.button(/^Cancel$/)).toBeDefined();
+    // Waiting on the learner: however long they read, nothing is confirmed and nothing is polled.
+    const polls = t.calls.length;
+    await t.wait(3);
+    expect(t.calls.length).toBe(polls);
+    expect(t.calls.some((c) => c.startsWith('confirm') || c.startsWith('bundle'))).toBe(false);
+    expect(TextPanel.clipEvents).toEqual([]);
+
+    t.h.press(t.h.button(/^Cancel$/));
+    await t.wait(1);
+    expect(t.card()).toBe('');
+    expect(t.h.button(/^Build$/)).toBeUndefined();
+    expect(t.calls.at(-1)).toBe('cancel job-0001-0001');
+    expect(t.calls.some((c) => c.startsWith('confirm'))).toBe(false);
+    expect(t.projects()).toEqual(before);
+    expect(await t.saved.list()).toEqual([]);
+    expect(t.h.state().system_id).toBe('system:mr-headset');
+  });
+
+  it('says how long from the server\'s own timings when it has them', async () => {
+    const t = await start({ estimate: { low_seconds: 5, high_seconds: 8, basis: '3 earlier builds on this server' } });
+    t.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await t.wait();
+    expect(t.card()).toContain('How long: about 5 to 8 seconds, going by 3 earlier builds on this server.');
+  });
+
+  it('Build shows each real stage, then opens the system, where a part can be checked against its source', async () => {
+    const t = await start();
+    t.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await t.wait();
+    t.h.press(t.h.button(/^Build$/));
+    await settle();
+    t.h.frames(5);
+    expect(t.calls).toContain('confirm job-0001-0001');
+    expect(t.card()).toMatch(/^BUILDING\nExample-Org\/Fixture.Shop\nDownloading the source at that commit\n0 s so far$/);
+    expect(t.h.button(/^Stop$/)).toBeDefined();
+    expect(t.h.button(/^Build$/)).toBeUndefined();
+    await t.wait(1);
+    expect(t.card()).toMatch(/Reading the source and finding the calls\n1 s so far$/);
+    await t.wait(1);
+    expect(t.card()).toMatch(/Asking the AI model to group the parts\n3 s so far$/);
+    await t.wait(3);
+
+    expect(t.calls).toContain('bundle job-0001-0001');
+    expect(t.card()).toBe('');
+    expect(t.h.state().system_id).toBe(BUILT_ID);
+    expect(t.projects().at(-1)).toBe(BUILT_ID);
+    expect((await t.saved.list()).map((s) => s.id)).toEqual([BUILT_ID]);
+    expect(t.h.caption()).toMatch(/This is Example-Org\/Fixture.Shop, read from GitHub at commit c0ffee1.*None of it was run/);
+
+    // The tour, by hand: explode, read the groups, trace the real chain, open the source lines.
+    t.h.press(t.h.button(/^Next ▸$/));
+    t.h.press(t.h.button(/^Explode$/));
+    expect(t.h.caption()).toMatch(/chosen by an AI model \(test-model-1\).*marked a hypothesis/);
+    t.h.press(t.h.button(/^Next ▸$/));
+    t.h.press(t.h.button(/^Trace the calls from Server$/));
+    expect(t.h.state().active_path_id).toBe('path:calls');
+    t.h.press(t.h.view().nodes.get('fn:src/core/auth.ts#authenticate')!.mesh);
+    t.h.press(t.h.button(/^Evidence$/));
+    const evidence = t.h.panels().map((p) => p.text).find((x) => /IN SOURCE/.test(x) && /auth\.ts/.test(x)) ?? '';
+    expect(evidence).toContain('src/core/auth.ts');
+    expect(evidence).toContain('export function authenticate(name: string): string {');
+    expect(evidence).toContain('@ commit c0ffee123456'); // a git commit, and called one
+    expect(FIXTURE_FILES['src/core/auth.ts']).toContain('export function authenticate(name: string): string {');
+    expect(drawCalls(t.h), 'draw calls in a built repository, traced, with evidence open').toBeLessThanOrEqual(120);
+    // Nothing in it can be unplugged, and nothing is called observed.
+    expect([...t.h.view().edges.values()].every((e) => e.plug === null)).toBe(true);
+    expect(t.h.panels().some((p) => /OBSERVED/.test(p.text))).toBe(false);
+
+    // It is in the picker, marked as built here, after the shipped systems and before the new-build row.
+    t.h.press(plate(t.h));
+    t.h.frames(70);
+    expect(pickerOf(t.h).names.slice(-2)).toEqual(['Fixture.Shop', 'Explode anything…']);
+    expect(t.h.button(/^BUILT HERE · Example-Org\/Fixture.Shop\s+·\s+● {2}ON THE STAGE Fixture.Shop Built for you/)).toBeDefined();
+    expectFinite(t.h.scene);
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('Stop during a build cancels it, and nothing is added', async () => {
+    const t = await start();
+    const before = t.projects();
+    t.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await t.wait();
+    t.h.press(t.h.button(/^Build$/));
+    await settle();
+    t.h.frames(5);
+    t.h.press(t.h.button(/^Stop$/));
+    await t.wait(4);
+    expect(t.calls.filter((c) => c.startsWith('cancel'))).toEqual(['cancel job-0001-0001']);
+    expect(t.calls.some((c) => c.startsWith('bundle'))).toBe(false);
+    expect(t.card()).toBe('');
+    expect(t.projects()).toEqual(before);
+    expect(t.h.state().system_id).toBe('system:mr-headset');
+  });
+
+  it('a refusal, a failed build and an unreachable server each say why, and add nothing', async () => {
+    const refused = await start({ research: [job({}), job({ status: 'refused', refusal: 'No TypeScript or JavaScript source was found in psf/requests. Those are the only languages this can read so far.' })] });
+    refused.h.app.proposeSystem('psf/requests');
+    await refused.wait();
+    expect(refused.card()).toBe('CANNOT BUILD THAT\nNo TypeScript or JavaScript source was found in psf/requests. Those are the only languages this can read so far.');
+    expect(refused.h.button(/^Build$/)).toBeUndefined();
+    expect(refused.h.button(/^Cancel$/)).toBeUndefined();
+    refused.h.press(onCard(refused.h, /^Close$/));
+    expect(refused.card()).toBe('');
+    expect(refused.calls.some((c) => c.startsWith('cancel'))).toBe(false); // nothing left on the server to cancel
+
+    const failed = await start({ build: [job({ status: 'building', stage: { id: 'curate', fraction: null }, build_seconds: 2 }), job({ status: 'failed', error: 'The AI model that groups the parts did not answer. Nothing was built.' })] });
+    failed.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await failed.wait();
+    failed.h.press(failed.h.button(/^Build$/));
+    await failed.wait(3);
+    expect(failed.card()).toBe('NOT BUILT\nThe AI model that groups the parts did not answer. Nothing was built.');
+    expect(failed.projects()).toHaveLength(5);
+
+    const down = await start();
+    down.api.propose = async () => {
+      throw new ExplodeError('The build server could not be reached.');
+    };
+    down.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await down.wait(1);
+    expect(down.card()).toBe('COULD NOT LOOK IT UP\nThe build server could not be reached.');
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('refuses to open a built bundle that breaks the truth contract', async () => {
+    const tampered = structuredClone(built);
+    tampered.graph.nodes.find((n) => n.role === 'concept')!.truth_status = 'observed';
+    const t = await start({ bundle: tampered });
+    t.h.app.proposeSystem('Example-Org/Fixture.Shop');
+    await t.wait();
+    t.h.press(t.h.button(/^Build$/));
+    await t.wait(5);
+    expect(t.card()).toMatch(/^BUILT, BUT NOT OPENED\nWhat was built did not pass its checks, so it was not opened\.$/);
+    expect(t.projects()).toHaveLength(5);
+    expect(await t.saved.list()).toEqual([]);
+    expect(t.h.state().system_id).toBe('system:mr-headset');
+  });
+
+  it('a typed GitHub address proposes directly, and the assistant can only press the buttons the card shows', async () => {
+    const t = await start();
+    const internals = t.h.app as unknown as { runCommand(c: unknown): void; viewContext(): { can_propose: boolean; buttons: Array<{ id: string; label: string; enabled: boolean }> } };
+    const buttonState = (id: string) => internals.viewContext().buttons.find((b) => b.id === id)!;
+    expect(internals.viewContext().can_propose).toBe(true);
+    expect(buttonState('build-system').enabled).toBe(false);
+
+    // Pressing Build with no proposal up does nothing.
+    internals.runCommand({ type: 'press', button_id: 'build-system' });
+    expect(t.calls).toEqual([]);
+
+    expect(await t.h.app.ask('please explode github.com/Example-Org/Fixture.Shop for me!')).toBeNull();
+    expect(t.calls).toEqual(['propose repository github.com/Example-Org/Fixture.Shop']);
+    await t.wait();
+    expect(buttonState('build-system')).toMatchObject({ label: 'Build', enabled: true });
+    expect(buttonState('cancel-build')).toMatchObject({ label: 'Cancel', enabled: true });
+    // The toolbar did not grow: these two belong to the card.
+    expect(t.h.panels().filter((p) => isInteractive(p.mesh) && p.mesh.visible && /^Build$/.test(p.text))).toHaveLength(1);
+
+    // The assistant's command opens a proposal and never a build; a second one waits its turn.
+    internals.runCommand({ type: 'propose_system', kind: 'repository', query: 'honojs/hono' });
+    expect(t.calls.filter((c) => c.startsWith('propose'))).toHaveLength(1);
+    t.h.frames(5);
+    expect(t.h.caption()).toMatch(/One proposal at a time/);
+
+    // "Yes, build it" is the same press as a hand's.
+    internals.runCommand({ type: 'press', button_id: 'build-system' });
+    await t.wait(6);
+    expect(t.calls).toContain('confirm job-0001-0001');
+    expect(t.h.state().system_id).toBe(BUILT_ID);
+  });
+
+  // ---- a subject, drafted by a model
+
+  const draft = buildSubjectBundle(DRAFT, META);
+  const subjectProposal: SubjectProposal = {
+    kind: 'subject',
+    title: 'An AI draft of Lantern World',
+    subject: { name: 'Lantern World', summary: 'The layers of Lantern World and the weather above them.' },
+    outline: ['Crust', 'Mantle', 'Core', 'Thin air', 'Dust storm', 'Polar ice'],
+    sources: [
+      { title: 'Lantern World', url: 'https://en.wikipedia.org/wiki/Lantern_World' },
+      { title: 'Weather of Lantern World', url: 'https://en.wikipedia.org/wiki/Weather_of_Lantern_World' },
+    ],
+    model: 'test-model-1',
+    creates: [
+      'A model of Lantern World with about 6 parts, drafted by test-model-1 from the Wikipedia articles Lantern World and Weather of Lantern World.',
+      'A short lesson: open it up, follow one chain of cause and effect, cut one link and see what the draft says would stop.',
+    ],
+    leaves_out: [
+      'No one checks the draft, and it is not compared with the articles after it is written.',
+      'Shapes, sizes and colours are rough stand-ins chosen by the model. Nothing is to scale and nothing is a picture of the real thing.',
+      'The model stays on this server for a few hours and in your browser; it is not published.',
+    ],
+    disclosure: 'Everything in it will be written by an AI model and marked as a hypothesis. Nobody checks it. It is a draft to explore, not a reference: where it matters, check it against a source you trust.',
+    estimate: null,
+  };
+  const subjectServer = () =>
+    start({
+      proposal: subjectProposal,
+      builtId: draft.graph.system_id,
+      bundle: draft,
+      research: [job({ kind: 'subject', stage: { id: 'plan', fraction: null } }), job({ kind: 'subject', stage: { id: 'outline', fraction: null } }), job({ kind: 'subject', status: 'proposed', proposal: subjectProposal })],
+      build: [job({ kind: 'subject', status: 'building', proposal: subjectProposal, stage: { id: 'draft', fraction: null }, build_seconds: 1.2 }), job({ kind: 'subject', status: 'done', proposal: subjectProposal, system_id: draft.graph.system_id, build_seconds: 4 })],
+    });
+
+  it('anything that is not a GitHub address is proposed as a subject, and the card says whose words it shows', async () => {
+    const t = await subjectServer();
+    t.h.app.proposeSystem('I want to explore Lantern World');
+    expect(t.calls).toEqual(['propose subject I want to explore Lantern World']);
+    expect(t.card()).toMatch(/^LOOKING IT UP\nI want to explore Lantern World\nReading about it\. Nothing is being built\.$/);
+    await t.wait(1);
+    expect(t.card()).toContain('Asking the AI model what its parts would be. Nothing is being built.');
+    await t.wait(2);
+    const text = t.card();
+    expect(text).toMatch(/^PROPOSAL {2}· {2}NOTHING IS BUILT YET\nLantern World {2}· {2}an AI draft\n◌ test-model-1 says: The layers of Lantern World/);
+    expect(text).toContain('Expected parts: Crust, Mantle, Core, Thin air, Dust storm, Polar ice.');
+    expect(text).toContain('Read for it: Lantern World; Weather of Lantern World (Wikipedia).');
+    expect(text).toContain('No one checks the draft');
+    expect(text).toMatch(/◌ Everything in it will be written by an AI model and marked as a hypothesis\. Nobody checks it\./);
+    expect(text).toContain('How long: unknown.');
+    expect(t.calls.some((c) => c.startsWith('confirm'))).toBe(false);
+    expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('a built draft opens as a model whose every part says it is a hypothesis, through the whole lesson', async () => {
+    const t = await subjectServer();
+    t.h.app.proposeSystem('Lantern World', 'subject');
+    await t.wait(3);
+    t.h.press(t.h.button(/^Build$/));
+    await settle();
+    t.h.frames(5);
+    expect(t.card()).toMatch(/^BUILDING\nLantern World\nThe AI model is writing the draft\n1 s so far$/);
+    await t.wait(4);
+    expect(t.h.state().system_id).toBe(draft.graph.system_id);
+    expect((await t.saved.list())[0]).toMatchObject({ id: draft.graph.system_id, kind: 'mechanical', name: 'Lantern World (AI draft)' });
+    // The nameplate and the first caption say what it is before anything else.
+    expect(t.h.panels().some((p) => /^AI DRAFT Lantern World/.test(p.text))).toBe(true);
+    expect(t.h.caption()).toMatch(/This is an AI draft of Lantern World, written just now by test-model-1.*Nobody has checked it/);
+
+    t.h.press(t.h.button(/^Explode$/));
+    // Every label carries the hypothesis glyph.
+    const labels = t.h.panels().map((p) => p.text).filter((x) => /^◌ /.test(x));
+    expect(labels).toEqual(expect.arrayContaining(['◌ Crust', '◌ Thin air', '◌ Dust storm', '◌ Core']));
+    expect(t.h.panels().some((p) => /^(Crust|Thin air|Dust storm|Core)$/.test(p.text))).toBe(false);
+    // A selected part is called an AI draft, never a teaching model.
+    t.h.press(t.h.view().nodes.get('part:core')!.mesh);
+    expect(t.h.panels().some((p) => /Part · AI draft, not checked/.test(p.text))).toBe(true);
+    expect(t.h.panels().some((p) => /teaching model/i.test(p.text) && p.mesh.visible && /Core/.test(p.text))).toBe(false);
+    expect(t.h.button(/^Evidence$/)).toBeDefined();
+
+    t.h.press(t.h.button(/^Next ▸$/));
+    t.h.press(t.h.button(/^Trace warm ground to the dust storm$/));
+    const edge = draft.lessons[0]!.break_edge_id!;
+    const internals = t.h.app as unknown as { runCommand(c: unknown): void };
+    internals.runCommand({ type: 'unplug', edge_id: edge });
+    t.h.frames(20);
+    expect(t.h.state().broken_edge_ids).toEqual([edge]);
+    internals.runCommand({ type: 'predict', target_id: 'part:air' });
+    t.h.frames(40);
+    expect(drawCalls(t.h), 'draw calls in a draft, open, cut, with its consequence shown').toBeLessThanOrEqual(120);
+    // What follows the cut is the draft's say-so: a hypothesis, never the teaching model's rule.
+    expect(t.h.state().consequences[0]).toMatchObject({ truth_status: 'inferred', evidence_ids: [] });
+    const shown = t.h.panels().map((p) => p.text).join(' | ');
+    expect(shown).toMatch(/HYPOTHESIS/);
+    expect(shown).not.toMatch(/TEACHING MODEL · not a measurement/);
+    expect(shown).not.toMatch(/OBSERVED/);
+    expect(t.h.caption()).toMatch(/That is what this draft says would happen\. It is not a measurement/);
+
+    t.h.press(t.h.button(/^Next ▸$/));
+    internals.runCommand({ type: 'plug', edge_id: edge, target_id: 'part:air' });
+    t.h.frames(20);
+    t.h.press(t.h.button(/^Collapse$/));
+    t.h.frames(60);
+    expect(t.h.state().lesson?.status).toBe('complete');
+    expect(t.h.caption()).toMatch(/That was an AI draft, and nobody has checked it/);
+    expectFinite(t.h.scene);
+    expect(TextPanel.clipEvents).toEqual([]);
   });
 });

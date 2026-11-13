@@ -15,6 +15,34 @@ export interface ProjectInfo {
   firstLesson: string | null;
   /** One line for the picker: what you do with it. Presentation only. */
   blurb: string;
+  /** Built on request in this browser (ADR-0026), not shipped with the app. */
+  built?: boolean;
+}
+
+/** The picker line of a system built on request: a repository, or a subject a model drafted. */
+export const BUILT_BLURB = 'Built for you from its source on GitHub';
+export const DRAFT_BLURB = 'Drafted for you by an AI model; not checked';
+
+/** The project entry for a system built in an earlier visit and kept in this browser; `load` reads it back. */
+export function savedProject(meta: { id: string; name: string; kind: 'mechanical' | 'software'; first_lesson: string | null }, load: (id: string) => Promise<ContentBundle>): Project {
+  return {
+    id: meta.id,
+    kind: meta.kind,
+    name: meta.name,
+    firstLesson: meta.first_lesson,
+    blurb: meta.kind === 'mechanical' ? DRAFT_BLURB : BUILT_BLURB,
+    built: true,
+    load: async (onProgress) => {
+      onProgress({ phase: 'check', fraction: null, bytes: 0 });
+      return load(meta.id);
+    },
+  };
+}
+
+/** The project entry for a bundle built on request. */
+export function builtProject(bundle: ContentBundle): Project {
+  const kind = bundle.graph.system_kind === 'mechanical' ? 'mechanical' : 'software';
+  return { id: bundle.graph.system_id, kind, name: bundle.graph.display_name, firstLesson: bundle.lessons[0]?.id ?? null, blurb: kind === 'mechanical' ? DRAFT_BLURB : BUILT_BLURB, built: true };
 }
 
 /** Where a load has got to; the loading view shows it. */

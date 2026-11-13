@@ -8,7 +8,9 @@ import jupiterUrl from './content/jupiter.bundle.json?url';
 import iwsdkUrl from './content/iwsdk.bundle.json?url';
 import repoDemoUrl from './content/repo-demo.bundle.json?url';
 import { startApp } from './app/app.ts';
-import { fetchBundle, PROJECTS, type Project } from './app/projects.ts';
+import { ExplodeClient } from './app/explode-client.ts';
+import { fetchBundle, PROJECTS, savedProject, type Project } from './app/projects.ts';
+import { savedSystems } from './app/saved-systems.ts';
 import { Store } from './app/store.ts';
 import { SdkAnchorFrame } from './app/desk-memory.ts';
 import { InteractionSystem } from './app/interactions.ts';
@@ -48,25 +50,36 @@ async function main(): Promise<void> {
   // The sample service carries the lessons; the real SDK after it is explored from its most relevant parts.
   // Only the system the visitor will see first is fetched before start: the one used last on this
   // device, else the opening tutorial. The rest load when opened (the picker shows the dial).
+  const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
+  // Systems the visitor had built on an earlier visit (ADR-0026) are kept in this browser and
+  // listed after the shipped ones. They only exist where a build server is configured.
+  const saved = savedSystems();
+  const kept = tutorUrl ? await saved.list() : [];
+  const mine = kept.map((s) => savedProject(s, (id) => saved.load(id)));
+  const projects: Project[] = [...PROJECT_LIST, ...mine];
   const last = Store.lastActiveSystem();
-  const first = PROJECT_LIST.find((p) => p.id === last) ?? PROJECT_LIST[0]!;
-  const firstName = first.name.replace(/\s*\(.*\)\s*$/, '');
-  setEnter(`Loading ${firstName}…`, false);
-  const [world, bundle] = await Promise.all([
-    World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions),
-    first.load!((p) => {
+  const wanted = projects.find((p) => p.id === last) ?? projects[0]!;
+  const loadFirst = async (first: Project) => {
+    const firstName = first.name.replace(/\s*\(.*\)\s*$/, '');
+    setEnter(`Loading ${firstName}…`, false);
+    return first.load!((p) => {
       if (p.phase === 'fetch' && p.fraction !== null) setEnter(`Loading ${firstName}… ${Math.round(p.fraction * 100)}%`, false);
       else if (p.phase === 'check') setEnter(`Checking ${firstName}…`, false);
-    }),
+    });
+  };
+  const [world, bundle] = await Promise.all([
+    World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions),
+    // A saved system that no longer reads back must not stop the app: open on the tutorial instead.
+    wanted.built ? loadFirst(wanted).catch(() => loadFirst(projects[0]!)) : loadFirst(wanted),
   ]);
   world.registerSystem(InteractionSystem);
   // Reads the planes the headset detected, so the stage can stand on the real desk.
   world.registerSystem(RoomSystem);
-  const tutorUrl = (import.meta.env.VITE_TUTOR_URL as string | undefined)?.trim() || null;
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
   // The persistent anchor lets the stage return to the same spot on the desk next session.
   const anchors = new SdkAnchorFrame(world.getSystem(SceneUnderstandingSystem) ?? null);
-  const app = startApp(world, [bundle], tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors, PROJECT_LIST);
+  const explode = tutorUrl ? { api: new ExplodeClient(tutorUrl), saved } : null;
+  const app = startApp(world, [bundle], tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors, projects, explode);
   for (const id of PREFETCH) app.prefetch(id);
 
   // The 2D page's project selector: the same change as the nameplate's picker, for the desktop
@@ -74,13 +87,18 @@ async function main(): Promise<void> {
   const projectBar = document.getElementById('project-bar');
   const projectSelect = document.getElementById('project') as HTMLSelectElement | null;
   if (projectBar && projectSelect) {
-    for (const p of app.projectList) {
-      const option = document.createElement('option');
-      option.value = p.id;
-      option.textContent = `${p.name.replace(/\s*\(.*\)\s*$/, '')}${p.kind === 'software' ? ' · codebase' : ''}`;
-      projectSelect.append(option);
-    }
-    projectSelect.value = app.currentProject;
+    const listProjects = () => {
+      projectSelect.replaceChildren();
+      for (const p of app.projectList) {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = `${p.name.replace(/\s*\(.*\)\s*$/, '')}${p.kind === 'software' ? ' · codebase' : ''}`;
+        projectSelect.append(option);
+      }
+      projectSelect.value = app.currentProject;
+    };
+    listProjects();
+    app.onProjectsChange = listProjects;
     app.onProjectChange = (id) => (projectSelect.value = id);
     projectSelect.addEventListener('change', () => {
       app.openProject(projectSelect.value);
@@ -89,6 +107,30 @@ async function main(): Promise<void> {
     });
     projectBar.hidden = false;
     world.visibilityState.subscribe((v) => (projectBar.hidden = v !== 'non-immersive'));
+  }
+  // Explode Anything (ADR-0026): a box for a GitHub address, on the 2D page, where there is a
+  // keyboard. Shown only once the build server has said it can build; the proposal and its Build
+  // and Cancel buttons then appear in the scene.
+  const explodeForm = document.getElementById('explode') as HTMLFormElement | null;
+  const explodeText = document.getElementById('explode-text') as HTMLInputElement | null;
+  if (explodeForm && explodeText) {
+    void app.explodeReady.then((ok) => {
+      if (!ok) return;
+      explodeForm.hidden = world.visibilityState.peek() !== 'non-immersive';
+      world.visibilityState.subscribe((v) => (explodeForm.hidden = v !== 'non-immersive'));
+      explodeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = explodeText.value.trim();
+        if (!text) return;
+        app.proposeSystem(text);
+        if (world.xrEnabled) setStatus('Looking it up. The proposal appears in the scene: enter to read it, then press Build or Cancel.');
+        explodeText.value = '';
+        explodeText.blur(); // so the keyboard shortcuts work again
+        // The proposal stands in the scene, behind the landing card on a desktop.
+        if (landing && !landing.hidden && !world.xrEnabled) landing.hidden = true;
+      });
+      app.onExplodeAsked = () => explodeText.focus();
+    });
   }
   // Typed questions for the assistant, on the 2D page. Only with a live tutor: offline it could
   // answer nothing, and a control that does nothing is worse than none.

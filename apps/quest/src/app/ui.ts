@@ -118,6 +118,7 @@ export class SpatialUI {
   private readonly plate: TextPanel;
   private plateText: [string, string] = ['', ''];
   private plateHovered = false;
+  private revisionKind: 'git' | 'content_hash' = 'content_hash';
   private guideDrawn = false;
   private controlsHalfHeight = 0;
   private mode: LayoutMode = 'wide';
@@ -375,7 +376,8 @@ export class SpatialUI {
     return out;
   }
 
-  render(model: CaptionModel, evidence: Evidence | null): void {
+  render(model: CaptionModel, evidence: Evidence | null, revision: 'git' | 'content_hash' = 'content_hash'): void {
+    this.revisionKind = revision;
     this.dirty = false;
     for (const b of this.buttons) {
       if (b.hidden) continue; // not drawn, not scaled: stays shrunk out of reach
@@ -408,7 +410,7 @@ export class SpatialUI {
 
     this.evidenceShown = evidence !== null;
     this.syncEvidence();
-    if (evidence) this.evidence.draw(evidenceLines(evidence));
+    if (evidence) this.evidence.draw(evidenceLines(evidence, this.revisionKind));
   }
 
   private evidenceShown = false;
@@ -444,7 +446,7 @@ const GUIDE_LINES: TextLine[] = [
   ...GUIDE.map(([gesture, effect]): TextLine => ({ text: `${gesture}  →  ${effect}`, size: SMALL })),
 ];
 
-function evidenceLines(ev: Evidence): TextLine[] {
+function evidenceLines(ev: Evidence, revision: 'git' | 'content_hash'): TextLine[] {
   const badge = TRUTH_BADGE[ev.truth_status];
   const lines: TextLine[] = [
     { text: 'EVIDENCE', size: CODE, color: CSS.muted, bold: true },
@@ -453,8 +455,8 @@ function evidenceLines(ev: Evidence): TextLine[] {
   ];
   switch (ev.kind) {
     case 'source_range':
-      // The revision is a content hash of the sample's source tree, not a git commit; say so.
-      lines.push({ text: `${ev.source.path}:${ev.source.start_line}-${ev.source.end_line} @ tree ${ev.source.revision.slice(0, 12)}`, size: CODE, color: CSS.action, mono: true, gap: 10 });
+      // Say what the revision is: a git commit for a real repository, a content hash of the source tree for the sample.
+      lines.push({ text: `${ev.source.path}:${ev.source.start_line}-${ev.source.end_line} @ ${revision === 'git' ? 'commit' : 'tree'} ${ev.source.revision.slice(0, 12)}`, size: CODE, color: CSS.action, mono: true, gap: 10 });
       for (const l of ev.source.excerpt.split('\n').slice(0, CODE_LINES)) lines.push({ text: l || ' ', size: CODE, mono: true });
       break;
     case 'test_run':

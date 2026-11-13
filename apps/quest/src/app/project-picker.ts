@@ -14,6 +14,8 @@ export interface PickerItem {
   done: boolean;
   /** Its bundle is already in hand, so opening it needs no download. */
   loaded: boolean;
+  /** Not a project: a row that starts something (Explode anything). Drawn as an action. */
+  action?: boolean;
 }
 
 const PPM = 2800;
@@ -22,7 +24,9 @@ const HEAD_H = 0.042;
 const ROW_H = 0.056;
 const GAP = 0.005;
 /** Most projects the picker lists; rows past the items are hidden and out of a ray's reach. */
-export const MAX_PICKER_ITEMS = 6;
+export const MAX_PICKER_ITEMS = 8;
+/** Rows the list holds before it is raised so its foot stays where a six-row list ends. */
+const ROWS_AT_REST = 6;
 /** Seconds for one row to drop into place, and between one row and the next. */
 const ROW_SECONDS = 0.22;
 const STAGGER = 0.045;
@@ -52,6 +56,7 @@ export class ProjectPicker {
   private clock = 0;
   private closing = 0;
   private dirty = false;
+  private lift = 0;
 
   constructor(
     world: World,
@@ -106,6 +111,8 @@ export class ProjectPicker {
       { text: 'CHOOSE WHAT TO EXPLODE   ▴', size: 30, bold: true, color: CSS.action },
     ]);
     let y = -HEAD_H / 2 - GAP - ROW_H / 2;
+    // A longer list rises rather than reaching further down toward the desk.
+    this.lift = Math.max(0, this.items.length - ROWS_AT_REST) * (ROW_H + GAP);
     this.rows.forEach((r, i) => {
       r.y = y - i * (ROW_H + GAP);
       if (i >= this.items.length) {
@@ -140,6 +147,7 @@ export class ProjectPicker {
       }
     } else this.clock += dt;
     this.group.position.copy(AT);
+    this.group.position.y += this.lift;
     this.group.rotation.set(0, Math.atan2(eye.x - AT.x, eye.z - AT.z), 0);
     if (this.dirty) this.redraw();
     this.animate();
@@ -171,6 +179,17 @@ export class ProjectPicker {
     this.rows.forEach((r, i) => {
       const item = this.items[i];
       if (!item) return;
+      if (item.action) {
+        r.panel.draw(
+          [
+            { text: item.kind, size: 24, bold: true, color: CSS.path, gap: 2 },
+            { text: item.name, size: 38, bold: true, color: CSS.action, gap: 2 },
+            { text: item.blurb, size: 26, color: CSS.muted },
+          ],
+          r.hovered ? CSS.buttonHover : CSS.buttonBg,
+        );
+        return;
+      }
       const mark = item.current ? '●  ON THE STAGE' : item.done ? '✓  DONE' : item.loaded ? '' : '↓  LOADS ON OPEN';
       const kind = mark ? `${item.kind}   ·   ${mark}` : item.kind;
       r.panel.draw(
