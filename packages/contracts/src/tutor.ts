@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Id } from './common.ts';
 import { SceneAction, MAX_TUTOR_ACTIONS } from './actions.ts';
+import { AssistantCommand, ConversationTurn, MAX_ASSISTANT_COMMANDS, MAX_HISTORY_TURNS, ViewContext } from './commands.ts';
 import { EngineEvent } from './events.ts';
 import { TruthStatus } from './truth.ts';
 
@@ -17,6 +18,9 @@ export const TutorTurnRequest = z.object({
   broken_edge_ids: z.array(Id).max(10),
   recent_events: z.array(EngineEvent).max(10),
   free_text: z.string().max(300).optional(),
+  /** What is on screen now. Sent with `free_text`; without it the assistant can only show. */
+  view: ViewContext.optional(),
+  history: z.array(ConversationTurn).max(MAX_HISTORY_TURNS).optional(),
 });
 export type TutorTurnRequest = z.infer<typeof TutorTurnRequest>;
 
@@ -27,6 +31,11 @@ export const TutorPlan = z.object({
   claim_status: TruthStatus,
   evidence_ids: z.array(Id).max(6),
   actions: z.array(SceneAction).max(MAX_TUTOR_ACTIONS),
+  /**
+   * Things done on the learner's behalf. Only a `free_text` turn may carry any (the learner
+   * asked in their own words); `validateTutorPlan` rejects them everywhere else.
+   */
+  commands: z.array(AssistantCommand).max(MAX_ASSISTANT_COMMANDS).default([]),
   /** True when the tutor declines because evidence is missing. */
   abstain: z.boolean(),
 });

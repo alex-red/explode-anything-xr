@@ -51,7 +51,7 @@ describe('tutor proxy with the Meta provider', () => {
     const fetchImpl = vi.fn(async () => metaReply(validPlan));
     const { handle } = setup(fetchImpl as unknown as typeof fetch);
     const res = await handle(post(), metaEnv);
-    expect(await j(res)).toEqual({ plan: validPlan, source: 'live', model: 'muse-ember-1.0' });
+    expect(await j(res)).toEqual({ plan: { ...validPlan, commands: [] }, source: 'live', model: 'muse-ember-1.0' });
 
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.meta.ai/v1/chat/completions');

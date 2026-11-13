@@ -10,6 +10,7 @@ import { SdkAnchorFrame } from './app/desk-memory.ts';
 import { InteractionSystem } from './app/interactions.ts';
 import { RoomSystem } from './app/room.ts';
 
+import { VoiceCapture } from './app/voice.ts';
 const status = document.getElementById('status');
 const landing = document.getElementById('landing');
 const enter = document.getElementById('enter-xr') as HTMLButtonElement | null;
@@ -39,7 +40,26 @@ async function main(): Promise<void> {
   // `?debug` shows the in-world frame-rate and draw-call readout (device testing only).
   // The persistent anchor lets the stage return to the same spot on the desk next session.
   const anchors = new SdkAnchorFrame(world.getSystem(SceneUnderstandingSystem) ?? null);
-  startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors);
+  const app = startApp(world, bundles, tutorUrl, new URLSearchParams(location.search).has('debug'), world.getSystem(RoomSystem) ?? null, anchors);
+  // Typed questions for the assistant, on the 2D page. Only with a live tutor: offline it could
+  // answer nothing, and a control that does nothing is worse than none.
+  const askForm = document.getElementById('ask') as HTMLFormElement | null;
+  const askText = document.getElementById('ask-text') as HTMLInputElement | null;
+  const askSend = document.getElementById('ask-send') as HTMLButtonElement | null;
+  if (askForm && askText && askSend && tutorUrl) {
+    askForm.hidden = false;
+    askForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = askText.value.trim();
+      if (!text) return;
+      askSend.disabled = true;
+      void app.ask(text).finally(() => {
+        askSend.disabled = false;
+        askText.value = '';
+      });
+    });
+    world.visibilityState.subscribe((v) => (askForm.hidden = v !== 'non-immersive'));
+  }
   // Dev only: a "Webcam hands" panel to drive the emulated hands from a camera
   // (src/dev/webcam-hands.ts); `?webcam` starts it on load. `import.meta.env.DEV` is false in a
   // build, so this branch and its chunk are dropped.
@@ -51,6 +71,19 @@ async function main(): Promise<void> {
   }
 
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (m: string) => Promise<boolean> } };
+  // Asking aloud needs the microphone. Offer to grant it here, on the 2D page: what a permission
+  // prompt does inside an immersive session on a headset is unknown.
+  const enableVoice = document.getElementById('enable-voice') as HTMLButtonElement | null;
+  if (enableVoice && tutorUrl && VoiceCapture.supported) {
+    enableVoice.hidden = false;
+    enableVoice.addEventListener('click', () => {
+      void VoiceCapture.prime().then((ok) => {
+        enableVoice.hidden = ok;
+        setStatus(ok ? 'Microphone allowed. In the lesson, press Ask and speak.' : 'The microphone was not allowed. Everything still works with the buttons.');
+      });
+    });
+  }
+
   const supports = async (mode: string): Promise<boolean> =>
     world.xrEnabled && !!nav.xr?.isSessionSupported && (await nav.xr.isSessionSupported(mode).catch(() => false));
   const arSupported = await supports('immersive-ar');

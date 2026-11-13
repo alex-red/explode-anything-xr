@@ -38,6 +38,42 @@ describe('validateTutorPlan', () => {
   });
 });
 
+describe('validateTutorPlan: commands', () => {
+  const scope = { enabledButtons: new Set(['explode', 'undo']), systems: new Set(['sys:mini', 'sys:other']) };
+  const withCommands = (...commands: unknown[]) => ({ ...okPlan, commands });
+
+  it('rejects any command on a turn the learner did not ask in their own words', () => {
+    expect(validateTutorPlan(ctx, withCommands({ type: 'unplug', edge_id: BREAK })).ok).toBe(false);
+    expect(validateTutorPlan(ctx, withCommands({ type: 'press', button_id: 'explode' })).ok).toBe(false);
+  });
+
+  it('accepts commands inside the scope, and defaults to none', () => {
+    const r = validateTutorPlan(
+      ctx,
+      withCommands({ type: 'press', button_id: 'explode' }, { type: 'unplug', edge_id: BREAK }, { type: 'plug', edge_id: BREAK, target_id: 'fn:verify' }, { type: 'open_system', system_id: 'sys:other' }),
+      scope,
+    );
+    expect(r).toMatchObject({ ok: true });
+    const plain = validateTutorPlan(ctx, okPlan, scope);
+    expect(plain.ok && plain.plan.commands).toEqual([]);
+  });
+
+  it.each([
+    ['a button that is not there or not enabled', { type: 'press', button_id: 'next' }],
+    ['an unknown part', { type: 'select', target_id: 'fn:invented' }],
+    ['an unknown connection', { type: 'unplug', edge_id: 'edge:made->up' }],
+    ['an unknown path', { type: 'trace', path_id: 'path:nope' }],
+    ['an unknown system', { type: 'open_system', system_id: 'sys:elsewhere' }],
+    ['a command outside the schema', { type: 'run_shell', cmd: 'ls' }],
+  ])('rejects %s', (_name, command) => {
+    expect(validateTutorPlan(ctx, withCommands(command), scope).ok).toBe(false);
+  });
+
+  it('rejects more than four commands', () => {
+    expect(validateTutorPlan(ctx, withCommands(...Array(5).fill({ type: 'deselect' })), scope).ok).toBe(false);
+  });
+});
+
 describe('scriptedTutorTurn', () => {
   it('always produces plans that pass validation', () => {
     let s = initialState(ctx);

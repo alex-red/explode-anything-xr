@@ -26,8 +26,9 @@ export type SceneAction = z.infer<typeof SceneAction>;
 export type SceneActionType = SceneAction['type'];
 
 /**
- * The tutor may only *show*. It cannot break or repair edges, and it cannot pass,
- * fail, or advance a lesson (only the deterministic lesson engine does that).
+ * Scene actions only *show*. Acting for the learner (unplugging, repairing, pressing Next) is an
+ * `AssistantCommand` (commands.ts), allowed only when the learner asked in their own words. Either
+ * way, only the deterministic lesson engine decides whether a step is passed.
  */
 export const TUTOR_ACTION_TYPES = [
   'focus',

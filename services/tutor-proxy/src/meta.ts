@@ -27,7 +27,7 @@ export async function callMeta(args: CallArgs): Promise<UpstreamResult | Upstrea
       { role: 'system', content: `${args.systemPrompt}\n\n${args.graphContext}` },
       { role: 'user', content: args.turnText },
     ],
-    response_format: { type: 'json_schema', json_schema: { name: 'tutor_plan', schema: tutorOutputSchema(), strict: true } },
+    response_format: { type: 'json_schema', json_schema: { name: 'tutor_plan', schema: tutorOutputSchema(!!args.withCommands), strict: true } },
     // The Muse models always reason, and reasoning counts toward this budget. Low effort keeps
     // the turn inside the latency budget; whether "low" is accepted is VERIFY (spike M4): "none"
     // is documented as rejected. A 400 here falls back to the scripted tutor like any failure.

@@ -17,7 +17,7 @@ content/drivetrain spec (authored)  ─┘    imported)    │    reduce() · pr
   tools/content: layout, lessons,                     ├─ validateTutorPlan() ◀── tutor plan
   hash, integrity check                               │        ▲ scriptedTutorTurn() (default/fallback)
                                                       └─ optional fetch ──▶ services/tutor-proxy
-                                                                            (Cloudflare Worker → Anthropic API)
+                                                                            (Node server → model API)
 ```
 
 **Principles:**
@@ -38,7 +38,7 @@ packages/lesson-engine/     createContext, reduce/replay/undo, computeConsequenc
                             validateTutorPlan, scriptedTutorTurn
 tools/indexer/              ts-morph indexer → SystemGraph + source_range evidence
 tools/content/              generate.ts (pipeline), check.ts, layout, lessons, evidence runners
-services/tutor-proxy/       Cloudflare Worker: POST tutor turn → validated TutorPlan
+services/tutor-proxy/       Node server: POST tutor turn → validated TutorPlan; POST audio → transcript
 content/repo-demo/fixture/  sample auth-service (MIT, written for this demo; ADR-0018)
 content/drivetrain/         authored drivetrain spec (procedural parts; ADR-0019)
 docs/                       this tree
@@ -189,7 +189,7 @@ The engine lives in `packages/lesson-engine/src/`.
 4. Otherwise, on a timeout, or on an invalid plan, it uses `scriptedTutorTurn(ctx, state, req)`, which is deterministic and built only from graph facts.
 5. Every plan, live or scripted, passes `validateTutorPlan` before any action runs. Actions run as `apply_action{origin:'tutor'}` events.
 
-**Proxy (`services/tutor-proxy`, Cloudflare Worker):**
+**Proxy (`services/tutor-proxy`, Node server):**
 
 - Calls the Anthropic Messages API. The model defaults to `claude-haiku-5-5` and can be set through env.
 - The structured-output schema comes from `tutorPlanJsonSchema()`.
@@ -205,7 +205,7 @@ The engine lives in `packages/lesson-engine/src/`.
 | Prompt injection in repo comments | Repo text is data in the prompt; the plan is schema- and allowlist-validated twice; the tutor can't mutate state beyond display actions |
 | The LLM invents ids, lines or test results | Unknown ids reject the plan; claim_status is checked against evidence rank; evidence is built only at build time |
 | Abuse of the public proxy URL | Rate limit, daily spend cap, kill switch, CORS restricted to the app origin |
-| API key leak | Key lives only in a Worker secret; the client has no keys |
+| API key leak | Key lives only in the proxy's environment; the client has no keys |
 | Executing untrusted code | Only the pinned, self-authored fixture's tests run, at build time on the dev machine; nothing runs at runtime |
 | Asset or license problems in a public PWA | Procedural geometry only ([ADR-0019](adr/0019-assets.md)); provenance in [DATA_PROVENANCE.md](DATA_PROVENANCE.md) |
 | Post-deadline changes | Production is deployed once from a tagged commit; `release:verify` compares the deployed files with the committed manifest ([ADR-0002](adr/0002-distribution.md)) |

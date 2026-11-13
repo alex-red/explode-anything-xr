@@ -73,7 +73,7 @@ describe('tutor proxy', () => {
     const res = await handle(post(turn()), baseEnv);
     expect(res.status).toBe(200);
     const body = await j(res);
-    expect(body).toEqual({ plan: validPlan, source: 'live', model: 'claude-haiku-5-5' });
+    expect(body).toEqual({ plan: { ...validPlan, commands: [] }, source: 'live', model: 'claude-haiku-5-5' });
 
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
@@ -110,6 +110,82 @@ describe('tutor proxy', () => {
     expect(body.source).toBe('scripted');
     expect(body.plan.say).toContain('POST /login');
     expect(logs.join('\n')).not.toContain('sk-test-secret');
+  });
+
+  const view = {
+    explode_factor: 0,
+    detail: 'supporting',
+    in_session: false,
+    active_path_id: null,
+    evidence_open_id: null,
+    highlighted_ids: [],
+    visible_node_ids: ['route.login'],
+    awaiting_prediction: false,
+    buttons: [
+      { id: 'explode', label: 'Explode', enabled: true },
+      { id: 'undo', label: 'Undo', enabled: false },
+    ],
+    systems: [{ id: 'test-repo', name: 'Test repo', current: true }],
+  };
+  const asked = (over: Record<string, unknown> = {}) => turn({ trigger: 'free_text', free_text: 'open it up and trace the login', view, ...over });
+
+  it('lets a question the learner asked act for them, and offers the model the commands field', async () => {
+    const plan = { ...validPlan, commands: [{ type: 'press', button_id: 'explode' }, { type: 'trace', path_id: 'path.login' }] };
+    const fetchImpl = vi.fn(async () => anthropicReply(plan));
+    const { handle } = setup(fetchImpl as unknown as typeof fetch);
+    const res = await handle(post(asked({ history: [{ role: 'learner', text: 'what is this?' }] })), baseEnv);
+    const body = await j(res);
+    expect(body.source).toBe('live');
+    expect(body.plan.commands).toEqual(plan.commands);
+    const sent = JSON.parse(String((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(Object.keys(sent.output_config.format.schema.properties)).toContain('commands');
+    expect(sent.messages[0].content).toContain('explode | Explode | yes');
+    expect(sent.messages[0].content).toContain('<conversation>');
+  });
+
+  it.each([
+    ['a command on a chip turn', turn(), [{ type: 'trace', path_id: 'path.login' }]],
+    ['a press on a disabled button', asked(), [{ type: 'press', button_id: 'undo' }]],
+    ['a command with no view sent', asked({ view: undefined }), [{ type: 'trace', path_id: 'path.login' }]],
+  ])('falls back to scripted on %s', async (_name, body, commands) => {
+    const { handle } = setup((async () => anthropicReply({ ...validPlan, commands })) as unknown as typeof fetch);
+    const res = await handle(post(body), baseEnv);
+    expect(res.headers.get('x-tutor-fallback')).toBe('invalid_plan');
+    expect((await j(res)).plan.commands).toEqual([]);
+  });
+
+  it('does not offer the commands field on a chip turn', async () => {
+    const fetchImpl = vi.fn(async () => anthropicReply(validPlan));
+    const { handle } = setup(fetchImpl as unknown as typeof fetch);
+    await handle(post(turn()), baseEnv);
+    const sent = JSON.parse(String((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(Object.keys(sent.output_config.format.schema.properties)).not.toContain('commands');
+  });
+
+  it('retries a rejected plan once, telling the model what was wrong, and accepts a corrected one', async () => {
+    const bad = { ...validPlan, evidence_ids: ['src:nope'] };
+    const fetchImpl = vi.fn().mockResolvedValueOnce(anthropicReply(bad)).mockResolvedValueOnce(anthropicReply(validPlan));
+    const { handle, logs } = setup(fetchImpl as unknown as typeof fetch);
+    const body = await j(await handle(post(turn()), baseEnv));
+    expect(body.source).toBe('live');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const second = JSON.parse(String((fetchImpl.mock.calls[1] as unknown as [string, RequestInit])[1].body));
+    expect(second.messages[0].content).toContain('previous plan was rejected');
+    expect(second.messages[0].content).toContain('unknown evidence src:nope');
+    expect(second.system).toEqual(JSON.parse(String((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body)).system); // cached prefix unchanged
+    expect(logs.join('\n')).toContain('attempt 1');
+  });
+
+  it('gives up after one retry, and tells a learner who asked a question that the answer was not usable', async () => {
+    const bad = { ...validPlan, evidence_ids: ['src:nope'] };
+    const fetchImpl = vi.fn(async () => anthropicReply(bad));
+    const { handle } = setup(fetchImpl as unknown as typeof fetch);
+    const res = await handle(post(asked()), baseEnv);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(res.headers.get('x-tutor-fallback')).toBe('invalid_plan');
+    expect((await j(res)).plan.say).toMatch(/could not answer that reliably/);
+    const offline = await j(await handle(post(asked()), { ...baseEnv, KILL_SWITCH: '1' }));
+    expect(offline.plan.say).toMatch(/need the online tutor/);
   });
 
   it('falls back on upstream 500', async () => {
@@ -204,7 +280,7 @@ describe('tutor proxy', () => {
     const { handle } = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
     const res = await handle(new Request('https://proxy.test/v1/health'), { ...baseEnv, KILL_SWITCH: '1' });
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, version: '0.2.0', killed: true, provider: 'anthropic', model: 'claude-haiku-5-5' });
+    expect(JSON.parse(text)).toEqual({ ok: true, version: '0.4.0', killed: true, provider: 'anthropic', model: 'claude-haiku-5-5' });
     expect(text).not.toContain('sk-test');
   });
 
@@ -214,6 +290,71 @@ describe('tutor proxy', () => {
     const res = await handle(post(turn()), { ALLOWED_ORIGINS: ORIGIN });
     expect(res.headers.get('x-tutor-fallback')).toBe('no_api_key');
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('speech to text', () => {
+  const wav = (seconds = 1) => {
+    const bytes = new Uint8Array(44 + seconds * 32_000);
+    bytes.set([...'RIFF'].map((c) => c.charCodeAt(0)), 0);
+    bytes.set([...'WAVE'].map((c) => c.charCodeAt(0)), 8);
+    return bytes;
+  };
+  const say = (body: Uint8Array, headers: Record<string, string> = {}) =>
+    new Request('https://proxy.test/v1/tutor/transcribe', { method: 'POST', headers: { 'content-type': 'audio/wav', origin: ORIGIN, 'cf-connecting-ip': '1.2.3.4', ...headers }, body });
+  const metaEnv: Env = { ...baseEnv, META_API_KEY: 'meta-test-secret' };
+  const heard = (body: unknown = { transcript: '  explode it  ', audioDurationMs: 1000, turns: [] }, status = 200) =>
+    vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify(body), { status }));
+
+  it('returns the transcript, sending the wav to the transcribe endpoint as multipart', async () => {
+    const upstream = heard();
+    const { handle } = setup(upstream as unknown as typeof fetch);
+    const res = await handle(say(wav()), metaEnv);
+    expect(res.status).toBe(200);
+    expect(await j(res)).toEqual({ text: 'explode it' });
+    const [url, init] = upstream.mock.calls[0]!;
+    expect(url).toBe('https://api.meta.ai/v1/asr/transcribe');
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer meta-test-secret');
+    const form = init.body as FormData;
+    expect(JSON.parse(await (form.get('request') as Blob).text())).toEqual({ model: 'muse-voice-transcribe-1.0', audioEncoding: 'WAV', mode: 'PUSH_TO_TALK' });
+    const audio = form.get('audio') as Blob;
+    expect(audio.type).toBe('audio/wav');
+    expect(audio.size).toBe(44 + 32_000);
+  });
+
+  it('refuses when there is no key, when killed, and for anything that is not a wav', async () => {
+    const upstream = heard();
+    const { handle } = setup(upstream as unknown as typeof fetch);
+    expect((await handle(say(wav()), baseEnv)).status).toBe(503);
+    expect((await handle(say(wav()), { ...metaEnv, KILL_SWITCH: '1' })).status).toBe(503);
+    expect((await handle(say(new Uint8Array(500)), metaEnv)).status).toBe(400);
+    expect((await handle(say(wav(13)), metaEnv)).status).toBe(413);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it('holds the daily voice cap and the origin check', async () => {
+    const { handle } = setup(heard() as unknown as typeof fetch);
+    const env = { ...metaEnv, DAILY_AUDIO_SECONDS_CAP: '15' };
+    expect((await handle(say(wav(10)), env)).status).toBe(200);
+    expect((await handle(say(wav(10)), env)).status).toBe(429);
+    expect((await handle(say(wav(), { origin: 'https://evil.test' }), env)).status).toBe(403);
+  });
+
+  it.each([
+    ['an upstream error', heard({ error: 'no' }, 500)],
+    ['an answer with no transcript', heard({ text: 'wrong field' })],
+    ['a network failure', vi.fn(async () => Promise.reject(new Error('meta-test-secret boom')))],
+  ])('answers 502 on %s, without leaking the key', async (_name, upstream) => {
+    const { handle, logs } = setup(upstream as unknown as typeof fetch);
+    const res = await handle(say(wav()), metaEnv);
+    expect(res.status).toBe(502);
+    expect(await res.text()).not.toContain('meta-test-secret');
+    expect(logs.join('\n')).not.toContain('meta-test-secret');
+  });
+
+  it('answers empty text when nothing was said', async () => {
+    const { handle } = setup(heard({ transcript: '' }) as unknown as typeof fetch);
+    expect(await j(await handle(say(wav()), metaEnv))).toEqual({ text: '' });
   });
 });
 
@@ -257,10 +398,14 @@ describe('prompt construction', () => {
       }
     };
     walk(tutorOutputSchema());
+    const acting = JSON.stringify(tutorOutputSchema(true));
+    for (const k of ['minLength', 'maxLength', 'maxItems', 'minimum', 'oneOf', '$schema', 'pattern', 'default']) expect(acting).not.toContain(`"${k}"`);
+    expect(tutorOutputSchema(true).required).toContain('commands');
+    walk(tutorOutputSchema(true));
   });
 });
 
-describe('worker entry', () => {
+describe('server entry', () => {
   it('registers every bundle the app ships, so no system falls back for being unknown', async () => {
     const { readdirSync } = await import('node:fs');
     const { BUNDLES } = await import('../src/index.ts');

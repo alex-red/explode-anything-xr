@@ -26,7 +26,7 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [0001](adr/0001-engine.md) | Engine: IWSDK 1.0.1 WebXR PWA (Unity fallback) |
 | [0002](adr/0002-distribution.md) | Distribution: hosted link, production deployed once and frozen |
 | [0003](adr/0003-session-passthrough.md) | Session: immersive AR, passthrough-first, seated |
-| [0004](adr/0004-backend.md) | Backend: none, except an optional tutor proxy Worker |
+| [0004](adr/0004-backend.md) | Backend: none, except an optional tutor proxy |
 | [0005](adr/0005-contracts.md) | Contracts: Zod 4 single source of truth |
 | [0006](adr/0006-indexer.md) | Indexer: ts-morph, build-time, conservative |
 | [0007](adr/0007-evidence.md) | Evidence: typed records; observed = recorded at build time |

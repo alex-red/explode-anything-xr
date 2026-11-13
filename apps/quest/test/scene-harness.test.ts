@@ -753,6 +753,84 @@ describe('scene harness: software hero lesson', () => {
   });
 
   it('keeps the exploded layout inside the 60°×50° cone and labels capped at 30', () => {
+  it('a typed question can act for the learner: it presses, traces and unplugs through the same handlers', async () => {
+    const h = setup(false, { tutorUrl: 'https://proxy.example' });
+    h.press(h.button(/Skip tutorial/));
+    const graph = ContentBundle.parse(repoJson).graph;
+    const edge = graph.edges.find((e) => e.is_mutable_in_sandbox)!;
+    const plan = {
+      say: 'Opening it up and tracing the request.',
+      claim_status: 'unknown',
+      evidence_ids: [],
+      actions: [],
+      commands: [{ type: 'press', button_id: 'explode' }, { type: 'trace', path_id: graph.paths[0]!.id }, { type: 'unplug', edge_id: edge.id }],
+      abstain: false,
+    };
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ plan, source: 'live', model: 'muse-ember-1.0' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const answer = await h.app.ask('open it up, trace the login and cut that link');
+    h.frames(60);
+    expect(answer?.source).toBe('live');
+    expect(h.state().explode_factor).toBe(1);
+    expect(h.state().active_path_id).toBe(graph.paths[0]!.id);
+    expect(h.state().broken_edge_ids).toEqual([edge.id]);
+    expect(h.caption()).toMatch(/Opening it up/); // still shown although the lesson moved on
+    // The request says what is on screen, and the second question carries the conversation.
+    const first = JSON.parse(String(fetchMock.mock.calls[0]![1].body));
+    expect(first.trigger).toBe('free_text');
+    expect(first.view.buttons.find((b: { id: string }) => b.id === 'explode')).toMatchObject({ label: 'Explode', enabled: true });
+    expect(first.view.systems.filter((x: { current: boolean }) => x.current)).toHaveLength(1);
+    await h.app.ask('and now?');
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1].body)).history).toHaveLength(2);
+  });
+
+  it('the assistant icon is shown only with a live tutor, and says so when there is no microphone', async () => {
+    expect(setup().button(/^Ask$/)).toBeUndefined();
+    const h = setup(false, { tutorUrl: 'https://proxy.example' });
+    const ask = h.button(/^Ask$/);
+    expect(ask).toBeDefined();
+    h.press(ask); // this environment has no microphone API
+    await vi.waitFor(() => {
+      h.frames(10);
+      expect(h.caption()).toMatch(/gave me no microphone/);
+    });
+    expect(h.button(/^Ask$/)).toBeDefined(); // back to idle
+  });
+
+  it('a spoken question is transcribed, answered and acted on, and what was heard is shown', async () => {
+    const h = setup(false, { tutorUrl: 'https://proxy.example' });
+    h.press(h.button(/Skip tutorial/));
+    const voice = (h.app as unknown as { voice: { listen: () => Promise<unknown> } }).voice;
+    voice.listen = async () => ({ kind: 'audio', wav: new Blob([new Uint8Array(100)], { type: 'audio/wav' }) });
+    const plan = { say: 'Opening it up.', claim_status: 'unknown', evidence_ids: [], actions: [], commands: [{ type: 'press', button_id: 'explode' }], abstain: false };
+    const fetchMock = vi.fn(async (url: string, _init: RequestInit) =>
+      new Response(JSON.stringify(url.endsWith('/transcribe') ? { text: 'explode it' } : { plan, source: 'live', model: 'm' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    h.press(h.button(/^Ask$/));
+    await vi.waitFor(() => {
+      h.frames(10);
+      expect(h.caption()).toMatch(/Heard: "explode it"/);
+    });
+    expect(h.state().explode_factor).toBe(1);
+    expect(h.caption()).toMatch(/Opening it up/);
+    expect(fetchMock.mock.calls.map((c) => c[0].split('/').pop())).toEqual(['transcribe', 'turn']);
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1].body)).free_text).toBe('explode it');
+  });
+
+  it('a chip answer that tries to act is refused, and nothing happens', () => {
+    const h = setup(false, { tutorUrl: 'https://proxy.example' });
+    h.press(h.button(/Skip tutorial/));
+    const plan = { say: 'Exploding.', claim_status: 'unknown', evidence_ids: [], actions: [], commands: [{ type: 'set_explode', factor: 1 }], abstain: false };
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ plan, source: 'live', model: 'm' }), { status: 200 })));
+    h.press(h.button(/^Hint$/));
+    return vi.waitFor(() => {
+      h.frames(5);
+      expect(h.caption()).toMatch(/failed validation/);
+      expect(h.state().explode_factor).toBe(0);
+    });
+  });
+
     localStorage.setItem('explode:detail:v1', 'all'); // the worst case: every part shown
     const h = setup();
     h.press(h.button(/Skip tutorial/));

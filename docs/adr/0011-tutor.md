@@ -30,6 +30,19 @@
 
 The model call can go to Meta's Model API instead of the Messages API (ADR-0004 note), with the same structured plan and the same validation. A live answer now names the model it came from in the caption (`Tutor (live AI · <model>)`), using the model the proxy returned, never a fixed string.
 
+## Note, 2026-11-12: the assistant may act when asked
+
+Decided by the owner on Nov 12: a question in the learner's own words (`free_text`) may also *do* things, not only show them. This replaces "the tutor can only show" for that one trigger.
+
+- A plan gains `commands` (`AssistantCommand`, at most 4): press any visible button by id, select, set the explode amount, trace, unplug, plug, predict, open or close evidence, set the detail level, open another system.
+- The request carries a `view` (what is on screen, every button with its current label and enabled state, the systems) and up to 6 lines of `history`.
+- Commands are offered to the model, and accepted by `validateTutorPlan`, only on a `free_text` turn that sent a `view`. On every chip turn the field is absent from the output schema and any command rejects the plan.
+- Each command runs through the same handler as the hand or button it stands for. The lesson engine still decides, alone, whether a step is passed: the assistant cannot mark anything passed, it can only do what the learner could do.
+- The truth contract is unchanged: `say` still carries a claim status no stronger than its evidence, and `view` is never evidence.
+- Offline or without the proxy, a `free_text` turn abstains; nothing acts.
+
+Built so far: typed questions on the 2D page. Voice input, spoken answers and the in-world icon are not built.
+
 ## Revisit trigger
 
 Voice input ships (P2), which adds `free_text`.

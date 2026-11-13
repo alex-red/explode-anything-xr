@@ -4,6 +4,7 @@ export * from './evidence.ts';
 export * from './graph.ts';
 export * from './layout.ts';
 export * from './actions.ts';
+export * from './commands.ts';
 export * from './events.ts';
 export * from './lesson.ts';
 export * from './state.ts';

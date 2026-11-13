@@ -1,17 +1,17 @@
-/** Minimal structural types for the Workers runtime, so this package typechecks with plain Node types. */
+/** A key-value store for the rate-limit windows and spend counters; in memory unless one is supplied. */
 export interface KVLike {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }
 
 export interface Env {
-  /** Secret (`wrangler secret put ANTHROPIC_API_KEY`). Never logged. Absent → scripted only. */
+  /** Secret, from the environment. Never logged. Absent → scripted only. */
   ANTHROPIC_API_KEY?: string;
   /** Defaults to claude-haiku-5-5. Used when the provider is anthropic. */
   TUTOR_MODEL?: string;
   /** Which model API answers live turns: "anthropic" (default) or "meta" (docs/EXPLORE_PLAN.md W12). */
   TUTOR_PROVIDER?: string;
-  /** Secret (`wrangler secret put META_API_KEY`). Never logged. Absent with provider meta → scripted only. */
+  /** Secret, from the environment. Never logged. Absent with provider meta → scripted only. Also the key for speech to text, whichever provider answers turns. */
   META_API_KEY?: string;
   /** Defaults to muse-ember-1.0. Used when the provider is meta. */
   META_MODEL?: string;
@@ -21,9 +21,11 @@ export interface Env {
   DAILY_TOKEN_CAP?: string;
   /** "1" forces scripted responses for every request. */
   KILL_SWITCH?: string;
-  /** Optional KV namespace for rate limits and the spend counter. In-memory fallback when unbound. */
+  /** Optional store for rate limits and the spend counter. In-memory fallback when absent. */
   TUTOR_KV?: KVLike;
+  /** Seconds of speech transcribed per UTC day. Default 3600. */
+  DAILY_AUDIO_SECONDS_CAP?: string;
 }
 
 export const DEFAULT_MODEL = 'claude-haiku-5-5';
-export const PROXY_VERSION = '0.2.0';
+export const PROXY_VERSION = '0.4.0';

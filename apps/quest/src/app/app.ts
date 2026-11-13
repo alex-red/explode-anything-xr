@@ -1,6 +1,8 @@
 import { createSystem, Group, SessionMode, Vector3, VisibilityState, type Entity, type World } from '@iwsdk/core';
-import type { ContentBundle, EngineEvent, Evidence, TutorTrigger } from '@explode/contracts';
-import { currentLesson, currentStep, DETAIL_LEVELS, stepDetail, type DetailLevel } from '@explode/lesson-engine';
+import type { AssistantCommand, ContentBundle, ConversationTurn, EngineEvent, Evidence, TutorTrigger, ViewContext } from '@explode/contracts';
+import { MAX_HISTORY_TURNS } from '@explode/contracts';
+import { currentLesson, currentStep, DETAIL_LEVELS, stepDetail, visibleAtDetail, type DetailLevel } from '@explode/lesson-engine';
+import { AssistantOrb } from './assistant-orb.ts';
 import { Sfx, type At } from './audio.ts';
 import { Backdrop } from './backdrop.ts';
 import { DebugReadout } from './debug-readout.ts';
@@ -12,6 +14,7 @@ import { Store } from './store.ts';
 import type { Placement, Viewer } from './surface-pick.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
 import { HandGestures } from './hand-gestures.ts';
+import { VoiceCapture } from './voice.ts';
 import { setInputTrace } from './interactions.ts';
 import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
@@ -40,6 +43,13 @@ const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up 
 const ROOM_LINK = { system: 'system:mr-headset', edge: 'edge:transmits:part:cameras->part:board' };
 const ROOM_DIM_NOTE = 'We dimmed your view of the room to show what this link carries. Your headset is fine, and your hands still work.';
 
+/** Why the assistant is not listening, in the learner's terms. */
+const VOICE_NOTE = {
+  nothing: "I didn't hear anything. Press Ask and speak; I stop listening when you do.",
+  denied: 'The microphone is blocked for this page. Allow it in the browser, or use the buttons.',
+  unavailable: 'This browser gave me no microphone. The buttons still do everything.',
+} as const;
+
 /** Top-level controller: owns the store, view, UI, tutor, and input glue. */
 export class ExplodeApp {
   private readonly store: Store;
@@ -65,6 +75,18 @@ export class ExplodeApp {
   private lessonWasComplete = false;
   private tutorAnswer: (TutorAnswer & { stepKey: string }) | null = null;
   private liveAllowed = true;
+  /** Every button, kept so the assistant presses exactly what a ray would. */
+  private buttonDefs: ButtonDef[] = [];
+  /** The last few lines of the conversation with the assistant, for follow-up questions. */
+  private readonly history: ConversationTurn[] = [];
+  private asking = false;
+  /** The assistant's icon. Only with a live tutor: offline it could do nothing, so it is not shown. */
+  private readonly orb: AssistantOrb | null;
+  private readonly voice = new VoiceCapture();
+  /** A spoken question being transcribed and answered. */
+  private voiceBusy = false;
+  /** What the assistant heard, or why it could not listen; shown under the caption. */
+  private voiceNote: string | null = null;
   /** How much of the codebase is shown; per viewer, remembered. Mechanical models always show every part. */
   private detail: DetailLevel = readDetail();
   private paused = false;
@@ -105,9 +127,11 @@ export class ExplodeApp {
     this.debug = new DebugReadout(world, this.anchorEntity);
     this.debug.enabled = debug;
     setInputTrace(debug);
-    this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
+    this.ui = new SpatialUI(world, this.anchorEntity, (this.buttonDefs = this.buttons()), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
     this.ui.setLayout(readLayout());
     this.menu = new NodeMenu(world, this.anchorEntity);
+    this.orb = this.tutor.liveConfigured ? new AssistantOrb(world, this.anchorEntity, () => void this.toggleVoice()) : null;
+    this.placeOrb();
     world.createTransformEntity(this.fovMask.group, { parent: this.anchorEntity });
     this.hands = new HandGestures(
       world,
@@ -182,6 +206,7 @@ export class ExplodeApp {
     if (this.hands.gestures.flick !== 0) this.setDetail(stepDetail(this.detail, this.hands.gestures.flick));
     this.applyViewPose(dt);
     this.debug.update(dt);
+    this.orb?.update(dt, this.voice.level);
     if (this.paused) return; // pause animation while blurred/hidden; state is already persisted
     const clamped = Math.min(dt, 1 / 30);
     tickHolo(clamped); // one shared clock drives every hologram shader
@@ -232,6 +257,7 @@ export class ExplodeApp {
   private toggleLayout(): void {
     const next: LayoutMode = this.ui.layout === 'wide' ? 'narrow' : 'wide';
     this.ui.setLayout(next);
+    this.placeOrb();
     try {
       localStorage.setItem(LAYOUT_KEY, next);
     } catch {
@@ -265,6 +291,7 @@ export class ExplodeApp {
     this.world.camera.getWorldPosition(this.eyeLocal);
     this.anchor.worldToLocal(this.eyeLocal);
     this.ui.setEye(this.eyeLocal);
+    this.placeOrb();
     this.fovMask.update(this.eyeLocal);
   }
 
@@ -598,7 +625,165 @@ export class ExplodeApp {
     for (const action of answer.plan.actions) this.dispatch({ type: 'apply_action', origin: 'tutor', action });
   }
 
+  /**
+   * A question in the learner's own words (typed on the 2D page). Because the learner asked, the
+   * answer may also act for them: its commands run through the same handlers as a hand or a
+   * button, and the lesson engine alone decides what they mean for the lesson.
+   */
+  async ask(text: string): Promise<TutorAnswer | null> {
+    const q = text.trim().slice(0, 300);
+    if (!q || this.asking) return null;
+    this.asking = true;
+    try {
+      const system = this.store.systemId;
+      const answer = await this.tutor.ask(this.store, 'free_text', this.liveAllowed, { text: q, view: this.viewContext(), history: this.history.slice() });
+      // The plan was checked against the system it was asked about; never run it on another.
+      if (this.store.systemId !== system) return null;
+      for (const c of answer.plan.commands) {
+        if (this.store.systemId !== system) break;
+        this.runCommand(c);
+      }
+      if (this.store.systemId === system) for (const action of answer.plan.actions) this.dispatch({ type: 'apply_action', origin: 'tutor', action });
+      // Keyed after the commands ran, so an answer that moved the lesson on stays on screen.
+      this.tutorAnswer = { ...answer, stepKey: this.stepKey() };
+      if (answer.source === 'live') {
+        this.history.push({ role: 'learner', text: q }, { role: 'assistant', text: answer.plan.say });
+        if (this.history.length > MAX_HISTORY_TURNS) this.history.splice(0, this.history.length - MAX_HISTORY_TURNS);
+      }
+      this.ui.dirty = true;
+      return answer;
+    } finally {
+      this.asking = false;
+    }
+  }
+
+  private placeOrb(): void {
+    this.orb?.place(this.ui.layout, this.eyeLocal, this.placedOn === 'air' ? null : STAGE_Y);
+  }
+
+  /**
+   * The assistant's icon was pressed: start listening, or stop and send what was said. Listening
+   * also ends by itself when the speaker stops. What was heard is shown, so a wrong transcript is
+   * seen for what it is.
+   */
+  async toggleVoice(): Promise<void> {
+    if (!this.orb || this.voiceBusy) return;
+    if (this.voice.active) {
+      this.voice.stop();
+      return;
+    }
+    this.sfx.click();
+    if (!this.liveAllowed) return this.voiceSay('Voice needs the live AI. Turn "Live AI" on, then ask again.');
+    this.voiceSay(null);
+    this.orb.set('listening');
+    const heard = await this.voice.listen();
+    if (heard.kind !== 'audio') {
+      this.orb.set('idle');
+      return this.voiceSay(VOICE_NOTE[heard.kind]);
+    }
+    this.voiceBusy = true;
+    this.orb.set('thinking');
+    try {
+      const text = await this.tutor.transcribe(heard.wav);
+      if (!text) return this.voiceSay('I could not turn that into words. Voice needs a connection; the buttons still work.');
+      const answer = await this.ask(text);
+      // The tutor's own notice (it fell back to the offline guide) matters more than the echo.
+      this.voiceSay(answer?.note ? null : `Heard: "${text}"`);
+      if (answer?.source === 'live') this.speak(answer.plan.say);
+    } finally {
+      this.voiceBusy = false;
+      this.orb.set('idle');
+    }
+  }
+
+  private voiceSay(note: string | null): void {
+    this.voiceNote = note;
+    this.ui.dirty = true;
+  }
+
+  /** Say an answer aloud where the browser can (many cannot, Quest Browser reportedly among them); the caption always shows it. */
+  private speak(text: string): void {
+    if (this.sfx.level === 'off') return;
+    try {
+      const synth = (globalThis as { speechSynthesis?: SpeechSynthesis }).speechSynthesis;
+      if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
+      synth.cancel();
+      synth.speak(new SpeechSynthesisUtterance(text));
+    } catch {
+      // No speech here: the caption carries the answer.
+    }
+  }
+
+  /** What the learner can see and press right now, for the assistant (events only; allocates). */
+  private viewContext(): ViewContext {
+    const s = this.store.state;
+    const hidden = this.consequencesHidden();
+    const systems = [...this.tutorials, this.software, ...this.showcases];
+    return {
+      explode_factor: s.explode_factor,
+      detail: this.onMechanical ? 'all' : this.detail,
+      in_session: !!this.world.session,
+      active_path_id: s.active_path_id,
+      evidence_open_id: s.evidence_open_id,
+      highlighted_ids: s.highlighted_ids.slice(0, 12),
+      visible_node_ids: [...visibleAtDetail(this.store.ctx, s, this.onMechanical ? 'all' : this.detail, !hidden)].slice(0, 40),
+      awaiting_prediction: hidden,
+      buttons: this.buttonDefs.slice(0, 48).map((d) => ({ id: d.id, label: d.label().slice(0, 40), enabled: d.enabled() })),
+      systems: systems.slice(0, 8).map((b) => ({ id: b.graph.system_id, name: b.graph.display_name.slice(0, 80), current: b.graph.system_id === this.store.systemId })),
+    };
+  }
+
+  /** Do one thing the learner asked the assistant to do, the way a hand or a button would. */
+  private runCommand(c: AssistantCommand): void {
+    switch (c.type) {
+      case 'press': {
+        const def = this.buttonDefs.find((d) => d.id === c.button_id);
+        if (def?.enabled()) def.onPress(); // enabled is re-checked: the scene may have moved on
+        break;
+      }
+      case 'select':
+        this.dispatch({ type: 'select', target_id: c.target_id });
+        break;
+      case 'deselect':
+        this.dispatch({ type: 'select', target_id: null });
+        break;
+      case 'set_explode':
+        this.dispatch({ type: 'set_explode', factor: c.factor });
+        break;
+      case 'trace':
+        this.dispatch({ type: 'trace', path_id: c.path_id });
+        break;
+      case 'unplug':
+        this.dispatch({ type: 'unplug', edge_id: c.edge_id });
+        break;
+      case 'plug':
+        this.dispatch({ type: 'plug', edge_id: c.edge_id, target_id: c.target_id });
+        break;
+      case 'predict':
+        this.dispatch({ type: 'predict', target_id: c.target_id });
+        break;
+      case 'open_evidence':
+        this.dispatch({ type: 'open_evidence', evidence_id: c.evidence_id });
+        break;
+      case 'close_evidence':
+        this.dispatch({ type: 'open_evidence', evidence_id: null });
+        break;
+      case 'set_detail':
+        this.setDetail(c.level);
+        break;
+      case 'open_system':
+        if (c.system_id !== this.store.systemId && [...this.tutorials, this.software, ...this.showcases].some((b) => b.graph.system_id === c.system_id)) {
+          this.sfx.collapse(this.modelAt());
+          this.loadSystem(c.system_id);
+        }
+        break;
+    }
+    this.ui.dirty = true;
+  }
+
   private onKey(e: KeyboardEvent): void {
+    // Typing a question must not fire the shortcuts.
+    if ((e.target as { tagName?: string } | null)?.tagName === 'INPUT') return;
     // Desktop / emulator shortcuts; every one has an in-world button.
     const k = e.key.toLowerCase();
     if (k === 'e') this.dispatch({ type: 'set_explode', factor: this.store.state.explode_factor > 0.5 ? 0 : 1 });
@@ -835,7 +1020,7 @@ export class ExplodeApp {
       feedback: s.feedback,
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
       tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source, model: tutor.model } : null,
-      note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (tutor?.note ?? null),
+      note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (this.voiceNote ?? tutor?.note ?? null),
       consequence: this.consequencesHidden() ? null : consequenceText(s, labelOf),
     };
   }

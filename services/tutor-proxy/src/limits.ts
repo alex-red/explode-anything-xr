@@ -4,6 +4,10 @@ export const RATE_LIMIT_MAX = 20;
 export const RATE_LIMIT_WINDOW_S = 600;
 export const MAX_BODY_BYTES = 16 * 1024;
 export const DEFAULT_DAILY_TOKEN_CAP = 2_000_000;
+/** One spoken question: a 44-byte WAV header and at most 12 s of 16 kHz 16-bit mono. */
+export const MAX_AUDIO_BYTES = 44 + 16_000 * 2 * 12;
+/** Seconds of speech transcribed per UTC day before voice is refused. */
+export const DEFAULT_DAILY_AUDIO_SECONDS = 3_600;
 
 /** In-memory fallback store (per isolate) used when no KV namespace is bound. */
 export class MemoryKV implements KVLike {
@@ -58,4 +62,17 @@ export function parseCap(raw: string | undefined): number {
 /** Rough token estimate (~4 chars per token) used before a call, to check the cap. */
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+function audioKey(nowMs: number): string {
+  return `audio:${new Date(nowMs).toISOString().slice(0, 10)}`;
+}
+
+export async function audioToday(kv: KVLike, nowMs: number): Promise<number> {
+  return Number((await kv.get(audioKey(nowMs))) ?? '0');
+}
+
+export async function recordAudio(kv: KVLike, nowMs: number, seconds: number): Promise<void> {
+  const current = await audioToday(kv, nowMs);
+  await kv.put(audioKey(nowMs), String(current + Math.max(0, seconds)), { expirationTtl: 2 * 86_400 });
 }

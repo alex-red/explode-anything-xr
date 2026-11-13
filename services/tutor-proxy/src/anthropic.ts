@@ -19,16 +19,26 @@ function sanitize(node: unknown): unknown {
   return out;
 }
 
-let cachedSchema: Record<string, unknown> | undefined;
+const cachedSchemas = new Map<boolean, Record<string, unknown>>();
 
-/** The TutorPlan schema, restricted to the tutor action allowlist and made structured-outputs compatible. */
-export function tutorOutputSchema(): Record<string, unknown> {
-  if (cachedSchema) return cachedSchema;
+/**
+ * The TutorPlan schema, restricted to the tutor action allowlist and made structured-outputs
+ * compatible. `withCommands` is true only for a turn that may act for the learner; otherwise the
+ * model is not even offered the field.
+ */
+export function tutorOutputSchema(withCommands = false): Record<string, unknown> {
+  const cached = cachedSchemas.get(withCommands);
+  if (cached) return cached;
   const schema = sanitize(tutorPlanJsonSchema()) as Record<string, any>;
   const allowed = new Set<string>(TUTOR_ACTION_TYPES);
   const items = schema.properties.actions.items as { anyOf: Array<{ properties: { type: { const: string } } }> };
   items.anyOf = items.anyOf.filter((v) => allowed.has(v.properties.type.const));
-  cachedSchema = schema;
+  delete schema.properties.commands.default;
+  if (!withCommands) {
+    delete schema.properties.commands;
+    schema.required = (schema.required as string[]).filter((k) => k !== 'commands');
+  } else if (!(schema.required as string[]).includes('commands')) (schema.required as string[]).push('commands');
+  cachedSchemas.set(withCommands, schema);
   return schema;
 }
 
@@ -51,6 +61,8 @@ export interface CallArgs {
   systemPrompt: string;
   graphContext: string;
   turnText: string;
+  /** Offer the model the `commands` field (a turn that may act for the learner). */
+  withCommands?: boolean;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -73,7 +85,7 @@ export async function callAnthropic(args: CallArgs): Promise<UpstreamResult | Up
     ],
     messages: [{ role: 'user', content: args.turnText }],
     // Low effort keeps latency inside the 5 s budget; thinking stays adaptive (default on Haiku 5.5).
-    output_config: { effort: 'low', format: { type: 'json_schema', schema: tutorOutputSchema() } },
+    output_config: { effort: 'low', format: { type: 'json_schema', schema: tutorOutputSchema(!!args.withCommands) } },
   };
   let res: Response;
   try {

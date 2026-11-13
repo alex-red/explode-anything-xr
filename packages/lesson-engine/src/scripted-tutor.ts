@@ -44,6 +44,7 @@ function explainSelection(ctx: EngineContext, id: string | null): TutorPlan {
       ...(evidence[0] ? [{ type: 'show_evidence' as const, evidence_id: evidence[0] }] : []),
     ],
     abstain: false,
+    commands: [],
   };
 }
 
@@ -52,7 +53,7 @@ function whatDepends(ctx: EngineContext, id: string | null): TutorPlan {
   if (!node) return abstain('Select a part first, then ask what depends on it.');
   const incoming = (ctx.incoming.get(node.id) ?? []).filter((e) => ctx.nodes.has(e.source_id));
   if (incoming.length === 0) {
-    return { say: `Nothing in this graph depends on ${node.label}.`, claim_status: 'static_verified', evidence_ids: [], actions: [{ type: 'focus', target_id: node.id }], abstain: false };
+    return { say: `Nothing in this graph depends on ${node.label}.`, claim_status: 'static_verified', evidence_ids: [], actions: [{ type: 'focus', target_id: node.id }], abstain: false, commands: [] };
   }
   const sources = [...new Set(incoming.map((e) => e.source_id))].slice(0, 8);
   const evidence = incoming.flatMap((e) => e.evidence_ids).slice(0, 3);
@@ -63,6 +64,7 @@ function whatDepends(ctx: EngineContext, id: string | null): TutorPlan {
     evidence_ids: evidence,
     actions: [{ type: 'highlight', target_ids: [node.id, ...sources] }],
     abstain: false,
+    commands: [],
   };
 }
 
@@ -89,15 +91,16 @@ function whyFailed(ctx: EngineContext, state: SceneState): TutorPlan {
       ...(c.evidence_ids[0] ? [{ type: 'show_evidence' as const, evidence_id: c.evidence_ids[0] }] : []),
     ],
     abstain: false,
+    commands: [],
   };
 }
 
 function hint(ctx: EngineContext, state: SceneState): TutorPlan {
   const step = currentStep(ctx, state);
   if (!step) return abstain('No active lesson step. Explore freely, or press Reset to start again.');
-  return { say: step.hint ?? step.caption, claim_status: 'unknown', evidence_ids: [], actions: [], abstain: false };
+  return { say: step.hint ?? step.caption, claim_status: 'unknown', evidence_ids: [], actions: [], abstain: false, commands: [] };
 }
 
 function abstain(say: string): TutorPlan {
-  return { say, claim_status: 'unknown', evidence_ids: [], actions: [], abstain: true };
+  return { say, claim_status: 'unknown', evidence_ids: [], actions: [], abstain: true, commands: [] };
 }

@@ -4,7 +4,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 
 ## Hard rules
 
-- **Never start a dev server or run a build (`bun run dev`, `vite`, `iwsdk dev …`, `vite build`, `wrangler dev/deploy`) unless the user explicitly asks.** If a server is already running, you may use it to verify. Tests and typechecks are fine.
+- **Never start a dev server or run a build (`bun run dev`, `vite`, `iwsdk dev …`, `vite build`, `bun run proxy:dev`) unless the user explicitly asks.** If a server is already running, you may use it to verify. Tests and typechecks are fine.
 - **Truth contract (ADR-0007):**
   - Never fabricate evidence, source lines, test results or ids.
   - `observed` means a run recorded at build time.
@@ -12,7 +12,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
   - `inferred` and `authored_model` are never promoted.
   - `checkBundleIntegrity` must return `[]`.
   - Anything a model chose (the SDK's parent nodes) is `inferred`, cites no evidence, and is shown as a hypothesis. `importance` and `role` are presentation, never evidence.
-- The tutor (LLM or scripted) may only use `TUTOR_ACTION_TYPES`. It cannot break or repair edges, and it cannot pass or advance lessons; only the lesson engine does that.
+- The tutor (LLM or scripted) shows things only through `TUTOR_ACTION_TYPES`. It may act for the learner (press a button, unplug, plug, predict, Next: `AssistantCommand`) **only** on a `free_text` turn, where the learner asked in their own words; `validateTutorPlan` rejects commands on every other turn. Commands go through the same handlers as a hand or a button. Nothing but the lesson engine decides that a step is passed (ADR-0011, note of Nov 12).
 - Commit messages follow Conventional Commits: `<type>(<optional scope>): <summary>`, lowercase imperative summary, subject ≤ 72 chars. Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `style`, `build`, `ci`, `revert`. Scopes are package or area names (`quest`, `content`, `lesson-engine`, `tutor-proxy`, `release`). `.githooks/commit-msg` rejects anything else; `bun install` enables it via `core.hooksPath`.
 - Don't commit, push or deploy unless asked. The site is GitHub Pages (`bun run release:pages` publishes the local build to the `gh-pages` branch of `alex-red/explode-anything-xr`); never publish after the release candidate: the entry is frozen.
 
@@ -28,7 +28,7 @@ A hands-first Quest mixed-reality app for the Meta VR Start Developer Competitio
 | `content/iwsdk` | A real repository drawn from its most relevant parts: `source/` is an unmodified copy of three packages of `meta/immersive-web-sdk` at the commit in `SOURCE.json`; `curation.json` is a model's choice of parent nodes | never edit `source/` or `curation.json` by hand: re-copy at a new commit, or run `content:curate` |
 | `content/drivetrain` | Authored procedural EV drivetrain spec | — |
 | `apps/quest` | IWSDK 1.0.1 WebXR app (three.js via `@iwsdk/core`) | agents for logic; the human judges look and clarity in the emulator |
-| `services/tutor-proxy` | Optional Cloudflare Worker for the live tutor | agents |
+| `services/tutor-proxy` | Optional Node server for the live tutor and voice questions (`bun run proxy:dev`) | agents |
 | `tools/release` | Freeze check: release manifest and deployed-file comparison | agents |
 
 Generated bundles are `apps/quest/src/content/*.bundle.json`. Never hand-edit them; run the generator.
@@ -40,9 +40,10 @@ bun run dev                                  # IWSDK dev server + emulator brows
 bun run test                                 # vitest: all packages, tools, proxy
 bunx tsc -p tsconfig.json --noEmit           # node-side typecheck
 bun run --cwd apps/quest typecheck           # app typecheck (run before any device test)
-bun run content:generate                     # rebuild all four bundles (runs the fixture's tests, mutations); offline
+bun run content:generate                     # rebuild all five bundles (runs the fixture's tests, mutations); offline
 bun run content:curate                       # ask the model for the SDK's parent nodes again (calls Meta's Model API with META_API_KEY; only when the user asks)
 bun run content:check                        # re-validate committed bundles + hashes
+bun run proxy:dev                            # tutor proxy on port 8787, keys from .env (only when the user asks)
 bun run emulator:walkthrough                 # headset tutorial, codebase lesson and incident drill in the IWER emulator (needs the dev server; `-- --start` runs one)
 bun run release:pages                        # publish apps/quest/dist to GitHub Pages (asks nothing; only when told to deploy)
 bun run release:manifest                     # hash a finished build into release/manifest.json (does not build)

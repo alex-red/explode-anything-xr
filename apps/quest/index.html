@@ -35,6 +35,13 @@
       #status:empty { display: none; }
       #needs { margin: 14px 0 0; font-size: 14px; line-height: 1.45; color: #a9b6c6; }
       #disclosure { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; line-height: 1.5; color: #8f9caf; }
+      /* Desktop preview only: type a question to the assistant (voice comes in the headset). */
+      #ask { position: fixed; right: 24px; bottom: 24px; display: flex; gap: 8px; width: min(420px, calc(100% - 48px)); }
+      #ask[hidden] { display: none; }
+      #ask input { flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; font: 16px system-ui, sans-serif; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(12, 18, 30, 0.92); color: #f4f7fb; }
+      #ask input:focus-visible { outline: 3px solid #3ccfcf; outline-offset: 2px; }
+      #ask button { min-height: 44px; padding: 0 16px; font: 600 16px system-ui, sans-serif; border-radius: 12px; border: 0; background: #1c6e70; color: #fff; cursor: pointer; }
+      #ask button:disabled { background: #283850; color: #a9b6c6; cursor: default; }
       @media (max-height: 520px) { #steps { display: none; } #card { padding: 20px; } }
     </style>
   </head>
@@ -50,6 +57,7 @@
         </ol>
         <button id="enter-xr" disabled>Loading…</button>
         <button id="enter-vr" class="secondary" hidden>Use a virtual backdrop instead</button>
+        <button id="enable-voice" class="secondary" hidden>Allow the microphone, to ask questions aloud</button>
         <button id="show-preview" class="secondary" hidden>Hide this panel and use the desktop preview</button>
         <p id="status" role="status" aria-live="polite"></p>
         <p id="needs">Meta Quest 3 or 3S. Seated at a desk, hands only (controllers also work). About five minutes. Uses your headset's room setup to find the desk if you allow it; works without it.</p>
@@ -60,6 +68,10 @@
         </p>
       </section>
     </main>
+    <form id="ask" hidden>
+      <input id="ask-text" type="text" maxlength="300" autocomplete="off" aria-label="Ask the assistant" placeholder="Ask, or tell it what to do…" />
+      <button id="ask-send" type="submit">Ask</button>
+    </form>
     <script type="module" src="/src/index.ts"></script>
   </body>
 </html>
