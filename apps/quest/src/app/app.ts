@@ -15,6 +15,7 @@ import { HandGestures } from './hand-gestures.ts';
 import { setInputTrace } from './interactions.ts';
 import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
+import { NodeMenu, type MenuItem } from './node-menu.ts';
 
 const ANCHOR_DISTANCE = 0.7; // m in front of the eyes; nearest parts stay within seated reach
 const ANCHOR_DROP = 0.14; // m below eye level, so the object sits above the hands
@@ -106,6 +107,7 @@ export class ExplodeApp {
     setInputTrace(debug);
     this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
     this.ui.setLayout(readLayout());
+    this.menu = new NodeMenu(world, this.anchorEntity);
     world.createTransformEntity(this.fovMask.group, { parent: this.anchorEntity });
     this.hands = new HandGestures(
       world,
@@ -187,6 +189,7 @@ export class ExplodeApp {
       this.view.revealConsequences = !this.consequencesHidden();
       this.view.update(clamped, camera);
     }
+    this.syncMenu();
     this.trackInput(clamped);
     // Panels repaint at most at ~10 Hz, and only when something they show may have changed
     // (plus a 1 Hz safety refresh), so idle frames build no view models and upload no textures.
@@ -480,6 +483,67 @@ export class ExplodeApp {
 
   private predicting(): boolean {
     return currentStep(this.store.ctx, this.store.state)?.expect.type === 'predict';
+  }
+
+  // ---------------------------------------------------------------- part menu
+
+  private readonly menu: NodeMenu;
+  /** The state the open menu was built for; rebuilt when it changes (events only). */
+  private menuState: unknown = null;
+  /** A part whose menu was used or closed: it stays shut until the selection changes. */
+  private menuDismissed: string | null = null;
+  private readonly menuAt = new Vector3();
+
+  /** Open the menu beside the selected part, keep it on that part, and shut it when nothing is selected. */
+  private syncMenu(): void {
+    const s = this.store.state;
+    const sel = s.selected_id;
+    if (sel !== this.menuDismissed) this.menuDismissed = null;
+    const view = this.view;
+    const wanted = sel !== null && sel !== this.menuDismissed && !!view && view.isShown(sel) && !this.predicting();
+    if (!wanted || !view || sel === null) {
+      if (this.menu.openFor !== null) this.menu.hide();
+      return;
+    }
+    const node = this.store.ctx.nodes.get(sel);
+    if (!node) return;
+    if (this.menu.openFor !== sel || this.menuState !== s) {
+      this.menuState = s;
+      this.menu.open(sel, node.label, kindLabel(node.kind, this.onMechanical), this.menuItems(sel));
+    }
+    if (!view.nodeWorldPosition(sel, this.menuAt)) return;
+    const radius = (this.store.ctx.bundle.layout.placements[sel]?.radius ?? 0.02) * view.root.scale.x;
+    this.menu.update(this.anchor, this.menuAt, radius, this.eyeLocal);
+  }
+
+  /**
+   * What can be done with a part, in the order it is most often wanted. Every option goes through
+   * the same handlers as the toolbar; the menu adds no new way to change the lesson.
+   */
+  private menuItems(id: string): MenuItem[] {
+    const s = this.store.state;
+    const ctx = this.store.ctx;
+    const by = this.tutor.liveConfigured && this.liveAllowed ? 'AI' : 'guide';
+    const items: MenuItem[] = [
+      { id: 'explain', label: `Explain this (${by})`, onPress: () => this.fromMenu(() => void this.askTutor('explain_selection')) },
+      { id: 'depends', label: `What depends on it? (${by})`, onPress: () => this.fromMenu(() => void this.askTutor('what_depends')) },
+    ];
+    const stopped = !this.consequencesHidden() && s.consequences.some((c) => c.affected_ids.includes(id));
+    if (stopped) items.push({ id: 'why', label: `Why did it stop? (${by})`, onPress: () => this.fromMenu(() => void this.askTutor('why_failed')) });
+    const evidence = ctx.nodes.get(id)?.evidence_ids[0];
+    if (evidence && s.evidence_open_id !== evidence) items.push({ id: 'evidence', label: 'Show its evidence', onPress: () => this.fromMenu(() => this.dispatch({ type: 'open_evidence', evidence_id: evidence })) });
+    const path = ctx.bundle.graph.paths.find((p) => p.node_ids.includes(id));
+    if (path && s.active_path_id !== path.id) items.push({ id: 'trace', label: `Trace ${path.label}`.slice(0, 40), onPress: () => this.fromMenu(() => this.dispatch({ type: 'trace', path_id: path.id })) });
+    items.push({ id: 'deselect', label: 'Deselect', onPress: () => this.fromMenu(() => this.dispatch({ type: 'select', target_id: null })) });
+    return items;
+  }
+
+  /** Run a menu option, then shut the menu so the answer above can be read. */
+  private fromMenu(run: () => void): void {
+    this.menuDismissed = this.menu.openFor;
+    this.menu.hide();
+    run();
+    this.ui.dirty = true;
   }
 
   private onNodePressed(id: string): void {
@@ -841,6 +905,13 @@ export function subjectOf(b: ContentBundle): [kind: string, name: string] {
   const bare = name.replace(/\s*\(.*\)\s*$/, '');
   if (b.graph.system_kind === 'mechanical') return [(qualifier || 'model').toUpperCase(), bare];
   return [qualifier ? `CODEBASE · ${qualifier}` : 'CODEBASE', bare];
+}
+
+/** The menu's kind line: what sort of part this is, in plain words. */
+function kindLabel(kind: string, mechanical: boolean): string {
+  if (mechanical) return 'Part · teaching model';
+  const words: Record<string, string> = { function: 'Function', method: 'Method', class: 'Class', module: 'File', cluster: 'Folder', route: 'Route', test: 'Test' };
+  return `${words[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1)} · in the code`;
 }
 
 function readDetail(): DetailLevel {

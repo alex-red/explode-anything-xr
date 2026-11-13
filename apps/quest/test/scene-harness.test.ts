@@ -1805,3 +1805,65 @@ describe('scene harness: nameplate, view dock and lifelike parts', () => {
     }
   });
 });
+
+describe('scene harness: part context menu', () => {
+  const NODE = 'fn:src/sessions/store.ts#sessionstore.create';
+  const menuOf = (h: ReturnType<typeof setup>) => (h.app as unknown as { menu: { openFor: string | null; labels: string[] } }).menu;
+  const row = (h: ReturnType<typeof setup>, label: RegExp) => h.button(label);
+
+  it('selecting a part opens its menu beside it; an option runs and shuts it until the selection changes', () => {
+    const h = setup();
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    expect(menuOf(h).openFor).toBeNull();
+    h.press(h.view().nodes.get(NODE)!.mesh);
+    expect(h.state().selected_id).toBe(NODE);
+    expect(menuOf(h).openFor).toBe(NODE);
+    expect(menuOf(h).labels.slice(0, 2)).toEqual(['Explain this (guide)', 'What depends on it? (guide)']); // offline: the scripted guide answers
+    expect(menuOf(h).labels.at(-1)).toBe('Deselect');
+    expect(h.panels().some((p) => /^SessionStore\.create|create Function · in the code/.test(p.text))).toBe(true);
+    h.press(row(h, /^Explain this \(guide\)$/));
+    expect(menuOf(h).openFor).toBeNull();
+    return vi.waitFor(() => {
+      h.frames(3);
+      expect(h.caption()).toMatch(/Guide \(offline\)/);
+      expect(menuOf(h).openFor).toBeNull(); // still selected, still shut
+      expect(h.state().selected_id).toBe(NODE);
+    });
+  });
+
+  it('offers evidence and Deselect, and Deselect clears the selection', () => {
+    const h = setup();
+    h.press(h.button(/Skip tutorial/));
+    h.press(h.button(/^Next/));
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.view().nodes.get(NODE)!.mesh);
+    h.press(row(h, /^Show its evidence$/));
+    expect(h.state().evidence_open_id).not.toBeNull();
+    h.press(h.view().nodes.get(NODE)!.mesh); // deselect
+    h.press(h.view().nodes.get(NODE)!.mesh); // and select again: the menu is back
+    expect(menuOf(h).openFor).toBe(NODE);
+    h.press(row(h, /^Deselect$/));
+    expect(h.state().selected_id).toBeNull();
+    expect(menuOf(h).openFor).toBeNull();
+  });
+
+  it('a mechanical part has a menu too, and no menu opens while a prediction is asked for', () => {
+    const h = setup(false, { bundles: shipped });
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    expect(menuOf(h).openFor).toBe('part:board');
+    expect(h.panels().some((p) => /Processor board Part · teaching model/.test(p.text))).toBe(true);
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get('edge:transmits:part:cameras->part:board')!.plug!.mesh);
+    expect(h.state().broken_edge_ids).toHaveLength(1);
+    h.press(h.view().nodes.get('part:display')!.mesh); // commits the prediction instead
+    expect(h.state().prediction?.target_id).toBe('part:display');
+    expect(menuOf(h).openFor).toBeNull();
+  });
+});
