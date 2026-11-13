@@ -1,7 +1,21 @@
 import { Vector3, type Object3D, type World } from '@iwsdk/core';
-import { noteRelease, partPressPending, setInteractionsEnabled, setXrActive, uiPressPending } from './interactions.ts';
+import { inputTrace, noteRelease, partPressPending, setInteractionsEnabled, setXrActive, uiPressPending } from './interactions.ts';
 import { unstickRayPointer } from './pointer-unstick.ts';
 import { ViewGestures, newHandInput, type PinchTarget, type ViewPose } from './view-gestures.ts';
+
+/** The parts of IWSDK's XR input manager read here; `gamepads` is public, `multiPointers` is not. */
+interface PadLike {
+  getSelecting?: () => boolean;
+  getSelectEnd?: () => boolean;
+}
+interface XrInputLike {
+  multiPointers?: Record<string, unknown>;
+  gamepads?: { left?: PadLike; right?: PadLike };
+}
+
+function padSelecting(pad: PadLike | undefined): boolean {
+  return !!pad?.getSelecting?.();
+}
 
 /**
  * Hand (and controller) gestures for handling the model (ADR-0012, ADR-0021): feeds each hand's
@@ -58,11 +72,19 @@ export class HandGestures {
       this.read(this.world.player.gripSpaces.left, this.left);
       this.read(this.world.player.gripSpaces.right, this.right);
     }
-    const pointers = (this.world as unknown as { input?: { xr?: { multiPointers?: Record<string, unknown> } } }).input?.xr?.multiPointers;
+    const xr = (this.world as unknown as { input?: { xr?: XrInputLike } }).input?.xr;
+    const pointers = xr?.multiPointers;
     if (pointers) {
       const now = performance.now();
-      unstickRayPointer(pointers.left, this.selecting.left, now);
-      unstickRayPointer(pointers.right, this.selecting.right, now);
+      // Quest Browser gives hands a gamepad, and IWSDK takes the ray's select from that gamepad,
+      // which leads the session's selectstart/selectend events by tens of milliseconds. Count a hand
+      // as selecting while either says so, or the work-around would cancel every pinch at its start
+      // (seen on a Quest 3S: each first pinch dropped, the second one landing).
+      const padLeft = padSelecting(xr.gamepads?.left);
+      const padRight = padSelecting(xr.gamepads?.right);
+      if (xr.gamepads?.left?.getSelectEnd?.() || xr.gamepads?.right?.getSelectEnd?.()) noteRelease();
+      if (unstickRayPointer(pointers.left, this.selecting.left || padLeft, now) && inputTrace) console.info('[explode:input] unstuck left ray pointer');
+      if (unstickRayPointer(pointers.right, this.selecting.right || padRight, now) && inputTrace) console.info('[explode:input] unstuck right ray pointer');
     }
     const hadPreview = g.preview !== null;
     if (!this.left.pinching && !this.right.pinching) this.startedOn = 'space';
@@ -96,6 +118,7 @@ export class HandGestures {
       if (h !== 'left' && h !== 'right') return;
       const hand = h === 'left' ? this.left : this.right;
       hand.pinching = on;
+      if (inputTrace) console.info('[explode:input]', h, select ? 'select' : 'squeeze', on ? 'start' : 'end');
       if (on) hand.startedAt = performance.now();
       else noteRelease();
       if (select) this.selecting[h] = on;

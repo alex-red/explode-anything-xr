@@ -12,6 +12,7 @@ import { Store } from './store.ts';
 import type { Placement, Viewer } from './surface-pick.ts';
 import { TutorClient, type TutorAnswer } from './tutor-client.ts';
 import { HandGestures } from './hand-gestures.ts';
+import { setInputTrace } from './interactions.ts';
 import { tickHolo } from './holo.ts';
 import { consequenceText, SpatialUI, type ButtonDef, type CaptionModel } from './ui.ts';
 
@@ -102,6 +103,7 @@ export class ExplodeApp {
     this.backdrop = new Backdrop(world);
     this.debug = new DebugReadout(world, this.anchorEntity);
     this.debug.enabled = debug;
+    setInputTrace(debug);
     this.ui = new SpatialUI(world, this.anchorEntity, this.buttons(), () => this.dispatch({ type: 'open_evidence', evidence_id: null }));
     this.ui.setLayout(readLayout());
     world.createTransformEntity(this.fovMask.group, { parent: this.anchorEntity });

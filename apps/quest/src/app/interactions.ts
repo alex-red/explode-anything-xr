@@ -37,6 +37,7 @@ export function setInteractionsEnabled(on: boolean): void {
  * press a button, or commit a prediction.
  */
 export function pressStart(obj: Object3D): void {
+  if (inputTrace) console.info('[explode:input] press start', enabled ? '' : '(ignored: gesture live)');
   if (enabled) pending.add(obj);
 }
 
@@ -46,9 +47,23 @@ export function pressStart(obj: Object3D): void {
  * held (IWSDK drops `Pressed` then too): only a pinch released on its target is a press.
  */
 export function pressEnd(obj: Object3D): void {
-  if (!pending.delete(obj)) return;
-  if (xrActive && performance.now() - lastReleaseAt > RELEASE_WINDOW_MS) return;
+  if (!pending.delete(obj)) {
+    if (inputTrace) console.info('[explode:input] press end ignored: not pending (cancelled or never started)');
+    return;
+  }
+  const gap = performance.now() - lastReleaseAt;
+  if (xrActive && gap > RELEASE_WINDOW_MS) {
+    if (inputTrace) console.info('[explode:input] press dropped: last release', gap.toFixed(0), 'ms ago');
+    return;
+  }
+  if (inputTrace) console.info('[explode:input] press delivered, release gap', gap.toFixed(0), 'ms');
   firePress(obj);
+}
+
+/** `?debug` only: log why each press was delivered or dropped (device diagnosis). */
+export let inputTrace = false;
+export function setInputTrace(on: boolean): void {
+  inputTrace = on;
 }
 
 const RELEASE_WINDOW_MS = 100;
