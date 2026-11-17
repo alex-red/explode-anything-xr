@@ -431,6 +431,7 @@ export class SpatialUI {
   buttonPositions(tmp: Vector3): Record<string, number[]> {
     const out: Record<string, number[]> = {};
     for (const b of this.buttons) out[b.def.id] = b.panel.mesh.getWorldPosition(tmp).toArray();
+    out.nameplate = this.plate.mesh.getWorldPosition(tmp).toArray();
     return out;
   }
 

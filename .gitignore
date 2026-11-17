@@ -14,3 +14,11 @@ coverage/
 # Signing keys must never be committed
 *.keystore
 *.jks
+
+# Video production (docs/VIDEO_PRODUCTION.md): footage, takes and renders are large
+video/footage/
+video/takes/
+video/out/
+video/voice/
+video/**/voice/
+apps/quest/.capture/

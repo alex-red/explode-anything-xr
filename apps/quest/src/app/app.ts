@@ -111,6 +111,8 @@ const SPEAK_ANSWERS = (() => {
   const q = new URLSearchParams(location.search);
   return q.get('speak') !== '0' && !q.has('capture');
 })();
+/** `?capture`: log every accepted event (as the debug readout does) without showing the readout, so a recorded take can be cut by its events. */
+const LOG_EVENTS = typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture');
 
 /** Why the assistant is not listening, in the learner's terms. */
 const VOICE_NOTE = {
@@ -976,7 +978,7 @@ export class ExplodeApp {
   private onEvent(event: EngineEvent | null): void {
     // With the debug readout on, every accepted event is logged so a run can be followed from
     // the console (chrome://inspect on the headset, or the emulator's log capture).
-    if (this.debug.enabled) console.info('[explode]', event ? JSON.stringify(event) : 'replay', '→', this.stepKey());
+    if (this.debug.enabled || LOG_EVENTS) console.info('[explode]', event ? JSON.stringify(event) : 'replay', '→', this.stepKey());
     if (!event) return;
     this.floatNote = null; // read, or not needed: the learner has started
     // The learner has moved on from the selected part: its menu would stand over the evidence or the cut.
@@ -1225,7 +1227,7 @@ export class ExplodeApp {
     // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
     // own content; inside the emulator it also counts the emulated room and controllers.
     const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
-    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, placedOn: this.placedOn, planes: this.room?.planeCount ?? 0, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), card: this.card?.buttonPositions(this.tmp) ?? {}, ...this.view?.targetPositions(this.tmp) };
+    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, placedOn: this.placedOn, planes: this.room?.planeCount ?? 0, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), card: this.card?.buttonPositions(this.tmp) ?? {}, picker: this.picker.rowPositions(this.tmp), ask: this.orb ? this.orb.group.getWorldPosition(this.tmp).toArray() : null, ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 

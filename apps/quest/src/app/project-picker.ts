@@ -100,6 +100,13 @@ export class ProjectPicker {
     return this.isOpen ? this.items.map((i) => i.name) : [];
   }
 
+  /** World position of each listed row by project id, while open (the emulator walkthrough aims from this). */
+  rowPositions(tmp: Vector3): Record<string, number[]> {
+    const out: Record<string, number[]> = {};
+    if (this.isOpen) this.items.forEach((item, i) => { const row = this.rows[i]; if (row) out[item.id] = row.panel.mesh.getWorldPosition(tmp).toArray(); });
+    return out;
+  }
+
   open(items: PickerItem[]): void {
     this.items = items.slice(0, MAX_PICKER_ITEMS);
     this.shown = true;
