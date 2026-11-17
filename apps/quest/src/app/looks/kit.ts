@@ -223,6 +223,65 @@ export function around(count: number, r: number, y: number, make: () => BufferGe
   return out;
 }
 
+/** One cross-section of a loft: a superellipse in XY at depth `z`. */
+export interface Section {
+  readonly z: number;
+  /** Half width and half height. */
+  readonly hw: number;
+  readonly hh: number;
+  /** Superellipse power: 2 is an ellipse, 4 a soft rounded rectangle. */
+  readonly n?: number;
+  /** Wrap: every point moves back by `bow · x²`, so the section curves round the face. */
+  readonly bow?: number;
+  /** Raise the middle of the lower edge by this much (the arch over the nose). */
+  readonly nose?: number;
+  readonly cy?: number;
+}
+
+/**
+ * A smooth skin through cross-sections, in order. Close a solid by ending on a very small
+ * section; make a hollow shell by running out along the outer skin and back along the inner one.
+ */
+export function loft(sections: readonly Section[], segments = 48): BufferGeometry {
+  const pos = new Float32Array(sections.length * segments * 3);
+  let k = 0;
+  for (const s of sections) {
+    const e = 2 / (s.n ?? 2);
+    for (let i = 0; i < segments; i++) {
+      const t = (i / segments) * Math.PI * 2;
+      const c = Math.cos(t);
+      const sn = Math.sin(t);
+      const x = s.hw * Math.sign(c) * Math.abs(c) ** e;
+      let y = s.hh * Math.sign(sn) * Math.abs(sn) ** e;
+      if (s.nose && y < 0) y += s.nose * Math.exp(-((x / (s.hw * 0.24)) ** 2)) * Math.min(1, -y / (s.hh * 0.5));
+      pos[k++] = x;
+      pos[k++] = y + (s.cy ?? 0);
+      pos[k++] = s.z - (s.bow ?? 0) * x * x;
+    }
+  }
+  const index: number[] = [];
+  for (let r = 0; r < sections.length - 1; r++) {
+    for (let i = 0; i < segments; i++) {
+      const a = r * segments + i;
+      const b = r * segments + ((i + 1) % segments);
+      index.push(a, b, a + segments, b, b + segments, a + segments);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(pos, 3));
+  g.setIndex(index);
+  g.computeVertexNormals();
+  return g;
+}
+
+/** A closed outline through points, in order. */
+export function polygon(points: ReadonlyArray<readonly [number, number]>): Shape {
+  const s = new Shape();
+  points.forEach(([x, y], i) => (i === 0 ? s.moveTo(x, y) : s.lineTo(x, y)));
+  s.closePath();
+  return s;
+}
+
 /**
  * A band of a globe about +y, between polar angles `from` and `from + span` (0 is the north
  * pole), with UVs for a painting of the whole globe: u runs with longitude (u = 0.25 faces +z),

@@ -4,7 +4,10 @@
  * the viewer's right, y up, z toward the viewer) and applies the pose it produces.
  *
  * - One hand, pinch and drag: starting on a part moves the model; starting on empty space turns
- *   it (left/right spins it, up/down tilts it). A pinch that does not travel stays a click.
+ *   it (left/right spins it about its vertical axis, up/down tilts it). A drag that sets off mostly
+ *   sideways only spins, like turning a turntable, so the arc of the arm does not also tilt it; one
+ *   that sets off mostly up or down only tilts. Moving well off that line frees both. A pinch that
+ *   does not travel stays a click.
  * - Two hands, pinch: one continuous "spread" from the change in hand distance. 0..1 is the
  *   explode factor (25 cm of travel, as before); past fully exploded the same pull zooms in.
  *   Pushing together zooms out first, then collapses.
@@ -45,6 +48,13 @@ export interface GestureConfig {
   /** One-hand turn: radians of spin, and of tilt, per metre of hand travel. */
   turnGain: number;
   tiltGain: number;
+  /**
+   * One-hand turn axis lock: a drag whose first travel is this many times more sideways than
+   * vertical only spins (and the reverse only tilts),
+   */
+  axisLockRatio: number;
+  /** until the hand strays this far along the other axis, which frees both (m). */
+  axisUnlock: number;
   /** Tilt stops here either way, so the model cannot be flipped over (rad). */
   maxTilt: number;
   /** Two-hand push/pull: radians of tilt per metre the hands move toward or away from the viewer, */
@@ -85,6 +95,10 @@ export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
   // 30 cm of sideways travel is about a quarter turn; tilt is gentler.
   turnGain: 5.5,
   tiltGain: 3.5,
+  // A sideways swipe of the forearm drifts a few centimetres up or down; a deliberate diagonal
+  // or a change of mind goes well past that.
+  axisLockRatio: 2,
+  axisUnlock: 0.07,
   maxTilt: (60 * Math.PI) / 180,
   // 15 cm of push or pull is the whole 60°.
   pushTiltGain: 7,
@@ -139,6 +153,8 @@ export function pastDeadzone(angle: number, deadzone: number): number {
 }
 
 type Side = 'left' | 'right';
+/** Which rotations a one-hand turn drives: `spin` only yaw, `tilt` only pitch, `free` both. */
+type TurnAxis = 'spin' | 'tilt' | 'free';
 
 export class ViewGestures {
   /** Where the model should be. The caller eases the real transform toward it. */
@@ -188,6 +204,7 @@ export class ViewGestures {
   private turnFromY = 0;
   private turnLastX = 0;
   private turnLastY = 0;
+  private turnAxis: TurnAxis = 'free';
 
   constructor(cfg: GestureConfig = DEFAULT_GESTURE_CONFIG) {
     this.cfg = cfg;
@@ -252,10 +269,20 @@ export class ViewGestures {
       } else if (this.mode === 'turn') {
         this.turnLastX = h.x;
         this.turnLastY = h.y;
+        // Straying far off the locked line frees both axes. Re-grab the freed one from here, so
+        // the travel that was ignored does not land all at once.
+        if (this.turnAxis === 'spin' && Math.abs(h.y - this.gy) > this.cfg.axisUnlock) {
+          this.turnAxis = 'free';
+          this.gy = h.y;
+        } else if (this.turnAxis === 'tilt' && Math.abs(h.x - this.gx) > this.cfg.axisUnlock) {
+          this.turnAxis = 'free';
+          this.gx = h.x;
+          this.yaw0 = this.pose.yaw;
+        }
         // Like turning a globe from the front: dragging right spins the near side to the right,
         // dragging up tips the top away.
-        this.pose.yaw = wrapAngle(this.yaw0 + (h.x - this.gx) * this.cfg.turnGain);
-        this.pose.pitch = clamp(this.pitch0 - (h.y - this.gy) * this.cfg.tiltGain, -this.cfg.maxTilt, this.cfg.maxTilt);
+        if (this.turnAxis !== 'tilt') this.pose.yaw = wrapAngle(this.yaw0 + (h.x - this.gx) * this.cfg.turnGain);
+        if (this.turnAxis !== 'spin') this.pose.pitch = clamp(this.pitch0 - (h.y - this.gy) * this.cfg.tiltGain, -this.cfg.maxTilt, this.cfg.maxTilt);
       } else {
         this.pose.x = clamp(this.px0 + (h.x - this.gx) * this.cfg.panGain, this.cfg.minX, this.cfg.maxX);
         this.pose.y = clamp(this.py0 + (h.y - this.gy) * this.cfg.panGain, this.cfg.minY, this.cfg.maxY);
@@ -324,6 +351,11 @@ export class ViewGestures {
     this.turnFromY = o.y;
     this.turnLastX = h.x;
     this.turnLastY = h.y;
+    // Lock to the axis the hand set off along, if it clearly chose one.
+    const ax = Math.abs(h.x - o.x);
+    const ay = Math.abs(h.y - o.y);
+    const k = this.cfg.axisLockRatio;
+    this.turnAxis = ax >= ay * k ? 'spin' : ay >= ax * k ? 'tilt' : 'free';
     this.yaw0 = this.pose.yaw;
     this.pitch0 = this.pose.pitch;
     this.panHand = side;

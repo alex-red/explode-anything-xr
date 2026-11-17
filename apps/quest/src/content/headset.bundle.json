@@ -7,7 +7,7 @@
     "display_name": "Mixed-reality headset (teaching model)",
     "revision": {
       "kind": "content_hash",
-      "value": "408ab3fe9379e30c96f816b14c282861f032035dbc75b543c41941b582c53857"
+      "value": "0da0769dd6145401e66398d8b1d434bd0c7c71ac12b524b4312dc34a2937c918"
     },
     "nodes": [
       {
@@ -353,39 +353,39 @@
       "part:cameras": {
         "collapsed": [
           0,
-          0.01,
-          0.052
+          0.004,
+          0.054
         ],
         "exploded": [
-          -0.24,
-          0.1,
-          0.06
+          -0.255,
+          0.075,
+          0.09
         ],
         "radius": 0.0327
       },
       "part:board": {
         "collapsed": [
           0,
-          0.005,
-          0.02
+          0.004,
+          0.038
         ],
         "exploded": [
-          -0.08,
-          0.12,
-          0.04
+          -0.095,
+          0.075,
+          0.05
         ],
         "radius": 0.0339
       },
       "part:battery": {
         "collapsed": [
           0,
-          -0.02,
-          0.004
+          -0.004,
+          0.022
         ],
         "exploded": [
-          -0.2,
-          -0.08,
-          0.03
+          -0.06,
+          -0.085,
+          0.02
         ],
         "radius": 0.0293
       },
@@ -393,51 +393,51 @@
         "collapsed": [
           0,
           0,
-          -0.01
+          0.008
         ],
         "exploded": [
-          0.08,
-          0.1,
-          0.02
+          0.065,
+          0.075,
+          -0.01
         ],
         "radius": 0.0315
       },
       "part:lens-left": {
         "collapsed": [
-          -0.035,
+          0.032,
           0,
-          -0.026
+          -0.012
         ],
         "exploded": [
-          0.2,
-          0.14,
-          0
+          0.252,
+          0.075,
+          -0.05
         ],
         "radius": 0.0281
       },
       "part:lens-right": {
         "collapsed": [
-          0.035,
+          -0.032,
           0,
-          -0.026
+          -0.012
         ],
         "exploded": [
-          0.26,
-          0.02,
-          0
+          0.188,
+          0.075,
+          -0.05
         ],
         "radius": 0.0281
       },
       "part:speakers": {
         "collapsed": [
-          0.085,
+          0,
           0.02,
           -0.03
         ],
         "exploded": [
-          0.06,
-          -0.1,
-          0.02
+          0.2,
+          -0.065,
+          -0.075
         ],
         "radius": 0.0235
       },
@@ -445,12 +445,12 @@
         "collapsed": [
           0,
           0,
-          0.04
+          0.028
         ],
         "exploded": [
-          0,
-          -0.16,
-          0.1
+          -0.2,
+          -0.085,
+          0.12
         ],
         "radius": 0.0247
       },
@@ -458,12 +458,12 @@
         "collapsed": [
           0,
           0,
-          -0.045
+          -0.027
         ],
         "exploded": [
-          0.22,
-          -0.14,
-          -0.02
+          0.2,
+          -0.085,
+          -0.11
         ],
         "radius": 0.0224
       }
@@ -595,9 +595,9 @@
       "part:cameras": {
         "shape": "box",
         "size": [
-          0.12,
-          0.02,
-          0.012
+          0.13,
+          0.036,
+          0.014
         ],
         "color": "#3d6f8e",
         "rotation_deg": [
@@ -609,9 +609,9 @@
       "part:board": {
         "shape": "box",
         "size": [
-          0.11,
-          0.06,
-          0.008
+          0.13,
+          0.058,
+          0.012
         ],
         "color": "#2f7d5b",
         "rotation_deg": [
@@ -623,9 +623,9 @@
       "part:battery": {
         "shape": "box",
         "size": [
-          0.07,
-          0.035,
-          0.014
+          0.076,
+          0.036,
+          0.011
         ],
         "color": "#8a8f98",
         "rotation_deg": [
@@ -637,8 +637,8 @@
       "part:display": {
         "shape": "box",
         "size": [
-          0.15,
-          0.07,
+          0.152,
+          0.078,
           0.006
         ],
         "color": "#c47f2c",
@@ -651,9 +651,9 @@
       "part:lens-left": {
         "shape": "cylinder",
         "size": [
-          0.045,
-          0.008,
-          0.045
+          0.05,
+          0.016,
+          0.05
         ],
         "color": "#b8b9bd",
         "rotation_deg": [
@@ -665,9 +665,9 @@
       "part:lens-right": {
         "shape": "cylinder",
         "size": [
-          0.045,
-          0.008,
-          0.045
+          0.05,
+          0.016,
+          0.05
         ],
         "color": "#b8b9bd",
         "rotation_deg": [
@@ -679,9 +679,9 @@
       "part:speakers": {
         "shape": "box",
         "size": [
-          0.02,
-          0.012,
-          0.03
+          0.198,
+          0.026,
+          0.04
         ],
         "color": "#6b5b95",
         "rotation_deg": [
@@ -693,9 +693,9 @@
       "part:shell": {
         "shape": "box",
         "size": [
-          0.18,
-          0.09,
-          0.02
+          0.186,
+          0.098,
+          0.062
         ],
         "color": "#d9dce1",
         "rotation_deg": [
@@ -707,9 +707,9 @@
       "part:facial": {
         "shape": "box",
         "size": [
-          0.17,
-          0.08,
-          0.012
+          0.178,
+          0.1,
+          0.046
         ],
         "color": "#2b2d31",
         "rotation_deg": [
@@ -720,7 +720,7 @@
       }
     }
   },
-  "content_hash": "3cb77bab07feaa1c7bb67b3e90fcc63d1e8a32fea165afd6a7ad59713caa9e3d",
-  "generated_at": "2026-11-11T18:14:46.169Z",
+  "content_hash": "7301b264c80952612f5b27fd67c0022d15fe7e773898d889d7d920d17ad71ec6",
+  "generated_at": "2026-11-13T04:19:54.654Z",
   "generator": "explode-content-tools@0.1.0"
 }

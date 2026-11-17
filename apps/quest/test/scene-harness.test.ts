@@ -434,9 +434,9 @@ describe('scene harness: handling the model with the hands', () => {
     clock += 300;
     fire('selectstart', 'right'); // the ray is on nothing: no press starts
     h.frames(2);
-    right.position.set(0.14, 1.2, -0.3);
+    right.position.set(0.13, 1.23, -0.3); // sets off diagonally: spin and tilt are both free
     h.frames(2);
-    right.position.set(0.24, 1.26, -0.3); // 10 cm right, 6 cm up
+    right.position.set(0.23, 1.29, -0.3); // 10 cm right, 6 cm up
     h.frames(30);
     clock += 500; // held before letting go, as a deliberate turn is (a quick release would be a flick)
     fire('selectend', 'right');
@@ -459,7 +459,7 @@ describe('scene harness: handling the model with the hands', () => {
     h.press(h.button(/^Gestures$/));
     const g = guide()!;
     expect(g.mesh.visible).toBe(true);
-    for (const phrase of ['select a part', 'move the model', 'turn and tilt', 'explode, then zoom in', 'zoom out, then collapse', 'push away or pull closer', 'turn like a wheel', 'Recenter']) {
+    for (const phrase of ['select a part', 'move the model', 'sideways  →  spin it', 'up or down  →  tilt it', 'one forward, one back', 'explode, then zoom in', 'zoom out, then collapse', 'push away or pull closer', 'turn like a wheel', 'Recenter']) {
       expect(g.text).toContain(phrase);
     }
     expect(isInteractive(g.mesh)).toBe(false); // a card, not a control: it never blocks a ray press

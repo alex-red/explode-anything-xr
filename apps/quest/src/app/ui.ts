@@ -433,11 +433,13 @@ export class SpatialUI {
 const GUIDE: ReadonlyArray<readonly [gesture: string, effect: string]> = [
   ['Pinch', 'select a part, press a button'],
   ['Drag a part', 'move the model'],
-  ['Drag empty space', 'turn and tilt it'],
+  ['Drag empty space sideways', 'spin it'],
+  ['Drag empty space up or down', 'tilt it'],
   ['Flick empty space sideways', 'fewer or more code parts'],
   ['Both hands, pull apart', 'explode, then zoom in'],
   ['Both hands, push together', 'zoom out, then collapse'],
   ['Both hands, push away or pull closer', 'tilt it'],
+  ['Both hands, one forward, one back', 'spin it'],
   ['Both hands, turn like a wheel', 'roll it'],
   ['Recenter', 'put everything back'],
 ];

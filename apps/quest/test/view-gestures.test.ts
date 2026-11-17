@@ -80,11 +80,11 @@ describe('view gestures: one hand', () => {
     r.place(r.right, 0.1, 0, 0.3);
     r.pinch(r.right, true);
     r.step();
-    r.place(r.right, 0.14, 0, 0.3); // the drag starts here
+    r.place(r.right, 0.13, 0.03, 0.3); // the drag starts here, diagonally: both axes free
     r.step();
     expect(r.g.mode).toBe('turn');
     expect(r.g.pose.yaw).toBeCloseTo(0); // no jump
-    r.place(r.right, 0.24, 0.05, 0.3); // 10 cm right, 5 cm up
+    r.place(r.right, 0.23, 0.08, 0.3); // 10 cm right, 5 cm up
     r.step();
     expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain); // the near side goes right
     expect(r.g.pose.pitch).toBeCloseTo(-0.05 * CFG.tiltGain); // the top tips away
@@ -97,6 +97,47 @@ describe('view gestures: one hand', () => {
     expect(r.g.mode).toBe('idle');
     expect(r.g.flick).toBe(0);
     expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain); // stays turned
+  });
+
+  it('a drag that sets off sideways only spins, like a turntable, until it strays well off that line', () => {
+    const r = rig();
+    r.s.on = 'space';
+    r.place(r.right, 0, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0.04, 0.005, 0.3); // sets off sideways
+    r.step();
+    r.place(r.right, 0.14, 0.05, 0.3); // the arm's arc drifts 4.5 cm up
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain);
+    expect(r.g.pose.pitch).toBe(0);
+    r.place(r.right, 0.14, 0.09, 0.3); // past the 7 cm: tilt is free, from here
+    r.step();
+    expect(r.g.pose.pitch).toBeCloseTo(0);
+    r.place(r.right, 0.14, 0.14, 0.3);
+    r.step();
+    expect(r.g.pose.pitch).toBeCloseTo(-0.05 * CFG.tiltGain);
+    expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain);
+  });
+
+  it('a drag that sets off up or down only tilts, until it strays well sideways', () => {
+    const r = rig();
+    r.s.on = 'space';
+    r.place(r.right, 0, 0, 0.3);
+    r.pinch(r.right, true);
+    r.step();
+    r.place(r.right, 0.005, 0.04, 0.3);
+    r.step();
+    r.place(r.right, 0.05, 0.1, 0.3);
+    r.step();
+    expect(r.g.pose.yaw).toBe(0);
+    expect(r.g.pose.pitch).toBeCloseTo(-0.06 * CFG.tiltGain);
+    r.place(r.right, 0.09, 0.1, 0.3); // freed here, without a jump
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo(0);
+    r.place(r.right, 0.19, 0.1, 0.3);
+    r.step();
+    expect(r.g.pose.yaw).toBeCloseTo(0.1 * CFG.turnGain);
   });
 
   it('tilt stops before the model flips over', () => {

@@ -14,7 +14,7 @@
 
 **It opens the app.** The headset lesson is the first tutorial; the drivetrain stays, one press away under the toolbar's "More". Nothing that worked was deleted.
 
-**Truth.** Every part and connection is `authored_model`, never promoted. The model statement says it is "a simplified, stylized teaching model … not the device's actual internals … Not affiliated with or endorsed by Meta." The device is named in plain text only; there is no logo, wordmark, product image or replica of its industrial design. Part cards carry no specification figures until each has a source in [DATA_PROVENANCE.md](../DATA_PROVENANCE.md).
+**Truth.** Every part and connection is `authored_model`, never promoted. The model statement says it is "a simplified, stylized teaching model … not the device's actual internals … Not affiliated with or endorsed by Meta." The device is named in plain text only; there is no logo, wordmark or product image. Its outside is drawn as a likeness of the device (see the note of Nov 12 below); its insides stay illustrative. Part cards carry no specification figures until each has a source in [DATA_PROVENANCE.md](../DATA_PROVENANCE.md).
 
 **The dimming break.** When the camera link is cut, and only once the learner has made their prediction (dimming earlier would give the answer away), the real room fades to about 90 % dark over roughly half a second, using the existing backdrop ([ADR-0022](0022-hologram-look.md)). The caption says at the same moment: "We dimmed your view of the room to show what this link carries. Your headset is fine, and your hands still work." Repairing the link fades the room back. The viewer's own View setting is kept and shown unchanged.
 
@@ -26,9 +26,26 @@
 
 - The lesson cannot play the same with passthrough off: the room is what the break takes away. That is the strongest answer we have to "the real room must change the experience".
 - The drivetrain lesson is still covered by tests and reachable, so a judge who skips around loses nothing.
-- If the sponsor rules the plain-text name out, the fallback is a text change ("a headset like the one you're wearing"); the model needs no change.
+- If the sponsor rules the plain-text name out, the fallback is a text change ("a headset like the one you're wearing"). If it rules the likeness out, the fallback is a change to the look alone (see the note of Nov 12).
 - Unverified: whether the dimming is comfortable and reads as intended over real passthrough (spike S3), and whether the model reads clearly at desk distance on the 3S.
+
+## Note of Nov 12: the model is drawn as a likeness
+
+The decision of Nov 11 was "no replica of its industrial design": a stylised hologram of boxes, discs and lenses. On Nov 12 the owner chose to draw the model as lifelike hardware instead, because the first payoff is recognising the thing on your own head.
+
+**What changed.** `apps/quest/src/app/looks/headset.ts` now draws a white visor that wraps round the face, two clusters of three sensor windows, a notched board with a shielded processor, heat pipe and fan, a pouch battery, one LCD panel, Fresnel lenses, strap-arm speakers and a foam facial interface. The exploded layout in `content/headset/spec.json` pulls the parts out in assembly order, front to back, and the left lens is on the wearer's left.
+
+**What did not change.**
+
+- No logo, wordmark, product photograph or third-party mesh. Geometry is procedural ([ADR-0019](0019-assets.md)).
+- Every part and connection is still `authored_model`. The insides are plausible hardware, not a teardown: positions, proportions and the choice of details are illustrative, and the model statement still says so.
+- Part cards still carry no specification figures without a source.
+- The name is still plain text only, with the non-affiliation line.
+
+**Risk accepted.** The rules forbid "recognizable branded products", and the sponsor decides compliance at its sole discretion. A likeness without a logo is closer to that clause than an abstract hologram was. This is the owner's reading, not a ruling.
+
+**Fallback.** The likeness lives in one file. A part with no builder in `looks/registry.ts` is drawn as its plain spec shape, so removing the headset's builders, or making the visor and sensor layout generic, returns the abstract model without touching the lesson, the bundle's graph or the tests of behaviour.
 
 ## Revisit trigger
 
-Spike S3 on the headset, a ruling on D1, or a playtester who reads the dimming as a malfunction.
+Spike S3 on the headset, a ruling on D1 (the name or the likeness), or a playtester who reads the dimming as a malfunction.
