@@ -43,6 +43,14 @@ Decided by the owner on Nov 12: a question in the learner's own words (`free_tex
 
 Built so far: typed questions on the 2D page. Voice input, spoken answers and the in-world icon are not built.
 
+## Note, 2026-11-16: voice built, and what it was measured to do
+
+Since the note above: voice input and the in-world Ask icon are built ([ADR-0015](0015-audio.md), note of Nov 12), and answers are spoken where the browser can (`?speak=0` or `?capture` keeps them silent).
+
+- A question about a failure must show it, not only say it. `SYSTEM_PROMPT` gained one rule: on such a question, highlight what stopped or its path, show the recorded run for the cut when there is one, and never collapse, clear or close in answer. Measured with `services/tutor-proxy/scripts/drill-voice-check.ts` (`muse-ember-1.0`, the incident drill's real state and view, typed text standing in for speech): "Why did that fail?" lit the path and opened the recorded run in 7 of 10 runs before the rule (the other three cleared highlights or collapsed the model) and in 20 of 20 after it. "Plug it back in for me" returned the right plug in 20 of 20, as did "plugged it back in for me" (how the Mac's default synthetic voice is transcribed) and "Fix the connection for me", 5 of 5 each. Median answer 1.4 to 1.7 s, slowest 2.6 s.
+- Transcription through the local proxy, synthetic voices: 0.7 to 1.9 s per line.
+- Not measured: a real voice, the headset's microphone inside a session, or any of this on the hosted proxy.
+
 ## Revisit trigger
 
 Voice input ships (P2), which adds `free_text`.
