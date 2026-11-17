@@ -23,6 +23,7 @@ import { DRAFT, META } from '../../../tools/content/test/subject-fixture.ts';
 import { FIXTURE_ANSWER, FIXTURE_FILES, FIXTURE_SOURCE, writeFixture } from '../../../tools/content/test/any-repo-fixture.ts';
 import { firePress, isInteractive, pressEnd, pressStart } from '../src/app/interactions.ts';
 import { TextPanel } from '../src/app/text.ts';
+import { foldOf } from '../src/app/ui.ts';
 import { FakeAudioContext } from './fake-audio.ts';
 import { FOV_BUDGET } from '../src/app/fov.ts';
 import { hasLook } from '../src/app/looks/registry.ts';
@@ -173,7 +174,20 @@ function setup(debug = false, opts: { bundles?: ContentBundle[]; room?: unknown;
     });
     return out;
   };
-  const button = (label: RegExp) => panels().find((p) => isInteractive(p.mesh) && p.mesh.visible && label.test(p.text))?.mesh;
+  const shown = (label: RegExp) => panels().find((p) => isInteractive(p.mesh) && p.mesh.visible && label.test(p.text))?.mesh;
+  /** A button as a person finds it: on screen, or behind the wide layout's Options or Move fold, which this opens. */
+  const button = (label: RegExp) => {
+    const now = shown(label);
+    if (now) return now;
+    // Only a button that exists, folded away, is worth opening a fold for (pressing advances the clock).
+    // A folded button is not drawn, so find it among the app's button definitions, and its fold.
+    const defs = (app as unknown as { buttonDefs: Array<{ id: string; label: () => string }> }).buttonDefs;
+    const fold = defs.map((d) => (label.test(d.label()) ? foldOf(d.id) : null)).find((f) => f !== null);
+    const toggle = fold ? shown(fold === 'options' ? /^Options ▾$/ : /^Move ▾$/) : undefined;
+    if (!toggle) return undefined;
+    press(toggle);
+    return shown(label);
+  };
   const caption = () => panels().map((p) => p.text).find((t) => /\d+\/\d+|Lesson complete|Tutorial complete|Free exploration/.test(t)) ?? '';
   const internals = app as unknown as {
     store: ExplodeApp extends never ? never : { state: import('@explode/contracts').SceneState; systemId: string; log: unknown[] };
@@ -976,6 +990,9 @@ describe('scene harness: headset opening lesson', () => {
     expect(backdrop(h).mode).toBe('passthrough'); // the viewer's own choice is untouched
     expect(h.caption()).toMatch(/We dimmed your view of the room/);
     expect(h.caption()).toMatch(/Your headset is fine/);
+    // The camera link carries data: the caption must not say the board stops receiving power.
+    expect(h.caption()).toMatch(/stop receiving data in this teaching model/);
+    expect(h.caption()).not.toMatch(/power/);
 
     h.press(h.button(/^Next/)); // observe → repair
     h.press(h.view().sockets.find((s) => s.targetId === 'part:board')!.mesh);
@@ -991,6 +1008,29 @@ describe('scene harness: headset opening lesson', () => {
     expect(h.state().system_id).toBe('system:auth-service');
     expectFinite(h.scene);
     expect(TextPanel.clipEvents).toEqual([]);
+  });
+
+  it('says why the stage floats in mixed reality, and how to stand it on the desk, until the first action', () => {
+    const room = (planeCount: number) => ({ planeCount, onPlaneAdded: null, pickDesk: () => false, describe: () => [] });
+    const none = setup(false, { bundles: shipped, room: room(0) });
+    expect(none.caption()).not.toMatch(/floats/); // not on the 2D page
+    mixedReality(none);
+    expect(none.caption()).toMatch(/No room setup was found, so the model floats/);
+    expect(none.caption()).toMatch(/Space Setup/);
+    none.press(none.button(/^Explode$/));
+    expect(none.caption()).not.toMatch(/floats/);
+
+    const standing = setup(false, { bundles: shipped, room: room(12) });
+    mixedReality(standing);
+    expect(standing.caption()).toMatch(/No table within reach/);
+
+    const vr = setup(false, { bundles: shipped, room: room(0) });
+    const session = Object.assign(new EventDispatcher<Record<string, { inputSource: { handedness: string } }>>(), { environmentBlendMode: 'opaque', inputSources: [{}, {}] as unknown[] });
+    (vr.xr as unknown as { session: unknown }).session = session;
+    vr.world.session = session;
+    vr.xr.dispatchEvent({ type: 'sessionstart' });
+    vr.frames(20);
+    expect(vr.caption()).not.toMatch(/floats/); // a virtual backdrop has no room to stand on
   });
 
   it('never dims outside mixed reality: not on the 2D page, not over the virtual backdrop', () => {
@@ -1336,14 +1376,25 @@ describe('scene harness: field-of-view layouts', () => {
     }
     expect(modelLeft).toBeLessThan(-20); // the model is open and wide
 
+    // Explain this and What depends are asked from the part's own menu (ui.ts MENU_ONLY).
     const lessonButtons = all.filter((e) => /^(Next|Lesson done|Incident|Collapse|Explode|Trace|Detail|Evidence$|Explain this|What depends|Why it failed|Hint|Undo)/.test(e.name));
-    expect(lessonButtons).toHaveLength(10);
+    expect(lessonButtons.map((e) => e.name.split(' ')[0])).toEqual(['Next', 'Collapse', 'Trace', 'Detail:', 'Evidence', 'Why', 'Hint', 'Undo']);
     for (const e of lessonButtons) expect(e.h[1], `${e.name} is left of the model`).toBeLessThanOrEqual(modelLeft);
 
     const caption = all.find((e) => /^What happens when/.test(e.name))!; // the lesson's title heads the caption panel
-    const settings = all.filter((e) => /^(Reset|Recenter|Gestures|Hide gestures|Sound|Layout|View|◂|More|Projects|Live AI)/.test(e.name));
-    expect(settings).toHaveLength(10);
-    for (const e of settings) expect(e.v[0], `${e.name} is above the caption`).toBeGreaterThanOrEqual(caption.v[1]);
+    const SETTINGS = /^(Reset|Recenter|Gestures|Hide gestures|Sound|Layout|View|◂|More|Projects|Live AI|Options)/;
+    // Folded: Recenter, the way back to the tutorial, and Options.
+    const folded = all.filter((e) => SETTINGS.test(e.name));
+    expect(folded.map((e) => e.name.split(' ')[0])).toEqual(['Recenter', '◂', 'Options']);
+    for (const e of folded) expect(e.v[0], `${e.name} is above the caption`).toBeGreaterThanOrEqual(caption.v[1]);
+    // Open: all eleven, still above the caption: the strip grows upward.
+    h.press(h.button(/^Options ▾$/));
+    const open = extents(h).filter((e) => SETTINGS.test(e.name));
+    expect(open).toHaveLength(11);
+    for (const e of open) expect(e.v[0], `${e.name} is above the caption`).toBeGreaterThanOrEqual(caption.v[1]);
+    // The view dock is folded to its Move toggle until asked for.
+    expect(all.filter((e) => /^(Spread|Turn|Tilt|Raise|Lower|Zoom|Home view)/.test(e.name))).toHaveLength(0);
+    expect(all.some((e) => /^Move ▾$/.test(e.name))).toBe(true);
 
     // The caption panel's lower edge is 0.24 m above the model's centre (ui.ts): every part label stays under it.
     let labels = 0;
@@ -1390,9 +1441,12 @@ describe('scene harness: field-of-view layouts', () => {
       expect(TextPanel.clipEvents).toEqual([]);
     });
 
-    it(`wide, ${where}: caption and toolbar fit the Quest 3S budget; nothing sits under the desk`, () => {
+    it(`wide, ${where}: caption and toolbar fit the Quest 3S budget, with both folds open; nothing sits under the desk`, () => {
       const h = scene('wide', onDesk);
       busiest(h);
+      h.press(h.button(/^Options ▾$/));
+      h.press(h.button(/^Move ▾$/));
+      expect(h.button(/^Home view$/)).toBeDefined();
       const b = FOV_BUDGET.wide;
       for (const e of extents(h).filter((x) => !/^EVIDENCE|^HAND GESTURES|^Close/.test(x.name))) {
         expect(Math.max(-e.h[0], e.h[1]), `${e.name}: horizontal`).toBeLessThanOrEqual(b.h);
@@ -1949,6 +2003,25 @@ describe('scene harness: part context menu', () => {
     expect(menuOf(h).openFor).toBeNull();
   });
 
+  it('the menu shuts when the evidence opens from the toolbar, and when a connection is cut', () => {
+    const h = setup(false, { bundles: shipped });
+    h.press(h.button(/^Explode$/));
+    h.frames(60);
+    h.press(h.view().nodes.get('part:board')!.mesh);
+    expect(menuOf(h).openFor).toBe('part:board');
+    h.press(h.button(/^Evidence$/));
+    expect(h.state().evidence_open_id).not.toBeNull();
+    expect(menuOf(h).openFor).toBeNull();
+    h.frames(10);
+    expect(menuOf(h).openFor).toBeNull(); // stays shut while the same part is selected
+    h.press(h.view().nodes.get('part:display')!.mesh);
+    expect(menuOf(h).openFor).toBe('part:display'); // a new selection brings it back
+    h.press(h.button(/^Trace/));
+    h.press(h.view().edges.get('edge:transmits:part:cameras->part:board')!.plug!.mesh);
+    expect(h.state().broken_edge_ids).toHaveLength(1);
+    expect(menuOf(h).openFor).toBeNull();
+  });
+
   it('a mechanical part has a menu too, and no menu opens while a prediction is asked for', () => {
     const h = setup(false, { bundles: shipped });
     h.press(h.button(/^Explode$/));
@@ -2053,8 +2126,12 @@ describe('scene harness: choosing a project, and loading it', () => {
     expect(pickerOf(h).names).toEqual(['Mixed-reality headset', 'Simplified EV drivetrain', 'Jupiter', 'auth-service', 'Immersive Web SDK']);
     expect(h.button(/ON THE STAGE Mixed-reality headset/)).toBeDefined();
     expect(h.button(/LOADS ON OPEN Jupiter/)).toBeDefined();
+    // The caption steps aside while the list is open: a long list's header would stand over its foot.
+    const captionPanel = () => h.panels().find((p) => /^How does the room reach your eyes\?/.test(p.text))!.mesh;
+    expect(captionPanel().visible).toBe(false);
     h.press(h.button(/^CHOOSE WHAT TO EXPLODE/));
     expect(pickerOf(h).isOpen).toBe(false);
+    expect(captionPanel().visible).toBe(true);
     expect(h.button(/LOADS ON OPEN Jupiter/)).toBeUndefined(); // folded away and out of a ray's reach
     expect(TextPanel.clipEvents).toEqual([]);
   });

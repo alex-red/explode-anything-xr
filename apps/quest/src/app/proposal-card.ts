@@ -176,6 +176,13 @@ export class ProposalCard {
   }
 
   /** Everything the card says right now, as plain text (tests and the walkthrough). */
+  /** World position of each button the card offers now, by id (debug and scripted emulator runs; allocates). */
+  buttonPositions(tmp: Vector3): Record<string, number[]> {
+    const out: Record<string, number[]> = {};
+    for (const b of this.buttons) if (b.def && b.panel.mesh.visible) out[b.def.id] = b.panel.mesh.getWorldPosition(tmp).toArray();
+    return out;
+  }
+
   get text(): string {
     return this.isOpen ? cardLines(this.view).map((l) => l.text).join('\n') : '';
   }

@@ -44,6 +44,13 @@ const DETAIL_NAME: Record<DetailLevel, string> = { key: 'key', supporting: 'more
 const NO_INPUT_HINT_AFTER = 3; // s in a session with no hand or controller before the hint shows
 const NO_INPUT_HINT = "I can't see your hands. Hold them up in view, or pick up a controller.";
 /**
+ * Why the stage floats in mixed reality, shown until the learner's first action (DEMO_PLAN C4).
+ * The headset reported no room at all: most often Space Setup was never run, or the browser was
+ * not allowed the room. Or it reported a room with no table in seated reach.
+ */
+const FLOAT_NO_ROOM = 'No room setup was found, so the model floats in front of you. To stand it on your desk, add the desk in your headset\'s Space Setup, then press Recenter.';
+const FLOAT_NO_DESK = 'No table within reach, so the model floats in front of you. Sit at a table and press Recenter to stand it there.';
+/**
  * The headset lesson's break: cutting the camera link dims the real room (WIN_PLAN W3). It is an
  * illustration of what the link carries, said so at the moment it happens; the headset is not
  * changed, and the user's real hand tracking keeps working.
@@ -93,6 +100,17 @@ export interface ExplodeDeps {
 }
 
 const AVAILABILITY_RETRY_MS = [15_000, 45_000] as const;
+
+/**
+ * `?speak=0` (and `?capture`) keeps the assistant's answers silent, captions only. A desktop
+ * browser reads them aloud and Quest Browser reportedly cannot, so an emulator capture uses this
+ * to sound like the headset (docs/DEMO_PLAN.md A3).
+ */
+const SPEAK_ANSWERS = (() => {
+  if (typeof location === 'undefined') return true;
+  const q = new URLSearchParams(location.search);
+  return q.get('speak') !== '0' && !q.has('capture');
+})();
 
 /** Why the assistant is not listening, in the learner's terms. */
 const VOICE_NOTE = {
@@ -146,6 +164,8 @@ export class ExplodeApp {
   /** Told whenever the system on the stage changes (the 2D page's project selector follows it). */
   onProjectChange: ((systemId: string) => void) | null = null;
   private roomDimmed = false;
+  /** Why the stage floats instead of standing on a desk; cleared by the learner's first action. */
+  private floatNote: string | null = null;
   /** The broken edge whose spreading failure has already been played, so it plays once. */
   private cascadePlayedFor: string | null = null;
   private lessonWasComplete = false;
@@ -315,6 +335,7 @@ export class ExplodeApp {
     }
     this.syncMenu();
     this.picker.update(clamped, this.eyeLocal);
+    this.ui.captionHidden = this.picker.isOpen; // a long list's header would stand over the caption's foot
     this.flow?.tick(clamped);
     this.card?.update(this.eyeLocal);
     if (this.pendingOpen && !this.switching) {
@@ -925,6 +946,12 @@ export class ExplodeApp {
     return items;
   }
 
+  /** Shut the selected part's menu until the selection changes. */
+  private dismissMenu(): void {
+    this.menuDismissed = this.store.state.selected_id;
+    if (this.menu.openFor !== null) this.menu.hide();
+  }
+
   /** Run a menu option, then shut the menu so the answer above can be read. */
   private fromMenu(run: () => void): void {
     this.menuDismissed = this.menu.openFor;
@@ -951,6 +978,9 @@ export class ExplodeApp {
     // the console (chrome://inspect on the headset, or the emulator's log capture).
     if (this.debug.enabled) console.info('[explode]', event ? JSON.stringify(event) : 'replay', '→', this.stepKey());
     if (!event) return;
+    this.floatNote = null; // read, or not needed: the learner has started
+    // The learner has moved on from the selected part: its menu would stand over the evidence or the cut.
+    if ((event.type === 'open_evidence' && event.evidence_id) || event.type === 'unplug') this.dismissMenu();
     switch (event.type) {
       case 'set_explode':
         if (event.factor > 0.5) this.sfx.explode(this.modelAt());
@@ -1069,7 +1099,7 @@ export class ExplodeApp {
 
   /** Say an answer aloud where the browser can (many cannot, Quest Browser reportedly among them); the caption always shows it. */
   private speak(text: string): void {
-    if (this.sfx.level === 'off') return;
+    if (this.sfx.level === 'off' || !SPEAK_ANSWERS) return;
     try {
       const synth = (globalThis as { speechSynthesis?: SpeechSynthesis }).speechSynthesis;
       if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
@@ -1195,7 +1225,7 @@ export class ExplodeApp {
     // Draw calls and triangles of the last rendered frame. Outside a session this is the app's
     // own content; inside the emulator it also counts the emulated room and controllers.
     const perf = info ? { draws: info.render.calls, triangles: info.render.triangles, textures: info.memory.textures } : null;
-    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, placedOn: this.placedOn, planes: this.room?.planeCount ?? 0, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), ...this.view?.targetPositions(this.tmp) };
+    const targets = { step: this.stepKey(), backdrop: this.backdrop.mode, placedOn: this.placedOn, planes: this.room?.planeCount ?? 0, perf, view: { ...this.hands.pose, mode: this.hands.gestures.mode }, buttons: this.ui.buttonPositions(this.tmp), card: this.card?.buttonPositions(this.tmp) ?? {}, ...this.view?.targetPositions(this.tmp) };
     console.info('[explode:targets]', JSON.stringify(targets));
   }
 
@@ -1343,6 +1373,9 @@ export class ExplodeApp {
       { id: 'zoom-out', label: () => 'Zoom −', enabled: () => this.hands.pose.zoom > 1.001, onPress: () => this.hands.gestures.zoomBy(0.8) },
       { id: 'zoom-in', label: () => 'Zoom +', enabled: () => st().explode_factor >= 0.999, onPress: () => this.hands.gestures.zoomBy(1.25) },
       { id: 'home-view', label: () => 'Home view', enabled: () => true, onPress: () => this.hands.gestures.reset() },
+      // The two folds of the wide layout (ui.ts SETTINGS_FOLDED, DOCK_FOLDED).
+      { id: 'view-tools', label: () => (this.ui.viewToolsOpen ? 'Move ▴' : 'Move ▾'), enabled: () => true, onPress: () => this.ui.toggleViewTools() },
+      { id: 'options', label: () => (this.ui.optionsOpen ? 'Options ▴' : 'Options ▾'), enabled: () => true, onPress: () => this.ui.toggleOptions() },
       {
         id: 'live',
         label: () => (this.tutor.liveConfigured ? `Live AI: ${this.liveAllowed ? 'on' : 'off'}` : 'Live AI: n/a'),
@@ -1404,8 +1437,8 @@ export class ExplodeApp {
       feedback: s.feedback,
       annotation: s.annotation ? `▸ ${labelOf(s.annotation.target_id)}: ${s.annotation.text}` : null,
       tutor: tutor ? { say: tutor.plan.say, status: tutor.plan.claim_status, source: tutor.source, model: tutor.model } : null,
-      note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (this.voiceNote ?? tutor?.note ?? null),
-      consequence: this.consequencesHidden() ? null : consequenceText(s, labelOf),
+      note: this.noInputHint ? NO_INPUT_HINT : this.roomDimmed ? ROOM_DIM_NOTE : (this.voiceNote ?? tutor?.note ?? this.floatNote),
+      consequence: this.consequencesHidden() ? null : consequenceText(s, labelOf, (id) => this.store.ctx.edges.get(id)?.flows[0]),
     };
   }
 
@@ -1450,6 +1483,10 @@ export class ExplodeApp {
       console.info('[explode:room]', this.placedOn, 'planes', this.room?.planeCount ?? 0, 'eye', v.y.toFixed(2));
       if (this.room) console.info('[explode:surfaces]', JSON.stringify(this.room.describe()));
     }
+    // Say why it floats, in a mixed-reality session with the room in view; gone with the first action.
+    this.floatNote =
+      this.placedOn === 'air' && !!this.world.session && this.backdrop.passthroughAvailable && !!this.room ? (this.room.planeCount === 0 ? FLOAT_NO_ROOM : FLOAT_NO_DESK) : null;
+    this.ui.dirty = true;
     this.anchor.rotation.set(0, Math.atan2(-this.fwd.x, -this.fwd.z), 0);
     this.measureEye();
     this.hands.gestures.reset(); // Recenter also undoes any move, zoom or turn of the model

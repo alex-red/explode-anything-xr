@@ -1,5 +1,5 @@
 import { Group, Vector3, type Entity, type World } from '@iwsdk/core';
-import type { Evidence, SceneState, TruthStatus } from '@explode/contracts';
+import type { Evidence, FlowType, SceneState, TruthStatus } from '@explode/contracts';
 import { placeFacing, type LayoutMode } from './fov.ts';
 import { makeInteractive } from './interactions.ts';
 import { CSS, TRUTH_BADGE } from './palette.ts';
@@ -56,8 +56,27 @@ const NARROW_COLUMNS = 4;
  * which set up the session and are pressed rarely, form a strip above the caption. Two columns
  * at the left stood in front of the open model's leftmost group.
  */
-const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'projects', 'live']);
-const SETTINGS_COLUMNS = 5;
+const SETTINGS_BUTTONS = new Set(['reset', 'recenter', 'guide', 'sound', 'layout', 'backdrop', 'switch', 'more', 'projects', 'live', 'options']);
+const SETTINGS_COLUMNS = 6;
+/** m: the settings strip's bottom edge; the strip grows upward from it as Options opens it. */
+const SETTINGS_BOTTOM = 0.441;
+/**
+ * Wide layout, folded (docs/DEMO_PLAN.md B1): about thirty buttons stood around the model at once.
+ * The settings strip shows only these until Options opens it, and the view dock only its Move
+ * toggle. Explain and What depends are asked from the selected part's own menu (node-menu.ts),
+ * so the lesson column leaves them out. Every button stays reachable, by its fold or the menu,
+ * and the assistant presses any of them by id.
+ */
+const SETTINGS_FOLDED = new Set(['recenter', 'switch', 'options']);
+const DOCK_FOLDED = new Set(['view-tools']);
+const MENU_ONLY = new Set(['explain', 'depends']);
+
+/** The toggle that unfolds a button in the wide layout, or null when it is always out. */
+export function foldOf(id: string): 'options' | 'view-tools' | null {
+  if (SETTINGS_BUTTONS.has(id) && !SETTINGS_FOLDED.has(id)) return 'options';
+  if (DOCK_BUTTONS.has(id) && !DOCK_FOLDED.has(id)) return 'view-tools';
+  return null;
+}
 /**
  * The view dock: a row of buttons centred under the model's front rim that move the model the
  * way the hand gestures do, for anyone who would rather press than pull. Grouped in pairs, with
@@ -70,6 +89,7 @@ const DOCK_GROUPS: ReadonlyArray<readonly string[]> = [
   ['raise', 'lower'],
   ['zoom-out', 'zoom-in'],
   ['home-view'],
+  ['view-tools'],
 ];
 const DOCK_BUTTONS = new Set(DOCK_GROUPS.flat());
 const DOCK_W = 0.05;
@@ -122,6 +142,8 @@ export class SpatialUI {
   private guideDrawn = false;
   private controlsHalfHeight = 0;
   private mode: LayoutMode = 'wide';
+  private settingsOpen = false;
+  private dockOpen = false;
   private floor: number | null = null;
   private readonly eye = DEFAULT_EYE.clone();
   /** True when something a panel shows may have changed; render() is skipped otherwise. */
@@ -209,6 +231,41 @@ export class SpatialUI {
     this.applyLayout();
   }
 
+  /** Hide the caption panel while something modal stands where it would be read (the project picker). */
+  set captionHidden(hidden: boolean) {
+    this.caption.mesh.visible = !hidden;
+  }
+
+  /** True while Options has the whole settings strip out. */
+  get optionsOpen(): boolean {
+    return this.settingsOpen;
+  }
+
+  /** True while Move has the whole view dock out. */
+  get viewToolsOpen(): boolean {
+    return this.dockOpen;
+  }
+
+  /** Options: show the whole settings strip, or fold it back to Recenter, the tutorial switch and itself. */
+  toggleOptions(): void {
+    this.settingsOpen = !this.settingsOpen;
+    this.applyLayout();
+  }
+
+  /** Move: show the whole view dock, or fold it back to itself. */
+  toggleViewTools(): void {
+    this.dockOpen = !this.dockOpen;
+    this.applyLayout();
+  }
+
+  /** Wide layout: whether a button stands out now, given the folds (SETTINGS_FOLDED, DOCK_FOLDED, MENU_ONLY). */
+  private shownWide(id: string): boolean {
+    if (MENU_ONLY.has(id)) return false;
+    if (SETTINGS_BUTTONS.has(id)) return this.settingsOpen || SETTINGS_FOLDED.has(id);
+    if (DOCK_BUTTONS.has(id)) return this.dockOpen || DOCK_FOLDED.has(id);
+    return true;
+  }
+
   /** Where the eye is in the anchor's frame, measured at each recenter; the narrow layout aims from it. */
   setEye(eye: Vector3): void {
     this.eye.copy(eye);
@@ -252,10 +309,10 @@ export class SpatialUI {
       this.dirty = true;
       return;
     }
-    this.showButtons(() => true);
+    this.showButtons((id) => this.shownWide(id));
     this.controlsHalfHeight = this.layoutGrid(1, (id) => !SETTINGS_BUTTONS.has(id) && !DOCK_BUTTONS.has(id));
     this.layoutDock();
-    this.layoutGrid(SETTINGS_COLUMNS, (id) => SETTINGS_BUTTONS.has(id));
+    const settingsHalfHeight = this.layoutGrid(SETTINGS_COLUMNS, (id) => SETTINGS_BUTTONS.has(id));
     // The column's inner edge is about 32° left of the gaze, just outside the open model's reach
     // (31°), and its outer edge about 41°, inside the wide budget (fov.ts).
     this.controls.rotation.order = 'XYZ';
@@ -265,7 +322,8 @@ export class SpatialUI {
     this.caption.mesh.position.set(0, 0.335, -0.02); // above the tallest exploded layout; part labels keep below it (graph-view LABEL_CEILING)
     this.caption.mesh.rotation.set(0.12, 0, 0);
     this.settings.rotation.order = 'XYZ';
-    this.settings.position.set(0, 0.478, -0.03);
+    // Bottom-aligned, so opening Options adds rows above and never over the caption.
+    this.settings.position.set(0, SETTINGS_BOTTOM + settingsHalfHeight, -0.03);
     this.settings.rotation.set(0.2, 0, 0);
     this.evidenceGroup.rotation.order = 'XYZ';
     this.evidenceGroup.position.set(0.43, 0.04, 0.14);
@@ -317,10 +375,10 @@ export class SpatialUI {
     return this.mode === 'narrow' ? Math.min(c, g, p) : Math.min(c, g, p, d);
   }
 
-  /** The dock's buttons in one row, centred, a wider gap between pairs. */
+  /** The dock's shown buttons in one row, centred, a wider gap between pairs. */
   private layoutDock(): void {
     const byId = new Map(this.buttons.map((b) => [b.def.id, b]));
-    const groups = DOCK_GROUPS.map((ids) => ids.map((id) => byId.get(id)).filter((b) => b !== undefined));
+    const groups = DOCK_GROUPS.map((ids) => ids.map((id) => byId.get(id)).filter((b): b is NonNullable<typeof b> => b !== undefined && !b.hidden)).filter((g) => g.length > 0);
     const width = groups.reduce((w, g) => w + g.length * DOCK_W + (g.length - 1) * DOCK_GAP, 0) + (groups.length - 1) * DOCK_GROUP_GAP;
     let x = -width / 2;
     for (const g of groups) {
@@ -485,15 +543,30 @@ function evidenceLines(ev: Evidence, revision: 'git' | 'content_hash'): TextLine
   return lines;
 }
 
-export function consequenceText(state: SceneState, labelOf: (id: string) => string): CaptionModel['consequence'] {
+/** What a connection carries, as the words "stop receiving …" needs. */
+const CARRIES: Record<FlowType, string> = {
+  electrical: 'power',
+  torque: 'torque',
+  data: 'data',
+  control: 'control signals',
+  heat: 'heat',
+  request: 'requests',
+};
+
+/**
+ * The caption's line about what a cut stops. `flowOf` gives what the cut connection carries
+ * (its first flow), so a cut camera link is not said to stop power.
+ */
+export function consequenceText(state: SceneState, labelOf: (id: string) => string, flowOf: (edgeId: string) => FlowType | undefined = () => undefined): CaptionModel['consequence'] {
   const c = state.consequences[0];
   if (!c) return null;
   const first = c.first_affected_id ? labelOf(c.first_affected_id) : 'downstream parts';
+  const flow = flowOf(c.edge_id);
   const text =
     c.truth_status === 'observed'
       ? `${first} and ${c.affected_ids.length - 1} more stop. A recorded test run shows the tests fail without this connection.`
       : c.truth_status === 'authored_model'
-        ? `${first} and everything after it stop receiving power in this teaching model.`
+        ? `${first} and everything after it stop receiving ${flow ? CARRIES[flow] : 'what this connection carries'} in this teaching model.`
         : `${first} would likely be affected. No recorded test confirms it.`;
   return { status: c.truth_status, text };
 }

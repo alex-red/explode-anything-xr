@@ -168,9 +168,9 @@ async function main(): Promise<void> {
     world.visibilityState.subscribe((v) => (askForm.hidden = v !== 'non-immersive'));
   }
   // Dev only: a "Webcam hands" panel to drive the emulated hands from a camera
-  // (src/dev/webcam-hands.ts); `?webcam` starts it on load. `import.meta.env.DEV` is false in a
-  // build, so this branch and its chunk are dropped.
-  if (import.meta.env.DEV) {
+  // (src/dev/webcam-hands.ts); `?webcam` starts it on load, and `?capture` (filming the emulator)
+  // leaves it out. `import.meta.env.DEV` is false in a build, so this branch and its chunk are dropped.
+  if (import.meta.env.DEV && !new URLSearchParams(location.search).has('capture')) {
     const webcam = new URLSearchParams(location.search).get('webcam');
     import('./dev/webcam-hands.ts')
       .then((m) => m.mountWebcamHands({ autostart: webcam !== null, swap: webcam === 'swap' ? true : undefined }))
