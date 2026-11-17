@@ -29,6 +29,7 @@ const env: Env = {
   GITHUB_TOKEN: e.GITHUB_TOKEN,
   EXPLODE_MODEL: e.EXPLODE_MODEL,
   EXPLODE_BUILDS_PER_DAY: e.EXPLODE_BUILDS_PER_DAY,
+  RATE_LIMIT_MAX: e.RATE_LIMIT_MAX,
 };
 /** Behind a reverse proxy the caller's address is the first hop of x-forwarded-for; trust it only when told to. */
 const trustProxy = e.TRUST_PROXY === '1';

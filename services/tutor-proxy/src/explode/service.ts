@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { neutralize } from '../context.ts';
 import { DEFAULT_MODEL, type Env, type KVLike } from '../env.ts';
-import { checkRateLimit, estimateTokens, MAX_BODY_BYTES, parseCap, recordSpend, spentToday } from '../limits.ts';
+import { checkRateLimit, estimateTokens, rateLimitMax, MAX_BODY_BYTES, parseCap, recordSpend, spentToday } from '../limits.ts';
 import { DEFAULT_META_MODEL } from '../meta.ts';
 import { Refusal, downloadSource, parseRepoQuery, repoNameIn, researchRepository, searchRepository } from './github.ts';
 import { askJson, type ModelMessage } from './model.ts';
@@ -493,7 +493,7 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
         if (Number(request.headers.get('content-length') ?? '0') > MAX_BODY_BYTES) return json(413, { error: 'body too large' });
         const raw = await request.text();
         if (raw.length > MAX_BODY_BYTES) return json(413, { error: 'body too large' });
-        if (!(await checkRateLimit(kv, ip, now()))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
+        if (!(await checkRateLimit(kv, ip, now(), rateLimitMax(env.RATE_LIMIT_MAX)))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
         let body: unknown;
         try {
           body = JSON.parse(raw);

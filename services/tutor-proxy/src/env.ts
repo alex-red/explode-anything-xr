@@ -31,6 +31,8 @@ export interface Env {
   EXPLODE_MODEL?: string;
   /** Builds one address may start per UTC day. Default 5. */
   EXPLODE_BUILDS_PER_DAY?: string;
+  /** Requests one address may make per 10 minutes, across tutor turns, transcriptions and proposals. Default 20. Raised only for local capture. */
+  RATE_LIMIT_MAX?: string;
 }
 
 export const DEFAULT_MODEL = 'claude-haiku-5-5';

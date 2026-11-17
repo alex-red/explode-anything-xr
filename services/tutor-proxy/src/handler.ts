@@ -8,7 +8,7 @@ import { buildGraphContext, buildTurnText, stateFromRequest, SYSTEM_PROMPT } fro
 import { DEFAULT_MODEL, PROXY_VERSION, type Env, type KVLike } from './env.ts';
 import type { ExplodeService } from './explode/service.ts';
 import { callTranscribe } from './transcribe.ts';
-import { audioToday, checkRateLimit, DEFAULT_DAILY_AUDIO_SECONDS, estimateTokens, MAX_AUDIO_BYTES, MAX_BODY_BYTES, MemoryKV, parseCap, recordAudio, recordSpend, spentToday } from './limits.ts';
+import { audioToday, checkRateLimit, DEFAULT_DAILY_AUDIO_SECONDS, rateLimitMax, estimateTokens, MAX_AUDIO_BYTES, MAX_BODY_BYTES, MemoryKV, parseCap, recordAudio, recordSpend, spentToday } from './limits.ts';
 
 export interface HandlerDeps {
   registry: BundleRegistry;
@@ -44,7 +44,7 @@ export function createHandler(deps: HandlerDeps) {
     if (bytes.byteLength > MAX_AUDIO_BYTES) return json(413, { error: 'audio too long' });
     const kv = env.TUTOR_KV ?? memoryKv;
     const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-    if (!(await checkRateLimit(kv, ip, now()))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
+    if (!(await checkRateLimit(kv, ip, now(), rateLimitMax(env.RATE_LIMIT_MAX)))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
     const tag = (at: number) => String.fromCharCode(...bytes.subarray(at, at + 4));
     if (bytes.byteLength <= 44 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return json(400, { error: 'expected a wav file' });
     if (killed || !env.META_API_KEY) return json(503, { error: 'speech-to-text unavailable' });
@@ -105,7 +105,7 @@ export function createHandler(deps: HandlerDeps) {
 
     const kv = env.TUTOR_KV ?? memoryKv;
     const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-    if (!(await checkRateLimit(kv, ip, now()))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
+    if (!(await checkRateLimit(kv, ip, now(), rateLimitMax(env.RATE_LIMIT_MAX)))) return json(429, { error: 'rate limited' }, { 'retry-after': '600' });
 
     let body: unknown;
     try {

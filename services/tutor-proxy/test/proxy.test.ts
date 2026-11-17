@@ -245,6 +245,18 @@ describe('tutor proxy', () => {
     expect((await handle(post(turn(), { 'cf-connecting-ip': '5.6.7.8' }), baseEnv)).status).toBe(200);
   });
 
+  it('takes the per-IP limit from RATE_LIMIT_MAX, and ignores a value that is not a positive whole number', async () => {
+    const { handle } = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
+    const env = { ...baseEnv, RATE_LIMIT_MAX: '3' };
+    for (let i = 0; i < 3; i++) expect((await handle(post(turn()), env)).status).toBe(200);
+    expect((await handle(post(turn()), env)).status).toBe(429);
+    const raised = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
+    for (let i = 0; i < 25; i++) expect((await raised.handle(post(turn()), { ...baseEnv, RATE_LIMIT_MAX: '100' })).status).toBe(200);
+    const junk = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
+    for (let i = 0; i < 20; i++) expect((await junk.handle(post(turn()), { ...baseEnv, RATE_LIMIT_MAX: '-1' })).status).toBe(200);
+    expect((await junk.handle(post(turn()), { ...baseEnv, RATE_LIMIT_MAX: '-1' })).status).toBe(429);
+  });
+
   it('rejects oversized bodies with 413', async () => {
     const { handle } = setup((async () => anthropicReply(validPlan)) as unknown as typeof fetch);
     const res = await handle(post(JSON.stringify(turn({ free_text: 'x'.repeat(17_000) }))), baseEnv);

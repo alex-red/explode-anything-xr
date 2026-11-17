@@ -87,6 +87,7 @@ The PWA URL is effectively public, so treat this endpoint as public too.
 | Daily spend cap | `DAILY_TOKEN_CAP` tokens per UTC day (default 2,000,000), counted from actual `usage`. Once exceeded, every answer is scripted. |
 | Kill switch | `KILL_SWITCH=1` and a restart makes every answer scripted without calling the model, and turns voice off. |
 | Daily voice cap | `DAILY_AUDIO_SECONDS_CAP` seconds of speech per UTC day (default 3600). |
+| Per-address limit | `RATE_LIMIT_MAX` requests per 10 minutes per address, across tutor turns, transcriptions and proposals (default 20; a spoken question costs two). Raise it only for local capture, where retakes would otherwise fall back to the scripted guide. |
 | Body limit | 16 KB |
 | Secret handling | `ANTHROPIC_API_KEY` and `META_API_KEY` come from the server's environment. They are never logged or returned. |
 
@@ -97,7 +98,7 @@ bun run proxy:dev        # from the repo root: Node 24, port 8787 (PORT to chang
 curl http://localhost:8787/v1/health
 ```
 
-No build step and no platform account. Settings are environment variables: `ANTHROPIC_API_KEY`, `META_API_KEY`, `TUTOR_PROVIDER`, `TUTOR_MODEL`, `META_MODEL`, `ALLOWED_ORIGINS`, `DAILY_TOKEN_CAP`, `DAILY_AUDIO_SECONDS_CAP`, `KILL_SWITCH`, `TRUST_PROXY`, `PORT`. With only `META_API_KEY` set, turns go to Meta. `ALLOWED_ORIGINS` defaults to the app's dev server (port 8473); a deployment must set it to the hosted app's origin.
+No build step and no platform account. Settings are environment variables: `ANTHROPIC_API_KEY`, `META_API_KEY`, `TUTOR_PROVIDER`, `TUTOR_MODEL`, `META_MODEL`, `ALLOWED_ORIGINS`, `DAILY_TOKEN_CAP`, `DAILY_AUDIO_SECONDS_CAP`, `RATE_LIMIT_MAX`, `EXPLODE_BUILDS_PER_DAY`, `KILL_SWITCH`, `TRUST_PROXY`, `PORT`. With only `META_API_KEY` set, turns go to Meta. `ALLOWED_ORIGINS` defaults to the app's dev server (port 8473); a deployment must set it to the hosted app's origin.
 
 The server statically imports every bundle in `apps/quest/src/content/`, so run `bun run content:generate` first, and restart after any content change, or the client's revision will mismatch (409) and it will use the scripted tutor.
 

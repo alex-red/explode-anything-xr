@@ -31,12 +31,18 @@ export class MemoryKV implements KVLike {
   }
 }
 
+/** Requests one address may make per window: `RATE_LIMIT_MAX` from the environment when it is a positive whole number, else 20. */
+export function rateLimitMax(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : RATE_LIMIT_MAX;
+}
+
 /** Fixed-window per-IP limit. Returns true when the request is allowed. KV is eventually consistent; this is abuse damping, not billing. */
-export async function checkRateLimit(kv: KVLike, ip: string, nowMs: number): Promise<boolean> {
+export async function checkRateLimit(kv: KVLike, ip: string, nowMs: number, max = RATE_LIMIT_MAX): Promise<boolean> {
   const window = Math.floor(nowMs / 1000 / RATE_LIMIT_WINDOW_S);
   const key = `rl:${ip}:${window}`;
   const count = Number((await kv.get(key)) ?? '0');
-  if (count >= RATE_LIMIT_MAX) return false;
+  if (count >= max) return false;
   await kv.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
   return true;
 }
