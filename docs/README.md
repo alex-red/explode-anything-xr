@@ -19,6 +19,7 @@ These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for his
 | [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) | Eligibility, PWA packaging, freeze, Devpost entry, final verification |
 | [DATA_PROVENANCE.md](DATA_PROVENANCE.md) | Licenses and sources for everything shipped, plus prior-art links |
 | [VIDEO_STORYBOARD.md](VIDEO_STORYBOARD.md) | The video script (rewritten Nov 16 against the judging pages), footage rules and gates |
+| [VIDEO_PRODUCTION.md](VIDEO_PRODUCTION.md) | **Nov 16:** how the video is made with `cs`: the frame, the cut by scene, scripted emulator takes with their sound, headset takes, assembly, checks, schedule |
 | [DEMO_PLAN.md](DEMO_PLAN.md) | **Nov 16:** each beat of the video against the code, what is missing, phases to capture, and the capture runbook |
 
 ## Architecture decision records
