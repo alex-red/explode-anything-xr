@@ -1,0 +1,4126 @@
+{
+  "bundle_version": "1",
+  "graph": {
+    "schema_version": "1.0",
+    "system_id": "system:iwsdk",
+    "system_kind": "software",
+    "display_name": "Immersive Web SDK (meta/immersive-web-sdk)",
+    "revision": {
+      "kind": "git",
+      "value": "52f0f502b339f341f35233e52f5524c3cdf78ccc"
+    },
+    "nodes": [
+      {
+        "id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+        "kind": "class",
+        "label": "AssetManager",
+        "summary": "Centralized asset loader with caching and priority‑based preloading.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/asset/asset-manager.ts#assetmanager"
+        ],
+        "importance": 0.761
+      },
+      {
+        "id": "class:packages/core/src/asset/cache-manager.ts#cachemanager",
+        "kind": "class",
+        "label": "CacheManager",
+        "summary": "Central cache for assets and in-flight loads used by {@link AssetManager}.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/asset/cache-manager.ts#cachemanager"
+        ],
+        "importance": 0.812,
+        "role": "hub"
+      },
+      {
+        "id": "class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader",
+        "kind": "class",
+        "label": "GLTFAssetLoader",
+        "summary": "GLTF loader with DRACO/KTX2 support, de-duplication, and caching.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader"
+        ],
+        "importance": 0.355
+      },
+      {
+        "id": "class:packages/core/src/audio/audio-system.ts#audiosystem",
+        "kind": "class",
+        "label": "AudioSystem",
+        "summary": "Runtime audio manager that loads sources, pools players, and applies XR-aware behavior.",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/audio/audio-system.ts#audiosystem"
+        ],
+        "importance": 0.4,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/camera/camera-system.ts#camerasystem",
+        "kind": "class",
+        "label": "CameraSystem",
+        "summary": "CameraSystem - Manages camera stream lifecycle for CameraSource components Automatically starts streams when the world is visible, including browser non-immersive mode and immersive XR sessions.",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/camera/camera-system.ts#camerasystem"
+        ],
+        "importance": 0.337,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem",
+        "kind": "class",
+        "label": "DepthSensingSystem",
+        "summary": "DepthSensingSystem - Manages WebXR depth sensing and occlusion.",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem"
+        ],
+        "importance": 0.391,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/ecs/world.ts#world",
+        "kind": "class",
+        "label": "World",
+        "summary": "World is the root ECS container, Three.js scene/renderer owner, and XR session gateway.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/ecs/world.ts#world"
+        ],
+        "importance": 0.88,
+        "role": "entry"
+      },
+      {
+        "id": "class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem",
+        "kind": "class",
+        "label": "EnvironmentRaycastSystem",
+        "summary": "System that manages environment raycasting.",
+        "parent_id": "concept:grab-interaction",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem"
+        ],
+        "importance": 0.491,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/environment/environment-system.ts#environmentsystem",
+        "kind": "class",
+        "label": "EnvironmentSystem",
+        "summary": "Unified background and image‑based lighting system.",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/environment/environment-system.ts#environmentsystem"
+        ],
+        "importance": 0.643,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "kind": "class",
+        "label": "GrabSystem",
+        "summary": "Manages interactive object grabbing and manipulation for VR/AR experiences.",
+        "parent_id": "concept:grab-interaction",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/grab/grab-system.ts#grabsystem"
+        ],
+        "importance": 0.626,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/grab/handles.ts#distancegrabhandle",
+        "kind": "class",
+        "label": "DistanceGrabHandle",
+        "summary": "",
+        "parent_id": "concept:grab-interaction",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/grab/handles.ts#distancegrabhandle"
+        ],
+        "importance": 0.309
+      },
+      {
+        "id": "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+        "kind": "class",
+        "label": "InputActionManager",
+        "summary": "",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/input/input-actions.ts#inputactionmanager"
+        ],
+        "importance": 0.71
+      },
+      {
+        "id": "class:packages/core/src/input/input-manager.ts#inputmanager",
+        "kind": "class",
+        "label": "InputManager",
+        "summary": "",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/input/input-manager.ts#inputmanager"
+        ],
+        "importance": 0.744
+      },
+      {
+        "id": "class:packages/core/src/input/input-system.ts#inputsystem",
+        "kind": "class",
+        "label": "InputSystem",
+        "summary": "Samples XR poses (hands/controllers/head) and gamepads, curates the set of interactables for pointer raycasting, and attaches minimal event listeners.",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/input/input-system.ts#inputsystem"
+        ],
+        "importance": 0.382,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard",
+        "kind": "class",
+        "label": "StatefulKeyboard",
+        "summary": "",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard"
+        ],
+        "importance": 0.677
+      },
+      {
+        "id": "class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem",
+        "kind": "class",
+        "label": "XRLayerSystem",
+        "summary": "XRLayerSystem manages WebXR quad and cylinder composition layers. For each entity with an {@link XRQuadLayer} or {@link XRCylinderLayer} component, the system: - Creates a mesh (plane or cylinder) as a child of the entity's object3D - Renders layer content via the component's `renderCallback` while…",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem"
+        ],
+        "importance": 0.55,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/level/level-component-applier.ts#levelcomponentapplier",
+        "kind": "class",
+        "label": "LevelComponentApplier",
+        "summary": "",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/level/level-component-applier.ts#levelcomponentapplier"
+        ],
+        "importance": 0.508
+      },
+      {
+        "id": "class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter",
+        "kind": "class",
+        "label": "SceneJSONImporter",
+        "summary": "Loads native IWSDK scene JSON documents into a level root.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter"
+        ],
+        "importance": 0.428
+      },
+      {
+        "id": "class:packages/core/src/level/level-system.ts#levelsystem",
+        "kind": "class",
+        "label": "LevelSystem",
+        "summary": "Manages the active level root, enforces identity transforms, and atomically loads levels.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/level/level-system.ts#levelsystem"
+        ],
+        "importance": 0.584,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/lighting/light-system.ts#lightsystem",
+        "kind": "class",
+        "label": "LightSystem",
+        "summary": "",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/lighting/light-system.ts#lightsystem"
+        ],
+        "importance": 0.327,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "kind": "class",
+        "label": "ActionLocomotionInputProvider",
+        "summary": "Converts low-level input actions into locomotion intent. Locomotion should not care whether input came from XR controllers, keyboard, browser gamepads, or an app-authored adapter. This provider is the narrow bridge between generic actions and the existing locomotor systems.",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider"
+        ],
+        "importance": 0.7,
+        "role": "hub"
+      },
+      {
+        "id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "kind": "class",
+        "label": "LocomotionSystem",
+        "summary": "Physics‑driven locomotion (slide, teleport, turn) backed by the {@link @iwsdk/locomotor!Locomotor} engine.",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/locomotion/locomotion.ts#locomotionsystem"
+        ],
+        "importance": 0.7,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/locomotion/slide.ts#slidesystem",
+        "kind": "class",
+        "label": "SlideSystem",
+        "summary": "Analog stick sliding locomotion with optional comfort vignette and jump.",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/locomotion/slide.ts#slidesystem"
+        ],
+        "importance": 0.483,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+        "kind": "class",
+        "label": "TeleportSystem",
+        "summary": "Arc‑based teleportation with surface validation and hand/controller input.",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/locomotion/teleport.ts#teleportsystem"
+        ],
+        "importance": 0.542,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/locomotion/turn.ts#turnsystem",
+        "kind": "class",
+        "label": "TurnSystem",
+        "summary": "Player yaw rotation via snap or smooth turning.",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/locomotion/turn.ts#turnsystem"
+        ],
+        "importance": 0.474,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/physics/physics-system.ts#physicssystem",
+        "kind": "class",
+        "label": "PhysicsSystem",
+        "summary": "Manages a Havok simulation on either a dedicated worker or the main thread. Per-frame commands and poses travel through a pair of transferable ArrayBuffers. Both execution modes use the same binary protocol and shared Havok runtime. Worker mode alternates ownership of transferable ArrayBuffers, avo…",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/physics/physics-system.ts#physicssystem"
+        ],
+        "importance": 0.533,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem",
+        "kind": "class",
+        "label": "SceneUnderstandingSystem",
+        "summary": "Manages WebXR scene understanding features including plane detection, mesh detection, and anchoring.",
+        "parent_id": "concept:environment-senses",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem"
+        ],
+        "importance": 0.318,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/core/src/ui/document.ts#uikitdocument",
+        "kind": "class",
+        "label": "UIKitDocument",
+        "summary": "Lightweight DOM-like wrapper around a UIKit root `Component` that lives in the 3D scene.",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/ui/document.ts#uikitdocument"
+        ],
+        "importance": 0.437
+      },
+      {
+        "id": "class:packages/core/src/ui/ui.ts#paneluisystem",
+        "kind": "class",
+        "label": "PanelUISystem",
+        "summary": "Renders and updates spatial UI panels.",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/core/src/ui/ui.ts#paneluisystem"
+        ],
+        "importance": 0.466,
+        "role": "engine"
+      },
+      {
+        "id": "class:packages/locomotor/src/core/engine.ts#locomotionengine",
+        "kind": "class",
+        "label": "LocomotionEngine",
+        "summary": "",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/locomotor/src/core/engine.ts#locomotionengine"
+        ],
+        "importance": 0.829
+      },
+      {
+        "id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+        "kind": "class",
+        "label": "Locomotor",
+        "summary": "Main thread interface for locomotion physics engine Supports both web worker mode (default) and inline mode - Worker mode: Runs physics engine in a separate thread for better performance - Inline mode: Runs physics engine in the same thread for snappier controls Use LocomotorConfig.useWorker to con…",
+        "parent_id": "concept:movement-physics",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/locomotor/src/core/locomotor.ts#locomotor"
+        ],
+        "importance": 0.7
+      },
+      {
+        "id": "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+        "kind": "class",
+        "label": "StatefulButtonAxesDevice",
+        "summary": "",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice"
+        ],
+        "importance": 0.778,
+        "role": "hub"
+      },
+      {
+        "id": "class:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer",
+        "kind": "class",
+        "label": "GazePointer",
+        "summary": "Singleton gaze pointer. Peer of {@link MultiPointer} in {@link XRInputManager}.",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer"
+        ],
+        "importance": 0.727
+      },
+      {
+        "id": "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+        "kind": "class",
+        "label": "MultiPointer",
+        "summary": "MultiPointer orchestrates multiple pointer types using priority-based selection.",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer"
+        ],
+        "importance": 0.795
+      },
+      {
+        "id": "class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter",
+        "kind": "class",
+        "label": "XRInputVisualAdapter",
+        "summary": "",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter"
+        ],
+        "importance": 0.525
+      },
+      {
+        "id": "class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter",
+        "kind": "class",
+        "label": "XRControllerVisualAdapter",
+        "summary": "",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter"
+        ],
+        "importance": 0.517
+      },
+      {
+        "id": "class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter",
+        "kind": "class",
+        "label": "XRHandVisualAdapter",
+        "summary": "",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter"
+        ],
+        "importance": 0.419
+      },
+      {
+        "id": "class:packages/xr-input/src/visual/impl/base-impl.ts#basecontrollervisual",
+        "kind": "class",
+        "label": "BaseControllerVisual",
+        "summary": "",
+        "parent_id": "concept:ui-display",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/visual/impl/base-impl.ts#basecontrollervisual"
+        ],
+        "importance": 0.346
+      },
+      {
+        "id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "kind": "class",
+        "label": "XRInputManager",
+        "summary": "",
+        "parent_id": "concept:input-pointers",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager"
+        ],
+        "importance": 0.846,
+        "role": "hub"
+      },
+      {
+        "id": "concept:assets-levels",
+        "kind": "cluster",
+        "label": "Assets and levels",
+        "summary": "Cached loaders for models, textures, and audio plus atomic level loading from scene JSON.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:environment-senses",
+        "kind": "cluster",
+        "label": "Environment and senses",
+        "summary": "Backgrounds, lighting, spatial audio, depth occlusion, and real-world plane and mesh detection.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:grab-interaction",
+        "kind": "cluster",
+        "label": "Grab and gaze interaction",
+        "summary": "Turns pointer hits into grabbing, manipulation, and gaze wiring for interactables.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:input-pointers",
+        "kind": "cluster",
+        "label": "Input and pointers",
+        "summary": "Samples hands, controllers, gamepads, and gaze into prioritized pointers for raycasting.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:movement-physics",
+        "kind": "cluster",
+        "label": "Movement and physics",
+        "summary": "Slide, teleport, turn, and Havok simulation backed by the locomotor engine.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:ui-display",
+        "kind": "cluster",
+        "label": "UI and display layers",
+        "summary": "Spatial UIKit panels, XR composition layers, and animated hand and controller visuals.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "concept:world-startup",
+        "kind": "cluster",
+        "label": "World and startup",
+        "summary": "World owns the scene, renderer, and XR session; systems tick each frame and startup adopts sessions.",
+        "parent_id": null,
+        "truth_status": "inferred",
+        "evidence_ids": [],
+        "importance": 0.9,
+        "role": "concept"
+      },
+      {
+        "id": "fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset",
+        "kind": "function",
+        "label": "loadCachedAsset",
+        "summary": "Run one cache-backed load with request de-duplication and a finite timeout. Late callbacks are ignored after timeout and cannot publish into the cache. A loader may provide `discard` to release resources created by such a late callback. Replaced requests still settle for their original callers, but…",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset"
+        ],
+        "importance": 0.567
+      },
+      {
+        "id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "kind": "function",
+        "label": "createSystem",
+        "summary": "Create a strongly-typed System class with query bindings and reactive config.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "importance": 0.863,
+        "role": "entry"
+      },
+      {
+        "id": "fn:packages/core/src/init/session-grant.ts#armsessiongrantcapture",
+        "kind": "function",
+        "label": "armSessionGrantCapture",
+        "summary": "Start recording native sessiongranted events before asynchronous world initialization begins. Calling this more than once for the same XRSystem is a no-op.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/init/session-grant.ts#armsessiongrantcapture"
+        ],
+        "importance": 0.373
+      },
+      {
+        "id": "fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions",
+        "kind": "function",
+        "label": "armSessionGrantCaptureForOptions",
+        "summary": "Arm capture synchronously when world options request grant-driven launch.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions"
+        ],
+        "importance": 0.576
+      },
+      {
+        "id": "fn:packages/core/src/init/xr.ts#adoptxrsession",
+        "kind": "function",
+        "label": "adoptXRSession",
+        "summary": "Adopt a native or emulated session into the world's renderer. Concurrent offer/request paths reconcile here: the first successfully adopted session wins and any later session is ended.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/init/xr.ts#adoptxrsession"
+        ],
+        "importance": 0.41
+      },
+      {
+        "id": "fn:packages/core/src/init/xr.ts#launchxr",
+        "kind": "function",
+        "label": "launchXR",
+        "summary": "Explicitly request a WebXR session with the given options.",
+        "parent_id": "concept:world-startup",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/init/xr.ts#launchxr"
+        ],
+        "importance": 0.559
+      },
+      {
+        "id": "fn:packages/core/src/level/level-scene-primitive.ts#disposesceneprimitiveobject",
+        "kind": "function",
+        "label": "disposeScenePrimitiveObject",
+        "summary": "Dispose only the resources owned directly by a scene primitive mesh.",
+        "parent_id": "concept:assets-levels",
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:fn:packages/core/src/level/level-scene-primitive.ts#disposesceneprimitiveobject"
+        ],
+        "importance": 0.364
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge:calls:actionlocomotioninputprovider->inputactionmanager",
+        "source_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "target_id": "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getjumpdown->fn:packages/core/src/input/input-actions.ts#inputactionmanager.getbuttondown"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "8 call sites"
+      },
+      {
+        "id": "edge:calls:actionlocomotioninputprovider->statefulbuttonaxesdevice",
+        "source_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "target_id": "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:long:1b7d3ce4cc8c884d19de7d05"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "4 call sites"
+      },
+      {
+        "id": "edge:calls:actionlocomotioninputprovider->xrinputmanager",
+        "source_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "target_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getteleportactive->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.isprimary"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:assetmanager->cachemanager",
+        "source_id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+        "target_id": "class:packages/core/src/asset/cache-manager.ts#cachemanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/asset/asset-manager.ts#assetmanager.getasset->fn:packages/core/src/asset/cache-manager.ts#cachemanager.getassetbykey"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "9 call sites"
+      },
+      {
+        "id": "edge:calls:assetmanager->gltfassetloader",
+        "source_id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+        "target_id": "class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/asset/asset-manager.ts#assetmanager.getgltf->fn:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader.getgltf"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:audiosystem->assetmanager",
+        "source_id": "class:packages/core/src/audio/audio-system.ts#audiosystem",
+        "target_id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/audio/audio-system.ts#audiosystem.loadaudio->fn:packages/core/src/asset/asset-manager.ts#assetmanager.getaudio"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:audiosystem->createsystem",
+        "source_id": "class:packages/core/src/audio/audio-system.ts#audiosystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/audio/audio-system.ts#audiosystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:camerasystem->createsystem",
+        "source_id": "class:packages/core/src/camera/camera-system.ts#camerasystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/camera/camera-system.ts#camerasystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:createsystem->world",
+        "source_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/ecs/system.ts#createsystem->fn:packages/core/src/ecs/world.ts#world.createentity"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:depthsensingsystem->createsystem",
+        "source_id": "class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:environmentraycastsystem->createsystem",
+        "source_id": "class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:environmentraycastsystem->xrinputmanager",
+        "source_id": "class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem",
+        "target_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:long:2eb1eb47ae8c4acac39519db"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:environmentsystem->assetmanager",
+        "source_id": "class:packages/core/src/environment/environment-system.ts#environmentsystem",
+        "target_id": "class:packages/core/src/asset/asset-manager.ts#assetmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/environment/environment-system.ts#environmentsystem.updatedometexturebackground->fn:packages/core/src/asset/asset-manager.ts#assetmanager.loadhdrtexture"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "4 call sites"
+      },
+      {
+        "id": "edge:calls:environmentsystem->cachemanager",
+        "source_id": "class:packages/core/src/environment/environment-system.ts#environmentsystem",
+        "target_id": "class:packages/core/src/asset/cache-manager.ts#cachemanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/environment/environment-system.ts#environmentsystem.updatedometexturebackground->fn:packages/core/src/asset/cache-manager.ts#cachemanager.resolveurl"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:environmentsystem->createsystem",
+        "source_id": "class:packages/core/src/environment/environment-system.ts#environmentsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/environment/environment-system.ts#environmentsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:gltfassetloader->cachemanager",
+        "source_id": "class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader",
+        "target_id": "class:packages/core/src/asset/cache-manager.ts#cachemanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader.getgltf->fn:packages/core/src/asset/cache-manager.ts#cachemanager.getassetbykey"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:grabsystem->createsystem",
+        "source_id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/grab/grab-system.ts#grabsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:grabsystem->distancegrabhandle",
+        "source_id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "target_id": "class:packages/core/src/grab/handles.ts#distancegrabhandle",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.initializedistancehandle->fn:packages/core/src/grab/handles.ts#distancegrabhandle.bind"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:grabsystem->multipointer",
+        "source_id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "target_id": "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.getholderhand->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.getpointer"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "4 call sites"
+      },
+      {
+        "id": "edge:calls:grabsystem->world",
+        "source_id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.init->fn:packages/core/src/ecs/world.ts#world.registercomponent"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:grabsystem->xrinputmanager",
+        "source_id": "class:packages/core/src/grab/grab-system.ts#grabsystem",
+        "target_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.update->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.getselectstate"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:inputactionmanager->statefulbuttonaxesdevice",
+        "source_id": "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+        "target_id": "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/input/input-actions.ts#inputactionmanager.getaxesvalues->fn:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice.getaxesvalues"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "7 call sites"
+      },
+      {
+        "id": "edge:calls:inputactionmanager->statefulkeyboard",
+        "source_id": "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+        "target_id": "class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/input/input-actions.ts#inputactionmanager.getbindingbuttondown->fn:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard.getkeydown"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:inputmanager->inputactionmanager",
+        "source_id": "class:packages/core/src/input/input-manager.ts#inputmanager",
+        "target_id": "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.update->fn:packages/core/src/input/input-actions.ts#inputactionmanager.update"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:inputmanager->statefulkeyboard",
+        "source_id": "class:packages/core/src/input/input-manager.ts#inputmanager",
+        "target_id": "class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.destroy->fn:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard.destroy"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:inputmanager->xrinputmanager",
+        "source_id": "class:packages/core/src/input/input-manager.ts#inputmanager",
+        "target_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.getprimaryinputsource->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.getprimaryinputsource"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:inputsystem->createsystem",
+        "source_id": "class:packages/core/src/input/input-system.ts#inputsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/input/input-system.ts#inputsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:levelcomponentapplier->world",
+        "source_id": "class:packages/core/src/level/level-component-applier.ts#levelcomponentapplier",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/level/level-component-applier.ts#levelcomponentapplier.applycomponents->fn:packages/core/src/ecs/world.ts#world.registercomponent"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:levelsystem->createsystem",
+        "source_id": "class:packages/core/src/level/level-system.ts#levelsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/level/level-system.ts#levelsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:levelsystem->scenejsonimporter",
+        "source_id": "class:packages/core/src/level/level-system.ts#levelsystem",
+        "target_id": "class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/level/level-system.ts#levelsystem.startlevelchange->fn:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter.load"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:levelsystem->world",
+        "source_id": "class:packages/core/src/level/level-system.ts#levelsystem",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/level/level-system.ts#levelsystem.init->fn:packages/core/src/ecs/world.ts#world.createtransformentity"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:lightsystem->createsystem",
+        "source_id": "class:packages/core/src/lighting/light-system.ts#lightsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/lighting/light-system.ts#lightsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:loadcachedasset->cachemanager",
+        "source_id": "fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset",
+        "target_id": "class:packages/core/src/asset/cache-manager.ts#cachemanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset->fn:packages/core/src/asset/cache-manager.ts#cachemanager.deletepromise"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:locomotionsystem->actionlocomotioninputprovider",
+        "source_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "target_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.init->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.enablebrowsercontrols"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:locomotionsystem->createsystem",
+        "source_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/locomotion/locomotion.ts#locomotionsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:locomotionsystem->locomotor",
+        "source_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "target_id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.addenvironmenttoengine->fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "12 call sites"
+      },
+      {
+        "id": "edge:calls:locomotionsystem->world",
+        "source_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.init->fn:packages/core/src/ecs/world.ts#world.onauthoredplayerposition"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:locomotionsystem->xrinputmanager",
+        "source_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+        "target_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.update->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.isprimary"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:locomotor->locomotionengine",
+        "source_id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+        "target_id": "class:packages/locomotor/src/core/engine.ts#locomotionengine",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment->fn:packages/locomotor/src/core/engine.ts#locomotionengine.addenvironment"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "10 call sites"
+      },
+      {
+        "id": "edge:calls:paneluisystem->createsystem",
+        "source_id": "class:packages/core/src/ui/ui.ts#paneluisystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/ui/ui.ts#paneluisystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:paneluisystem->uikitdocument",
+        "source_id": "class:packages/core/src/ui/ui.ts#paneluisystem",
+        "target_id": "class:packages/core/src/ui/document.ts#uikitdocument",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/ui/ui.ts#paneluisystem.cleanuppanel->fn:packages/core/src/ui/document.ts#uikitdocument.dispose"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:physicssystem->createsystem",
+        "source_id": "class:packages/core/src/physics/physics-system.ts#physicssystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/physics/physics-system.ts#physicssystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:scenejsonimporter->world",
+        "source_id": "class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter.createentityforlowerednode->fn:packages/core/src/ecs/world.ts#world.createtransformentity"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:sceneunderstandingsystem->createsystem",
+        "source_id": "class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:sceneunderstandingsystem->world",
+        "source_id": "class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem",
+        "target_id": "class:packages/core/src/ecs/world.ts#world",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem.init->fn:packages/core/src/ecs/world.ts#world.createtransformentity"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:slidesystem->actionlocomotioninputprovider",
+        "source_id": "class:packages/core/src/locomotion/slide.ts#slidesystem",
+        "target_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/slide.ts#slidesystem.update->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getjumpdown"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:slidesystem->createsystem",
+        "source_id": "class:packages/core/src/locomotion/slide.ts#slidesystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/locomotion/slide.ts#slidesystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:slidesystem->locomotor",
+        "source_id": "class:packages/core/src/locomotion/slide.ts#slidesystem",
+        "target_id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/slide.ts#slidesystem.update->fn:packages/locomotor/src/core/locomotor.ts#locomotor.jump"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:teleportsystem->actionlocomotioninputprovider",
+        "source_id": "class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+        "target_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getteleportactive"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "3 call sites"
+      },
+      {
+        "id": "edge:calls:teleportsystem->createsystem",
+        "source_id": "class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/locomotion/teleport.ts#teleportsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:teleportsystem->locomotor",
+        "source_id": "class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+        "target_id": "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/locomotor/src/core/locomotor.ts#locomotor.requesthittest"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "2 call sites"
+      },
+      {
+        "id": "edge:calls:teleportsystem->multipointer",
+        "source_id": "class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+        "target_id": "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.getraybusy"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:turnsystem->actionlocomotioninputprovider",
+        "source_id": "class:packages/core/src/locomotion/turn.ts#turnsystem",
+        "target_id": "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/turn.ts#turnsystem.updatesmooth->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getturnaxis"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "4 call sites"
+      },
+      {
+        "id": "edge:calls:turnsystem->createsystem",
+        "source_id": "class:packages/core/src/locomotion/turn.ts#turnsystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/locomotion/turn.ts#turnsystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:world->armsessiongrantcaptureforoptions",
+        "source_id": "class:packages/core/src/ecs/world.ts#world",
+        "target_id": "fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/ecs/world.ts#world.create->fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:world->launchxr",
+        "source_id": "class:packages/core/src/ecs/world.ts#world",
+        "target_id": "fn:packages/core/src/init/xr.ts#launchxr",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/ecs/world.ts#world.launchxr->fn:packages/core/src/init/xr.ts#launchxr"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      },
+      {
+        "id": "edge:calls:xrcontrollervisualadapter->xrinputvisualadapter",
+        "source_id": "class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter",
+        "target_id": "class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:long:9f693acd57cb918698808f11"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:xrhandvisualadapter->xrinputvisualadapter",
+        "source_id": "class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter",
+        "target_id": "class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter->class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:xrinputmanager->gazepointer",
+        "source_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "target_id": "class:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager->fn:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer.reset"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "9 call sites"
+      },
+      {
+        "id": "edge:calls:xrinputmanager->multipointer",
+        "source_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "target_id": "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.disablepointers->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.update"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:xrinputmanager->statefulbuttonaxesdevice",
+        "source_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "target_id": "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.readhandselectstate->fn:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice.getselectend"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:xrinputmanager->xrcontrollervisualadapter",
+        "source_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "target_id": "class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.onsessionended->fn:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter.disconnect"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "5 call sites"
+      },
+      {
+        "id": "edge:calls:xrinputmanager->xrhandvisualadapter",
+        "source_id": "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+        "target_id": "class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.onsessionended->fn:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter.disconnect"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "4 call sites"
+      },
+      {
+        "id": "edge:calls:xrlayersystem->createsystem",
+        "source_id": "class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem",
+        "target_id": "fn:packages/core/src/ecs/system.ts#createsystem",
+        "relation": "calls",
+        "flows": [
+          "control"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem->fn:packages/core/src/ecs/system.ts#createsystem"
+        ],
+        "is_mutable_in_sandbox": false,
+        "label": "calls"
+      }
+    ],
+    "paths": [
+      {
+        "id": "path:sdk-move",
+        "label": "a move",
+        "flow": "control",
+        "node_ids": [
+          "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+          "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+          "class:packages/core/src/input/input-actions.ts#inputactionmanager",
+          "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+          "class:packages/locomotor/src/core/locomotor.ts#locomotor",
+          "class:packages/locomotor/src/core/engine.ts#locomotionengine"
+        ],
+        "edge_ids": [
+          "edge:calls:locomotionsystem->actionlocomotioninputprovider",
+          "edge:calls:actionlocomotioninputprovider->inputactionmanager",
+          "edge:calls:inputactionmanager->statefulbuttonaxesdevice",
+          "edge:calls:locomotionsystem->locomotor",
+          "edge:calls:locomotor->locomotionengine"
+        ],
+        "truth_status": "static_verified",
+        "evidence_ids": [
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.init->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.enablebrowsercontrols",
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getjumpdown->fn:packages/core/src/input/input-actions.ts#inputactionmanager.getbuttondown",
+          "ev:src:edge:calls:fn:packages/core/src/input/input-actions.ts#inputactionmanager.getaxesvalues->fn:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice.getaxesvalues",
+          "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.addenvironmenttoengine->fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment",
+          "ev:src:edge:calls:fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment->fn:packages/locomotor/src/core/engine.ts#locomotionengine.addenvironment"
+        ]
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev:license:iwsdk",
+      "title": "Source: meta/immersive-web-sdk (MIT License)",
+      "summary": "Every excerpt in this system is quoted from meta/immersive-web-sdk at commit 52f0f502b339. Not affiliated with or endorsed by Meta.",
+      "kind": "asset_license",
+      "truth_status": "static_verified",
+      "license": {
+        "name": "MIT License",
+        "spdx": "MIT",
+        "url": "https://github.com/meta/immersive-web-sdk",
+        "attribution": "Copyright (c) Meta Platforms, Inc. and affiliates."
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/asset/asset-manager.ts#assetmanager",
+      "title": "Source: packages/core/src/asset/asset-manager.ts:347-639",
+      "summary": "Declaration of AssetManager.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/asset-manager.ts",
+        "start_line": 347,
+        "end_line": 358,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class AssetManager {\n  static loadingManager: LoadingManager;\n  static world: World;\n  private static loadTimeoutMs = DEFAULT_ASSET_LOAD_TIMEOUT_MS;\n  private static readonly manifestEntries = new Map<\n    string,\n    LoadableAssetManifestEntry\n  >();\n\n  /**\n   * Initialize loaders and bind to the current world/renderer.\n   */",
+        "excerpt_sha256": "b59fff987b33f1b3cb52300b55f8518596c1abc6311bb1c813a4c16fdeef556d"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/asset/cache-manager.ts#cachemanager",
+      "title": "Source: packages/core/src/asset/cache-manager.ts:18-98",
+      "summary": "Declaration of CacheManager.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/cache-manager.ts",
+        "start_line": 18,
+        "end_line": 29,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class CacheManager {\n  private static cache = new Map<string, any>();\n  private static promiseCache = new Map<string, Promise<any>>();\n  private static keyToUrl = new Map<string, string>();\n\n  /** Record a logical key → URL mapping. */\n  static setKeyToUrl(key: string, url: string): void {\n    this.keyToUrl.set(key, url);\n  }\n\n  /** Resolve a key or pass-through a URL. */\n  static resolveUrl(urlOrKey: string): string {",
+        "excerpt_sha256": "f858dfb7485e0c54531e55a410dee12750b409cb8cfeb9515ac27e81bd9191b9"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader",
+      "title": "Source: packages/core/src/asset/loaders/gltf-loader.ts:76-248",
+      "summary": "Declaration of GLTFAssetLoader.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/loaders/gltf-loader.ts",
+        "start_line": 76,
+        "end_line": 87,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class GLTFAssetLoader {\n  private static gltfLoader: GLTFLoader;\n  private static dracoLoader: DRACOLoader;\n  private static ktx2Loader: KTX2Loader;\n\n  /**\n   * Initialize loader instances and configure decoders/transcoders.\n   * @param loadingManager Shared Three.js `LoadingManager`.\n   * @param renderer Renderer used to detect KTX2 support.\n   * @param options Optional decoder/transcoder paths (fall back to CDN paths matching Three r{REVISION}).\n   */\n  static init(",
+        "excerpt_sha256": "1bba867ad2573520f749e44672f7c1857c7a892c7e2e98afc64b17e8941c1e54"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/audio/audio-system.ts#audiosystem",
+      "title": "Source: packages/core/src/audio/audio-system.ts:33-644",
+      "summary": "Declaration of AudioSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/audio/audio-system.ts",
+        "start_line": 33,
+        "end_line": 44,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class AudioSystem extends createSystem(\n  {\n    audioEntities: { required: [AudioSource] },\n  },\n  {\n    /** Enable distance-based culling for positional audio instances. */\n    enableDistanceCulling: { type: Types.Boolean, default: true },\n    /** Multiplier applied to `maxDistance` for culling threshold. */\n    cullingDistanceMultiplier: { type: Types.Float32, default: 1.5 },\n  },\n) {\n  private listener!: AudioListener;",
+        "excerpt_sha256": "f43889879182f548d73e402dee3024318575b9ee588a0823aeca542a72776203"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/camera/camera-system.ts#camerasystem",
+      "title": "Source: packages/core/src/camera/camera-system.ts:26-300",
+      "summary": "Declaration of CameraSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/camera/camera-system.ts",
+        "start_line": 26,
+        "end_line": 37,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class CameraSystem extends createSystem({\n  cameras: { required: [CameraSource] },\n}) {\n  private readonly operationIds = new WeakMap<Entity, number>();\n\n  init() {\n    const stopIfDocumentHidden = () => {\n      if (document.visibilityState === 'hidden') {\n        this.stopAllCameras();\n      }\n    };\n    const hasDocumentVisibility =",
+        "excerpt_sha256": "522f715237d012278bd50ad6617234d6e9dea421c9165f03dd8fa97dd775fad0"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem",
+      "title": "Source: packages/core/src/depth/depth-sensing-system.ts:60-624",
+      "summary": "Declaration of DepthSensingSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/depth/depth-sensing-system.ts",
+        "start_line": 60,
+        "end_line": 71,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class DepthSensingSystem extends createSystem(\n  {\n    occludables: { required: [DepthOccludable] },\n  },\n  {\n    enableOcclusion: { type: Types.Boolean, default: true },\n    enableDepthTexture: { type: Types.Boolean, default: true },\n    useFloat32: { type: Types.Boolean, default: true },\n    blurRadius: { type: Types.Float32, default: 20.0 },\n  },\n) {\n  private depthFeatureEnabled: boolean | undefined;",
+        "excerpt_sha256": "84b5de045308f58dcfdc464171e1e409e1435ca9d975e1c6a5a353c37141148c"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/ecs/world.ts#world",
+      "title": "Source: packages/core/src/ecs/world.ts:102-646",
+      "summary": "Declaration of World.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ecs/world.ts",
+        "start_line": 102,
+        "end_line": 113,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class World extends ElicsWorld {\n  public input!: InputManager;\n  public player!: XROrigin;\n  public assetManager!: typeof AssetManager;\n  /** Renderable assets registered by the application manifest. */\n  public assets!: RenderableAssetRegistry;\n  /** Component definitions shared by scene validation and editor tooling. */\n  public componentCatalog!: SceneComponentCatalog;\n  public scene!: Scene;\n  public sceneEntity!: Entity;\n  public activeLevel!: Signal<Entity>;\n  public activeLevelId: string = 'level:default';",
+        "excerpt_sha256": "babf430ce599541911c662ec2e288e143537f8e9d587444f98868c7ace1f1cfe"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem",
+      "title": "Source: packages/core/src/environment-raycast/environment-raycast.ts:30-519",
+      "summary": "Declaration of EnvironmentRaycastSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment-raycast/environment-raycast.ts",
+        "start_line": 30,
+        "end_line": 41,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class EnvironmentRaycastSystem extends createSystem({\n  targets: { required: [EnvironmentRaycastTarget] },\n}) {\n  private hitTestFeatureEnabled: boolean | undefined;\n  private pendingControllerSources = new Map<Entity, 'left' | 'right'>();\n\n  init(): void {\n    this.xrManager.addEventListener('sessionstart', () => {\n      this.updateEnabledFeatures(this.xrManager.getSession());\n    });\n\n    this.xrManager.addEventListener('sessionend', () => {",
+        "excerpt_sha256": "3355d1ab694f9c8fc97c4e4d05929db6bc72aeb4201dfe1d19b8ad6322449fcb"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/environment/environment-system.ts#environmentsystem",
+      "title": "Source: packages/core/src/environment/environment-system.ts:169-887",
+      "summary": "Declaration of EnvironmentSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment/environment-system.ts",
+        "start_line": 169,
+        "end_line": 180,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class EnvironmentSystem extends createSystem({\n  domeTextures: { required: [DomeTexture, LevelRoot] },\n  domeGradients: { required: [DomeGradient, LevelRoot] },\n  iblTextures: { required: [IBLTexture, LevelRoot] },\n  iblGradients: { required: [IBLGradient, LevelRoot] },\n  domeFades: { required: [DomeFade] },\n}) {\n  private state: EnvState = {};\n  private pmrem!: PMREMGenerator;\n  private gradientGeometry?: SphereGeometry;\n  private tmpColor: Color = new Color();\n  private domeUniforms!: DomeGradientUniforms;",
+        "excerpt_sha256": "d3765c8d8ac9bbd511bf4faaf8caee9d8f6a74f8a112064fbb7415ab781fb3e7"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/grab/grab-system.ts#grabsystem",
+      "title": "Source: packages/core/src/grab/grab-system.ts:62-428",
+      "summary": "Declaration of GrabSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 62,
+        "end_line": 73,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class GrabSystem extends createSystem(\n  {\n    oneHandGrabbables: {\n      required: [OneHandGrabbable],\n    },\n    twoHandsGrabbables: {\n      required: [TwoHandsGrabbable],\n    },\n    distanceGrabbables: {\n      required: [DistanceGrabbable],\n    },\n    handles: {",
+        "excerpt_sha256": "1ec0a1af35f67f28c507f943b3dc9fc86696ddf8746f280d8e0eb933f7040ec3"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/grab/handles.ts#distancegrabhandle",
+      "title": "Source: packages/core/src/grab/handles.ts:42-290",
+      "summary": "Declaration of DistanceGrabHandle.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/handles.ts",
+        "start_line": 42,
+        "end_line": 53,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class DistanceGrabHandle<T> extends HandleStore<T> {\n  private previousPointerOrigin: Vector3 | undefined;\n  private isSnapped: boolean = false;\n  private returnOriginCaptured = false;\n  private returnTargetParent: Object3D | null = null;\n  private readonly returnTargetPosition = new Vector3();\n  private readonly returnTargetQuaternion = new Quaternion();\n  private readonly returnTargetRotation = new Euler();\n  private readonly returnTargetScale = new Vector3();\n  private static SNAP_THRESHOLD = 0.005;\n  private static MOVE_SPEED_SCALE = 100;\n  private static _tmp = new Vector3();",
+        "excerpt_sha256": "a617cb7dfd54cc09019fe72cbc10265101de049d1a90322ab1a0f3920df64347"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/input/input-actions.ts#inputactionmanager",
+      "title": "Source: packages/core/src/input/input-actions.ts:161-592",
+      "summary": "Declaration of InputActionManager.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-actions.ts",
+        "start_line": 161,
+        "end_line": 172,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class InputActionManager {\n  private readonly bindings: InputActionBinding[] = [];\n  private readonly buttonStates = new Map<InputActionName, ButtonState>();\n  private readonly axis1DStates = new Map<InputActionName, Axis1DState>();\n  private readonly axis2DStates = new Map<InputActionName, Axis2DState>();\n\n  constructor() {\n    this.enableDefaultBindings('xr');\n  }\n\n  enableDefaultBindings(\n    profile: InputActionProfile,",
+        "excerpt_sha256": "2945512ea7c33847a97930936117a76704ab3dfca610cd60b02ea788007dd604"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/input/input-manager.ts#inputmanager",
+      "title": "Source: packages/core/src/input/input-manager.ts:43-127",
+      "summary": "Declaration of InputManager.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-manager.ts",
+        "start_line": 43,
+        "end_line": 54,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class InputManager {\n  public readonly xr: XRInputManager;\n  public readonly keyboard: StatefulKeyboard;\n  public readonly browserGamepads: Array<StatefulBrowserGamepad | undefined> =\n    [];\n  public readonly actions: InputActionManager;\n  public readonly canvasPointerEvents: NormalizedCanvasPointerEventsOptions;\n\n  constructor(xr: XRInputManager, options: InputManagerOptions = {}) {\n    this.xr = xr;\n    this.keyboard = new StatefulKeyboard();\n    this.actions = new InputActionManager();",
+        "excerpt_sha256": "997d8c61daa20dc593a5215f235ec7f423b4157c4997090090d53b5870367500"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/input/input-system.ts#inputsystem",
+      "title": "Source: packages/core/src/input/input-system.ts:50-404",
+      "summary": "Declaration of InputSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-system.ts",
+        "start_line": 50,
+        "end_line": 61,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class InputSystem extends createSystem(\n  {\n    /** Entities interactable via ray pointer */\n    rayInteractables: { required: [RayInteractable, Transform] },\n    /** Entities interactable via touch/poke pointer */\n    pokeInteractables: { required: [PokeInteractable, Transform] },\n    /** One-hand grabbable entities */\n    oneHandGrabbables: { required: [OneHandGrabbable, Transform] },\n    /** Two-hands grabbable entities */\n    twoHandsGrabbables: { required: [TwoHandsGrabbable, Transform] },\n    /** Distance grabbable entities */\n    distanceGrabbables: { required: [DistanceGrabbable, Transform] },",
+        "excerpt_sha256": "c1cf808104a71e4c020fb480a30182caae564a41d44770768348638ea7be30f2"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard",
+      "title": "Source: packages/core/src/input/stateful-keyboard.ts:8-70",
+      "summary": "Declaration of StatefulKeyboard.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/stateful-keyboard.ts",
+        "start_line": 8,
+        "end_line": 19,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class StatefulKeyboard {\n  private readonly pressedKeys = new Set<string>();\n  private readonly currentDownKeys = new Set<string>();\n  private readonly currentUpKeys = new Set<string>();\n  private readonly pendingDownKeys = new Set<string>();\n  private readonly pendingUpKeys = new Set<string>();\n  private readonly target: Window;\n\n  private readonly handleKeyDown = (event: KeyboardEvent) => {\n    if (!this.pressedKeys.has(event.code)) {\n      this.pendingDownKeys.add(event.code);\n    }",
+        "excerpt_sha256": "da1d5c9d977416a0d1e28743bb44e6b607779be612d66623dff93081bae7ab27"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem",
+      "title": "Source: packages/core/src/layers/xr-layer-system.ts:130-1070",
+      "summary": "Declaration of XRLayerSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/layers/xr-layer-system.ts",
+        "start_line": 130,
+        "end_line": 141,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class XRLayerSystem extends createSystem({\n  quadLayers: { required: [XRQuadLayer] },\n  cylinderLayers: { required: [XRCylinderLayer] },\n  activeLayers: { required: [XRLayerState] },\n}) {\n  private sessionUsesLayers = false;\n  private sessionLayerInitializationPending = false;\n  private unsupportedLayerStates = new Map<number, UnsupportedLayerState>();\n  private pendingNativeLayerRemovals = new Set<number>();\n  private retiredLayers: RetiredLayerResources[] = [];\n  private layerVisibility = new Map<number, boolean>();\n  private layerConfigurations = new Map<number, Vector3>();",
+        "excerpt_sha256": "4f40e829b17bc9501605513c267ed83607f76a7f92d4ce6a523f2a76e9f07877"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/level/level-component-applier.ts#levelcomponentapplier",
+      "title": "Source: packages/core/src/level/level-component-applier.ts:31-230",
+      "summary": "Declaration of LevelComponentApplier.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-component-applier.ts",
+        "start_line": 31,
+        "end_line": 42,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LevelComponentApplier {\n  static applyComponents(\n    entity: Entity,\n    components: Record<string, unknown>,\n    world: World,\n    options: LevelComponentApplyOptions = {},\n  ): void {\n    const allComponents = ComponentRegistry.getAllComponents();\n    this.handlePanelComponents(entity, components, world, options);\n\n    Object.entries(components).forEach(([componentName, componentData]) => {\n      const hasPackagePrefix = componentName.startsWith(LEVEL_COMPONENT_PREFIX);",
+        "excerpt_sha256": "9d17c326ed8049c62b5b224d73d7e062eb250f4dbfaa0fba80d50629901c4dc6"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter",
+      "title": "Source: packages/core/src/level/level-scene-json-importer.ts:74-278",
+      "summary": "Declaration of SceneJSONImporter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-scene-json-importer.ts",
+        "start_line": 74,
+        "end_line": 85,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class SceneJSONImporter {\n  static canLoadUrl(url: string): boolean {\n    const pathname = parsePathname(url);\n    return (\n      pathname.endsWith('.iwsdk.scene.json') || pathname.endsWith('.scene.json')\n    );\n  }\n\n  static async load(\n    world: World,\n    url: string,\n    parentEntity: Entity,",
+        "excerpt_sha256": "633e04ffb7133820bf33110a11394cbe54eae188a726921727e9bf0769185597"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/level/level-system.ts#levelsystem",
+      "title": "Source: packages/core/src/level/level-system.ts:43-201",
+      "summary": "Declaration of LevelSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-system.ts",
+        "start_line": 43,
+        "end_line": 54,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LevelSystem extends createSystem({\n  // All entities that belong to a level (will be destroyed on level change)\n  levelEntities: { required: [LevelTag] },\n}) {\n  private loading = false;\n  /** Renderer state that predates the currently committed level. */\n  private activeEnvironmentBase: SceneEnvironmentState | undefined;\n\n  init(): void {\n    // Ensure there is always an active level signal and a root entity\n    if (!this.world.activeLevel || !this.world.activeLevel.value) {\n      const root = this.world.createTransformEntity(undefined, {",
+        "excerpt_sha256": "08163e355fd7a3b4cc683dce1041e6f60271dc5431be18cd31bf85c1a4a71491"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/lighting/light-system.ts#lightsystem",
+      "title": "Source: packages/core/src/lighting/light-system.ts:36-124",
+      "summary": "Declaration of LightSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/lighting/light-system.ts",
+        "start_line": 36,
+        "end_line": 47,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LightSystem extends createSystem({\n  ambientLights: { required: [AmbientLightComponent] },\n  directionalLights: { required: [DirectionalLightComponent] },\n  hemisphereLights: { required: [HemisphereLightComponent] },\n  pointLights: { required: [PointLightComponent] },\n  rectAreaLights: { required: [RectAreaLightComponent] },\n  spotLights: { required: [SpotLightComponent] },\n}) {\n  private readonly bindings = new Map<Entity, Map<ComponentId, LightBinding>>();\n\n  init(): void {\n    const entries = [",
+        "excerpt_sha256": "2ac07f133d9875f174d7e44b80e5ab1aaa4f27e56e5fa27d1b5bcd59af880d71"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider",
+      "title": "Source: packages/core/src/locomotion/locomotion-input-provider.ts:30-153",
+      "summary": "Declaration of ActionLocomotionInputProvider.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion-input-provider.ts",
+        "start_line": 30,
+        "end_line": 41,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class ActionLocomotionInputProvider {\n  constructor(private readonly world: World) {}\n\n  enableBrowserControls(options: BrowserLocomotionControls): void {\n    if (!options) {\n      return;\n    }\n\n    const bindingOptions =\n      typeof options === 'object'\n        ? {\n            keyboard: options.keyboard,",
+        "excerpt_sha256": "178d91bf3ead53f307f4870e593efb71c604dbe0bfb70087c83c213695e25ba6"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/locomotion/locomotion.ts#locomotionsystem",
+      "title": "Source: packages/core/src/locomotion/locomotion.ts:41-320",
+      "summary": "Declaration of LocomotionSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 41,
+        "end_line": 52,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LocomotionSystem extends createSystem(\n  {\n    envs: { required: [LocomotionEnvironment] },\n  },\n  {\n    /** Starting player position before the first update. */\n    initialPlayerPosition: { type: Types.Vec3, default: [0, 0, 0] },\n    /** Run the locomotion engine in a WebWorker for better main‑thread perf. */\n    useWorker: { type: Types.Boolean, default: true },\n    /** Comfort vignette strength forwarded to SlideSystem. */\n    comfortAssist: { type: Types.Float32, default: 0.5 },\n    /** Maximum sliding speed (m/s). */",
+        "excerpt_sha256": "68651b21a259e2f424e19f20c20658a69fe624d7c070020bb46f849736a3448a"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/locomotion/slide.ts#slidesystem",
+      "title": "Source: packages/core/src/locomotion/slide.ts:85-162",
+      "summary": "Declaration of SlideSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/slide.ts",
+        "start_line": 85,
+        "end_line": 96,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class SlideSystem extends createSystem(\n  {},\n  {\n    /** Locomotor engine shared across locomotion systems. */\n    locomotor: { type: Types.Object, default: undefined },\n    /** Action-backed input provider shared across locomotion systems. */\n    inputProvider: { type: Types.Object, default: undefined },\n    /** Maximum linear speed in meters/second. */\n    maxSpeed: { type: Types.Float32, default: 5 },\n    /** Comfort vignette strength [0..1]; 0 disables vignetting. */\n    comfortAssist: { type: Types.Float32, default: 0.5 },\n    /** Whether jumping is enabled. */",
+        "excerpt_sha256": "1678207f1849a61874a82f4f733201ce7b6121e6735f7f48e4716ed6ee59d454"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/locomotion/teleport.ts#teleportsystem",
+      "title": "Source: packages/core/src/locomotion/teleport.ts:47-189",
+      "summary": "Declaration of TeleportSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/teleport.ts",
+        "start_line": 47,
+        "end_line": 58,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class TeleportSystem extends createSystem(\n  {},\n  {\n    /** Downward acceleration for the parabolic guide (negative). */\n    rayGravity: { type: Types.Float32, default: -0.4 },\n    /** Locomotor engine used for hit testing and teleport execution. */\n    locomotor: { type: Types.Object, default: undefined },\n    /** Action-backed input provider shared across locomotion systems. */\n    inputProvider: { type: Types.Object, default: undefined },\n    /** Enable hand‑tracking micro‑gesture flow for activation/confirm. */\n    microGestureControlsEnabled: { type: Types.Boolean, default: false },\n  },",
+        "excerpt_sha256": "58324214b18d876856097fce1b0198e1b903d5e7eeadc59dd0a0c5fac8c4bd53"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/locomotion/turn.ts#turnsystem",
+      "title": "Source: packages/core/src/locomotion/turn.ts:34-139",
+      "summary": "Declaration of TurnSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/turn.ts",
+        "start_line": 34,
+        "end_line": 45,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class TurnSystem extends createSystem(\n  {},\n  {\n    /** Choose snap or smooth turning. */\n    turningMethod: { type: Types.Int8, default: TurningMethod.SnapTurn },\n    /** Degrees to rotate per snap. */\n    turningAngle: { type: Types.Float32, default: 45 },\n    /** Degrees per second when smooth turning. */\n    turningSpeed: { type: Types.Float32, default: 180 },\n    /** Enable swipe‑gesture turning in hand‑tracking mode. */\n    microGestureControlsEnabled: { type: Types.Boolean, default: false },\n    /** Action-backed input provider shared across locomotion systems. */",
+        "excerpt_sha256": "e4d1c840fe9d3caa8eba295d1a39523ce6ced91987ea7557dfbfad54062eefe6"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/physics/physics-system.ts#physicssystem",
+      "title": "Source: packages/core/src/physics/physics-system.ts:160-1108",
+      "summary": "Declaration of PhysicsSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/physics/physics-system.ts",
+        "start_line": 160,
+        "end_line": 171,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class PhysicsSystem extends createSystem(\n  {\n    physicsEntities: {\n      required: [PhysicsBody, PhysicsShape],\n    },\n    manipluatedEntities: {\n      required: [PhysicsBody, PhysicsManipulation],\n      where: [ne(PhysicsBody, '_engineBody', 0)],\n    },\n    gravityOverrides: {\n      required: [PhysicsBody, PhysicsShape],\n      where: [ne(PhysicsBody, 'gravityFactor', DEFAULT_GRAVITY_FACTOR)],",
+        "excerpt_sha256": "1f5a85ef2a784b4a152a2082f74887588cf3195b7f41787249652d1ab88e0eb6"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem",
+      "title": "Source: packages/core/src/scene-understanding/scene-understanding-system.ts:94-889",
+      "summary": "Declaration of SceneUnderstandingSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/scene-understanding/scene-understanding-system.ts",
+        "start_line": 94,
+        "end_line": 105,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class SceneUnderstandingSystem extends createSystem(\n  {\n    planeEntities: { required: [XRPlane] },\n    meshEntities: { required: [XRMesh] },\n    anchoredEntities: { required: [XRAnchor] },\n  },\n  {\n    showWireFrame: { type: Types.Boolean, default: false },\n  },\n) {\n  private planeFeatureEnabled: boolean | undefined;\n  private meshFeatureEnabled: boolean | undefined;",
+        "excerpt_sha256": "c1731cbfc465612966b445622bd4f3c265e3df93e650f6c8d4f0339a2b241400"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/ui/document.ts#uikitdocument",
+      "title": "Source: packages/core/src/ui/document.ts:24-395",
+      "summary": "Declaration of UIKitDocument.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ui/document.ts",
+        "start_line": 24,
+        "end_line": 35,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class UIKitDocument extends Group {\n  private elementMap = new Map<string, Component<any>>();\n  private classMap = new Map<string, Component<any>[]>();\n  private _rootElement: Component<any>;\n  private _abortController = new AbortController();\n  private _disposed = false;\n\n  /** Reactive target width in meters. Set via {@link setTargetDimensions}. */\n  readonly targetWidth: Signal<number> = signal(0);\n  /** Reactive target height in meters. Set via {@link setTargetDimensions}. */\n  readonly targetHeight: Signal<number> = signal(0);\n",
+        "excerpt_sha256": "a225e7ea3c011f1cbd38c50c4c159011dde87aee560f3d50a118df425df4473c"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/core/src/ui/ui.ts#paneluisystem",
+      "title": "Source: packages/core/src/ui/ui.ts:39-142",
+      "summary": "Declaration of PanelUISystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ui/ui.ts",
+        "start_line": 39,
+        "end_line": 50,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class PanelUISystem extends createSystem(\n  {\n    unconfiguredPanels: { required: [PanelUI], excluded: [PanelDocument] },\n    configuredPanels: { required: [PanelUI, PanelDocument] },\n  },\n  {\n    /** Built-in UIKitML component collection. */\n    kit: { type: Types.String, default: DEFAULT_UIKITML_KIT },\n    /** Additional application-defined UIKitML components. */\n    componentSets: { type: Types.Object, default: [] },\n    /** Color scheme preference for UI theming */\n    preferredColorScheme: { type: Types.String, default: 'system' },",
+        "excerpt_sha256": "daed5f8a2f37a094afdf34bce1470fbcf00f6f3697af7ad05b70aa6faaed4e33"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/locomotor/src/core/engine.ts#locomotionengine",
+      "title": "Source: packages/locomotor/src/core/engine.ts:23-399",
+      "summary": "Declaration of LocomotionEngine.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/locomotor/src/core/engine.ts",
+        "start_line": 23,
+        "end_line": 34,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LocomotionEngine {\n  public playerPosition = new Vector3();\n  private playerVelocity = new Vector3();\n  private movementVector = new Vector3();\n  private ray = new Ray();\n  private capsuleInfo: CapsuleInfo = {\n    radius: 0.5,\n    segment: new Line3(new Vector3(0, 1.5, 0), new Vector3(0, 0.5, 0)),\n  };\n  public lastUpdateTime = 0;\n  private rayPoints = new Array<Vector3>();\n  private rayVector = new Vector3();",
+        "excerpt_sha256": "3ecf7384a5888ca5893b05cc32acede5c4ce349482e5000dcab93a49db10c8d3"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/locomotor/src/core/locomotor.ts#locomotor",
+      "title": "Source: packages/locomotor/src/core/locomotor.ts:57-504",
+      "summary": "Declaration of Locomotor.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/locomotor/src/core/locomotor.ts",
+        "start_line": 57,
+        "end_line": 68,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class Locomotor {\n  public hitTestTarget: Object3D;\n  public hitTestNormal = new Vector3();\n  public isGrounded = false;\n  public position = new Vector3();\n\n  private worker?: Worker;\n  // Private inline engine (used when useWorker is false)\n  private engine?: LocomotionEngine;\n  private useWorker: boolean;\n  private initialized = false;\n  private config: LocomotorConfig;",
+        "excerpt_sha256": "0a1d9d87eb09f41fa77b6f53fd0244f29acc6e5f31c9ebd580e4eef7d48ebb72"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice",
+      "title": "Source: packages/xr-input/src/gamepad/stateful-button-axes-device.ts:43-260",
+      "summary": "Declaration of StatefulButtonAxesDevice.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/gamepad/stateful-button-axes-device.ts",
+        "start_line": 43,
+        "end_line": 54,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class StatefulButtonAxesDevice {\n  public readonly buttonMapping = new Map<string, number>();\n  public readonly axesMapping = new Map<string, { x: number; y: number }>();\n  public axesThreshold = 0.8;\n\n  protected readonly selectComponentId: string;\n  private readonly pressedArrs: [Int8Array, Int8Array];\n  private readonly touchedArrs: [Int8Array, Int8Array];\n  private readonly valueArrs: [Float32Array, Float32Array];\n  private readonly axesStates = new Map<\n    string,\n    { prev: AxesState; curr: AxesState }",
+        "excerpt_sha256": "717625e1bcdda2db21458d5856813cefa37264ba158b98b44a26a519eefa67d5"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer",
+      "title": "Source: packages/xr-input/src/pointer/gaze-pointer.ts:513-1213",
+      "summary": "Declaration of GazePointer.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/pointer/gaze-pointer.ts",
+        "start_line": 513,
+        "end_line": 524,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class GazePointer {\n  public readonly reticle: Mesh<CircleGeometry, MeshBasicMaterial>;\n\n  public provider: GazeCandidateProvider;\n  public suppressWhenDirectPointerActive: boolean;\n  public pointerTransformFollowsHand: boolean;\n  public showDebugReticle: boolean;\n\n  private _trackingLossGraceSeconds = 5;\n\n  public get trackingLossGraceSeconds(): number {\n    return this._trackingLossGraceSeconds;",
+        "excerpt_sha256": "325054e91a42fda65041f9c2817d875c332fe8e9fc1a34fc83b70817956b29f8"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer",
+      "title": "Source: packages/xr-input/src/pointer/multi-pointer.ts:77-794",
+      "summary": "Declaration of MultiPointer.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/pointer/multi-pointer.ts",
+        "start_line": 77,
+        "end_line": 88,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class MultiPointer {\n  private ray: PointerEntry<RayPointer>;\n  private grab: PointerEntry<GrabPointer>;\n  private touch: PointerEntry<TouchPointer>;\n  private cursorVisual: CursorVisual;\n\n  /** Current active pointer kind (winner of priority selection) */\n  private activeKind: PointerKind | null = null;\n\n  /** State for each pointer type */\n  private pointerStates: Map<PointerKind, InteractorState> = new Map();\n",
+        "excerpt_sha256": "1525901e212ee39bcb0d9b7cda828391177838d584ecfe991234c72b53bb6282"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter",
+      "title": "Source: packages/xr-input/src/visual/adapter/base-visual-adapter.ts:57-210",
+      "summary": "Declaration of XRInputVisualAdapter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/adapter/base-visual-adapter.ts",
+        "start_line": 57,
+        "end_line": 68,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export abstract class XRInputVisualAdapter {\n  static cursorPool: Mesh<BufferGeometry, MeshBasicMaterial>[] = [];\n  public visual?: VisualImplementation;\n  protected inputConfig?: InputConfig;\n  public raySpace: Group | undefined;\n  public gripSpace: Group | undefined;\n  public isPrimary = false;\n  protected _inputSource?: XRInputSource;\n\n  constructor(\n    protected playerSpace: Group,\n    public handedness: XRHandedness,",
+        "excerpt_sha256": "e60942d25b8ea243195d98842c1173fe70505344bfc71f22fd58496b8f4e80d8"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter",
+      "title": "Source: packages/xr-input/src/visual/adapter/controller-visual-adapter.ts:17-69",
+      "summary": "Declaration of XRControllerVisualAdapter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/adapter/controller-visual-adapter.ts",
+        "start_line": 17,
+        "end_line": 28,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class XRControllerVisualAdapter extends XRInputVisualAdapter {\n  public visual?: VisualImplementation;\n\n  constructor(\n    playerSpace: Group,\n    handedness: XRHandedness,\n    visualsEnabled: boolean,\n    visualClass: VisualConstructor<VisualImplementation>,\n    scene: Scene,\n    camera: PerspectiveCamera,\n    assetLoader: XRAssetLoader,\n  ) {",
+        "excerpt_sha256": "9855931c02b2de2d56d4c6d0fc31a043039546a821dd41ad263571c7dd52f9cd"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter",
+      "title": "Source: packages/xr-input/src/visual/adapter/hand-visual-adapter.ts:83-309",
+      "summary": "Declaration of XRHandVisualAdapter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/adapter/hand-visual-adapter.ts",
+        "start_line": 83,
+        "end_line": 94,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class XRHandVisualAdapter extends XRInputVisualAdapter {\n  public jointSpaces: XRJointSpace[] = [];\n  public jointTransforms?: Float32Array;\n  private indexTip?: XRSpace;\n  private thumbTip?: XRSpace;\n  private pinchThreshold = 0.008;\n  private pinchCooldown = 0;\n  private pinchData = { prev: false, curr: false };\n  /** Continuous 0..1 pinch strength derived from thumb-tip↔index-tip distance. */\n  private pinchStrength = 0;\n  private vec3 = new Vector3();\n  private visualOffsetStart = new Vector3();",
+        "excerpt_sha256": "9ee11fee05907f34e45c29f95bd75e430c3a796f703aa488202013cbde131f91"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/visual/impl/base-impl.ts#basecontrollervisual",
+      "title": "Source: packages/xr-input/src/visual/impl/base-impl.ts:40-71",
+      "summary": "Declaration of BaseControllerVisual.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/impl/base-impl.ts",
+        "start_line": 40,
+        "end_line": 51,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class BaseControllerVisual implements VisualImplementation {\n  protected gamepad?: Gamepad;\n  protected enabled = true;\n  public xrInput?: XRControllerVisualAdapter;\n\n  constructor(\n    protected scene: Scene,\n    protected camera: PerspectiveCamera,\n    public model: Group,\n    protected layout: InputLayout,\n  ) {}\n",
+        "excerpt_sha256": "f0d260baa2aceb3ce7c2e5c1fad3910e0075c20d23b422704e0f1bbb733e2696"
+      }
+    },
+    {
+      "id": "ev:src:class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager",
+      "title": "Source: packages/xr-input/src/xr-input-manager.ts:87-825",
+      "summary": "Declaration of XRInputManager.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 87,
+        "end_line": 98,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class XRInputManager {\n  public readonly xrOrigin: XROrigin;\n\n  public readonly multiPointers: Record<'left' | 'right', MultiPointer>;\n\n  /**\n   * Single global gaze pointer — gaze has no handedness, so it sits beside\n   * {@link XRInputManager.multiPointers} rather than inside them.\n   *\n   * Constructed unconditionally so systems (`GrabSystem`, `GazeSystem`) can\n   * hold a stable reference, but idle until {@link XRInputManager.gazeEnabled}\n   * is set. Nothing here costs a frame while gaze is off.",
+        "excerpt_sha256": "9b056fc7ae33ba67bf32a00d529e3583e9d05410b5bc1a8a075c543f3c37c37f"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/audio/audio-system.ts#audiosystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/audio/audio-system.ts:33",
+      "summary": "AudioSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/audio/audio-system.ts",
+        "start_line": 33,
+        "end_line": 43,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class AudioSystem extends createSystem(\n  {\n    audioEntities: { required: [AudioSource] },\n  },\n  {\n    /** Enable distance-based culling for positional audio instances. */\n    enableDistanceCulling: { type: Types.Boolean, default: true },\n    /** Multiplier applied to `maxDistance` for culling threshold. */\n    cullingDistanceMultiplier: { type: Types.Float32, default: 1.5 },\n  },\n) {",
+        "excerpt_sha256": "c69cefc5eba724bc3e5094ed0dbb921e2ff04e8930d1c649037257ba91f8a3fa"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/camera/camera-system.ts#camerasystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/camera/camera-system.ts:26",
+      "summary": "CameraSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/camera/camera-system.ts",
+        "start_line": 26,
+        "end_line": 28,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class CameraSystem extends createSystem({\n  cameras: { required: [CameraSource] },\n}) {",
+        "excerpt_sha256": "897845ade0616965f4442c08016f347d9112b56823dd3c3250245263df66ee03"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/depth/depth-sensing-system.ts:60",
+      "summary": "DepthSensingSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/depth/depth-sensing-system.ts",
+        "start_line": 60,
+        "end_line": 70,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class DepthSensingSystem extends createSystem(\n  {\n    occludables: { required: [DepthOccludable] },\n  },\n  {\n    enableOcclusion: { type: Types.Boolean, default: true },\n    enableDepthTexture: { type: Types.Boolean, default: true },\n    useFloat32: { type: Types.Boolean, default: true },\n    blurRadius: { type: Types.Float32, default: 20.0 },\n  },\n) {",
+        "excerpt_sha256": "8358dc6bf067ea0e25e58af9d8bf6f22c43db51d4055c2c9525081727c2f0cf3"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/environment-raycast/environment-raycast.ts:30",
+      "summary": "EnvironmentRaycastSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment-raycast/environment-raycast.ts",
+        "start_line": 30,
+        "end_line": 32,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class EnvironmentRaycastSystem extends createSystem({\n  targets: { required: [EnvironmentRaycastTarget] },\n}) {",
+        "excerpt_sha256": "3f4e35aaf0e35bf8d1f3d0d64f433a8274b40509e2bbdb1b3fc3e11f962c6f48"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/environment/environment-system.ts#environmentsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/environment/environment-system.ts:169",
+      "summary": "EnvironmentSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment/environment-system.ts",
+        "start_line": 169,
+        "end_line": 175,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class EnvironmentSystem extends createSystem({\n  domeTextures: { required: [DomeTexture, LevelRoot] },\n  domeGradients: { required: [DomeGradient, LevelRoot] },\n  iblTextures: { required: [IBLTexture, LevelRoot] },\n  iblGradients: { required: [IBLGradient, LevelRoot] },\n  domeFades: { required: [DomeFade] },\n}) {",
+        "excerpt_sha256": "cc3d103cfa2e88d5152adb27a7d1f5ca5a27efd20849372ff0c82de6becc5dac"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/grab/grab-system.ts#grabsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/grab/grab-system.ts:62",
+      "summary": "GrabSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 62,
+        "end_line": 73,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class GrabSystem extends createSystem(\n  {\n    oneHandGrabbables: {\n      required: [OneHandGrabbable],\n    },\n    twoHandsGrabbables: {\n      required: [TwoHandsGrabbable],\n    },\n    distanceGrabbables: {\n      required: [DistanceGrabbable],\n    },\n    handles: {",
+        "excerpt_sha256": "1ec0a1af35f67f28c507f943b3dc9fc86696ddf8746f280d8e0eb933f7040ec3"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/input/input-system.ts#inputsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/input/input-system.ts:50",
+      "summary": "InputSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-system.ts",
+        "start_line": 50,
+        "end_line": 61,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class InputSystem extends createSystem(\n  {\n    /** Entities interactable via ray pointer */\n    rayInteractables: { required: [RayInteractable, Transform] },\n    /** Entities interactable via touch/poke pointer */\n    pokeInteractables: { required: [PokeInteractable, Transform] },\n    /** One-hand grabbable entities */\n    oneHandGrabbables: { required: [OneHandGrabbable, Transform] },\n    /** Two-hands grabbable entities */\n    twoHandsGrabbables: { required: [TwoHandsGrabbable, Transform] },\n    /** Distance grabbable entities */\n    distanceGrabbables: { required: [DistanceGrabbable, Transform] },",
+        "excerpt_sha256": "c1cf808104a71e4c020fb480a30182caae564a41d44770768348638ea7be30f2"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/layers/xr-layer-system.ts:130",
+      "summary": "XRLayerSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/layers/xr-layer-system.ts",
+        "start_line": 130,
+        "end_line": 134,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class XRLayerSystem extends createSystem({\n  quadLayers: { required: [XRQuadLayer] },\n  cylinderLayers: { required: [XRCylinderLayer] },\n  activeLayers: { required: [XRLayerState] },\n}) {",
+        "excerpt_sha256": "b6f5de56ccdfe968fcd6b75e80e7b4fa74e8b2a89f47d5062605056dddd3e417"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/level/level-system.ts#levelsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/level/level-system.ts:43",
+      "summary": "LevelSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-system.ts",
+        "start_line": 43,
+        "end_line": 46,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LevelSystem extends createSystem({\n  // All entities that belong to a level (will be destroyed on level change)\n  levelEntities: { required: [LevelTag] },\n}) {",
+        "excerpt_sha256": "5e84d94641d069e02e3867156b8d436118f07fcc096bf813f2ced4dbb3c4301a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/lighting/light-system.ts#lightsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/lighting/light-system.ts:36",
+      "summary": "LightSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/lighting/light-system.ts",
+        "start_line": 36,
+        "end_line": 43,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LightSystem extends createSystem({\n  ambientLights: { required: [AmbientLightComponent] },\n  directionalLights: { required: [DirectionalLightComponent] },\n  hemisphereLights: { required: [HemisphereLightComponent] },\n  pointLights: { required: [PointLightComponent] },\n  rectAreaLights: { required: [RectAreaLightComponent] },\n  spotLights: { required: [SpotLightComponent] },\n}) {",
+        "excerpt_sha256": "61973c2a2153db60614fca56ecbc6b3dd6bad9635a0a3cef394ee136611e0bba"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/locomotion/locomotion.ts#locomotionsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/locomotion/locomotion.ts:41",
+      "summary": "LocomotionSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 41,
+        "end_line": 52,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class LocomotionSystem extends createSystem(\n  {\n    envs: { required: [LocomotionEnvironment] },\n  },\n  {\n    /** Starting player position before the first update. */\n    initialPlayerPosition: { type: Types.Vec3, default: [0, 0, 0] },\n    /** Run the locomotion engine in a WebWorker for better main‑thread perf. */\n    useWorker: { type: Types.Boolean, default: true },\n    /** Comfort vignette strength forwarded to SlideSystem. */\n    comfortAssist: { type: Types.Float32, default: 0.5 },\n    /** Maximum sliding speed (m/s). */",
+        "excerpt_sha256": "68651b21a259e2f424e19f20c20658a69fe624d7c070020bb46f849736a3448a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/locomotion/slide.ts#slidesystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/locomotion/slide.ts:85",
+      "summary": "SlideSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/slide.ts",
+        "start_line": 85,
+        "end_line": 96,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class SlideSystem extends createSystem(\n  {},\n  {\n    /** Locomotor engine shared across locomotion systems. */\n    locomotor: { type: Types.Object, default: undefined },\n    /** Action-backed input provider shared across locomotion systems. */\n    inputProvider: { type: Types.Object, default: undefined },\n    /** Maximum linear speed in meters/second. */\n    maxSpeed: { type: Types.Float32, default: 5 },\n    /** Comfort vignette strength [0..1]; 0 disables vignetting. */\n    comfortAssist: { type: Types.Float32, default: 0.5 },\n    /** Whether jumping is enabled. */",
+        "excerpt_sha256": "1678207f1849a61874a82f4f733201ce7b6121e6735f7f48e4716ed6ee59d454"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/locomotion/teleport.ts#teleportsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/locomotion/teleport.ts:47",
+      "summary": "TeleportSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/teleport.ts",
+        "start_line": 47,
+        "end_line": 58,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class TeleportSystem extends createSystem(\n  {},\n  {\n    /** Downward acceleration for the parabolic guide (negative). */\n    rayGravity: { type: Types.Float32, default: -0.4 },\n    /** Locomotor engine used for hit testing and teleport execution. */\n    locomotor: { type: Types.Object, default: undefined },\n    /** Action-backed input provider shared across locomotion systems. */\n    inputProvider: { type: Types.Object, default: undefined },\n    /** Enable hand‑tracking micro‑gesture flow for activation/confirm. */\n    microGestureControlsEnabled: { type: Types.Boolean, default: false },\n  },",
+        "excerpt_sha256": "58324214b18d876856097fce1b0198e1b903d5e7eeadc59dd0a0c5fac8c4bd53"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/locomotion/turn.ts#turnsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/locomotion/turn.ts:34",
+      "summary": "TurnSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/turn.ts",
+        "start_line": 34,
+        "end_line": 45,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class TurnSystem extends createSystem(\n  {},\n  {\n    /** Choose snap or smooth turning. */\n    turningMethod: { type: Types.Int8, default: TurningMethod.SnapTurn },\n    /** Degrees to rotate per snap. */\n    turningAngle: { type: Types.Float32, default: 45 },\n    /** Degrees per second when smooth turning. */\n    turningSpeed: { type: Types.Float32, default: 180 },\n    /** Enable swipe‑gesture turning in hand‑tracking mode. */\n    microGestureControlsEnabled: { type: Types.Boolean, default: false },\n    /** Action-backed input provider shared across locomotion systems. */",
+        "excerpt_sha256": "e4d1c840fe9d3caa8eba295d1a39523ce6ced91987ea7557dfbfad54062eefe6"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/physics/physics-system.ts#physicssystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/physics/physics-system.ts:160",
+      "summary": "PhysicsSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/physics/physics-system.ts",
+        "start_line": 160,
+        "end_line": 171,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class PhysicsSystem extends createSystem(\n  {\n    physicsEntities: {\n      required: [PhysicsBody, PhysicsShape],\n    },\n    manipluatedEntities: {\n      required: [PhysicsBody, PhysicsManipulation],\n      where: [ne(PhysicsBody, '_engineBody', 0)],\n    },\n    gravityOverrides: {\n      required: [PhysicsBody, PhysicsShape],\n      where: [ne(PhysicsBody, 'gravityFactor', DEFAULT_GRAVITY_FACTOR)],",
+        "excerpt_sha256": "1f5a85ef2a784b4a152a2082f74887588cf3195b7f41787249652d1ab88e0eb6"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/scene-understanding/scene-understanding-system.ts:94",
+      "summary": "SceneUnderstandingSystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/scene-understanding/scene-understanding-system.ts",
+        "start_line": 94,
+        "end_line": 103,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class SceneUnderstandingSystem extends createSystem(\n  {\n    planeEntities: { required: [XRPlane] },\n    meshEntities: { required: [XRMesh] },\n    anchoredEntities: { required: [XRAnchor] },\n  },\n  {\n    showWireFrame: { type: Types.Boolean, default: false },\n  },\n) {",
+        "excerpt_sha256": "d0d3e0292e9bcb1a1cca2448dd92ed511ff524e4b8a7d6d5b09f50a355f2adfb"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/core/src/ui/ui.ts#paneluisystem->fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Call site: packages/core/src/ui/ui.ts:39",
+      "summary": "PanelUISystem calls createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ui/ui.ts",
+        "start_line": 39,
+        "end_line": 50,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export class PanelUISystem extends createSystem(\n  {\n    unconfiguredPanels: { required: [PanelUI], excluded: [PanelDocument] },\n    configuredPanels: { required: [PanelUI, PanelDocument] },\n  },\n  {\n    /** Built-in UIKitML component collection. */\n    kit: { type: Types.String, default: DEFAULT_UIKITML_KIT },\n    /** Additional application-defined UIKitML components. */\n    componentSets: { type: Types.Object, default: [] },\n    /** Color scheme preference for UI theming */\n    preferredColorScheme: { type: Types.String, default: 'system' },",
+        "excerpt_sha256": "daed5f8a2f37a094afdf34bce1470fbcf00f6f3697af7ad05b70aa6faaed4e33"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter->class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter",
+      "title": "Call site: packages/xr-input/src/visual/adapter/hand-visual-adapter.ts:113",
+      "summary": "XRHandVisualAdapter calls XRInputVisualAdapter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/adapter/hand-visual-adapter.ts",
+        "start_line": 113,
+        "end_line": 121,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    super(\n      playerSpace,\n      handedness,\n      visualsEnabled,\n      visualClass,\n      scene,\n      camera,\n      assetLoader,\n    );",
+        "excerpt_sha256": "52d85e276c31b745b67f52c9f5e85eb8ab18154fa822b718b408d7f98490aa7a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager->fn:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer.reset",
+      "title": "Call site: packages/xr-input/src/xr-input-manager.ts:119",
+      "summary": "XRInputManager calls GazePointer.reset.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 119,
+        "end_line": 119,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.gazePointer.reset();",
+        "excerpt_sha256": "c7187b2e461848c0cfbea79223c78d6df031bbdbcb2d47c17113a31468a50e54"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/asset/asset-manager.ts#assetmanager.getasset->fn:packages/core/src/asset/cache-manager.ts#cachemanager.getassetbykey",
+      "title": "Call site: packages/core/src/asset/asset-manager.ts:557",
+      "summary": "AssetManager.getAsset calls CacheManager.getAssetByKey.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/asset-manager.ts",
+        "start_line": 557,
+        "end_line": 557,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    return CacheManager.getAssetByKey(key);",
+        "excerpt_sha256": "e024004e5a826cfe38f9e839b6bbec133c00eafc0681605af63c660aa4edf209"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/asset/asset-manager.ts#assetmanager.getgltf->fn:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader.getgltf",
+      "title": "Call site: packages/core/src/asset/asset-manager.ts:637",
+      "summary": "AssetManager.getGLTF calls GLTFAssetLoader.getGLTF.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/asset-manager.ts",
+        "start_line": 637,
+        "end_line": 637,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    return GLTFAssetLoader.getGLTF(key, options);",
+        "excerpt_sha256": "bc6e44949bf2e28fd94efd24116f4f7832b6a6ab11fffd23b0981749a0311c4b"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset->fn:packages/core/src/asset/cache-manager.ts#cachemanager.deletepromise",
+      "title": "Call site: packages/core/src/asset/loaders/cached-asset-load.ts:86",
+      "summary": "loadCachedAsset calls CacheManager.deletePromise.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/loaders/cached-asset-load.ts",
+        "start_line": 86,
+        "end_line": 86,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    CacheManager.deletePromise(url, promise);",
+        "excerpt_sha256": "272c1a84e3710acc4ed9d7ae9e0aa5d9f085c2e5803b5c901120e701d9b2031d"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader.getgltf->fn:packages/core/src/asset/cache-manager.ts#cachemanager.getassetbykey",
+      "title": "Call site: packages/core/src/asset/loaders/gltf-loader.ts:239",
+      "summary": "GLTFAssetLoader.getGLTF calls CacheManager.getAssetByKey.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/loaders/gltf-loader.ts",
+        "start_line": 239,
+        "end_line": 239,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    const cached = CacheManager.getAssetByKey(key) as GLTF | undefined;",
+        "excerpt_sha256": "19ff3d2312c723e833eaee00cfe9fa96e3a2da4e544f302351ac320fa1873466"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/audio/audio-system.ts#audiosystem.loadaudio->fn:packages/core/src/asset/asset-manager.ts#assetmanager.getaudio",
+      "title": "Call site: packages/core/src/audio/audio-system.ts:159",
+      "summary": "AudioSystem.loadAudio calls AssetManager.getAudio.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/audio/audio-system.ts",
+        "start_line": 159,
+        "end_line": 159,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      let buffer = AssetManager.getAudio(src);",
+        "excerpt_sha256": "c8e1a88e20c7c1d76431cf6c049e78ebf1cdca6dd1e277ed605dd73bf3558d48"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/ecs/system.ts#createsystem->fn:packages/core/src/ecs/world.ts#world.createentity",
+      "title": "Call site: packages/core/src/ecs/system.ts:169",
+      "summary": "createSystem calls World.createEntity.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ecs/system.ts",
+        "start_line": 169,
+        "end_line": 169,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      return this.world.createEntity();",
+        "excerpt_sha256": "e6cabbbaef58ecbb1791bb3efaec04634519dfeec44a8341408a7f1724fb1cf4"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/ecs/world.ts#world.create->fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions",
+      "title": "Call site: packages/core/src/ecs/world.ts:642",
+      "summary": "World.create calls armSessionGrantCaptureForOptions.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ecs/world.ts",
+        "start_line": 642,
+        "end_line": 642,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    armSessionGrantCaptureForOptions(options?.xr);",
+        "excerpt_sha256": "2c4fa5d8040d25f4f40033f6a3b4e959ae3dc380388ca703df168bf98c6c7f94"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/ecs/world.ts#world.launchxr->fn:packages/core/src/init/xr.ts#launchxr",
+      "title": "Call site: packages/core/src/ecs/world.ts:357",
+      "summary": "World.launchXR calls launchXR.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ecs/world.ts",
+        "start_line": 357,
+        "end_line": 357,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    launchXR(this, xrOptions);",
+        "excerpt_sha256": "7bf3c703535fd003ff25bfb37ca136b1b59fe0aa92301de76481e48881eaa1f7"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/environment/environment-system.ts#environmentsystem.updatedometexturebackground->fn:packages/core/src/asset/asset-manager.ts#assetmanager.loadhdrtexture",
+      "title": "Call site: packages/core/src/environment/environment-system.ts:373",
+      "summary": "EnvironmentSystem.updateDomeTextureBackground calls AssetManager.loadHDRTexture.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment/environment-system.ts",
+        "start_line": 373,
+        "end_line": 373,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      ? await AssetManager.loadHDRTexture(url)",
+        "excerpt_sha256": "b8c50e596445a79aca819bcf110a7a1029b313c4e07fb93ccc17be9a80feab3d"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/environment/environment-system.ts#environmentsystem.updatedometexturebackground->fn:packages/core/src/asset/cache-manager.ts#cachemanager.resolveurl",
+      "title": "Call site: packages/core/src/environment/environment-system.ts:371",
+      "summary": "EnvironmentSystem.updateDomeTextureBackground calls CacheManager.resolveUrl.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment/environment-system.ts",
+        "start_line": 371,
+        "end_line": 371,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    const url = CacheManager.resolveUrl(src);",
+        "excerpt_sha256": "aab164df2f9623396a46656af4cfd78091847db67d1cade07a5e6639ad77dade"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.getholderhand->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.getpointer",
+      "title": "Call site: packages/core/src/grab/grab-system.ts:242",
+      "summary": "GrabSystem.getHolderHand calls MultiPointer.getPointer.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 242,
+        "end_line": 242,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      [left.getPointer('grab').id, left.getPointer('ray').id],",
+        "excerpt_sha256": "53b6a4dfc4387f777623ac01901f63c06cbcfb9260aa0c1d01c3e7986132fb4a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.init->fn:packages/core/src/ecs/world.ts#world.registercomponent",
+      "title": "Call site: packages/core/src/grab/grab-system.ts:89",
+      "summary": "GrabSystem.init calls World.registerComponent.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 89,
+        "end_line": 89,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.world.registerComponent(Handle);",
+        "excerpt_sha256": "0dce721bf0fdcf828747b1f438f8a983afa7ed2fb94b299906e6f1e07311254f"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.initializedistancehandle->fn:packages/core/src/grab/handles.ts#distancegrabhandle.bind",
+      "title": "Call site: packages/core/src/grab/grab-system.ts:424",
+      "summary": "GrabSystem.initializeDistanceHandle calls DistanceGrabHandle.bind.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 424,
+        "end_line": 424,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    handle.bind(obj);",
+        "excerpt_sha256": "c28e7e2d78b5f6c5df76d588dd51d75fac985030722b7f222e20f65afc0fee4a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/grab/grab-system.ts#grabsystem.update->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.getselectstate",
+      "title": "Call site: packages/core/src/grab/grab-system.ts:146",
+      "summary": "GrabSystem.update calls XRInputManager.getSelectState.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/grab/grab-system.ts",
+        "start_line": 146,
+        "end_line": 146,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "          const select = this.input.xr.getSelectState(handedness);",
+        "excerpt_sha256": "ef1f11756857f05de482f9ee5bf21b011a98349a1bc91ac55719443560b68c47"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/input/input-actions.ts#inputactionmanager.getaxesvalues->fn:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice.getaxesvalues",
+      "title": "Call site: packages/core/src/input/input-actions.ts:364",
+      "summary": "InputActionManager.getAxesValues calls StatefulButtonAxesDevice.getAxesValues.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-actions.ts",
+        "start_line": 364,
+        "end_line": 364,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      return gamepad?.getAxesValues(binding.axis);",
+        "excerpt_sha256": "33b2bbef1b1a2fc41445fefeac62e260104c3d2c6e9e479cb4578b724675de47"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/input/input-actions.ts#inputactionmanager.getbindingbuttondown->fn:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard.getkeydown",
+      "title": "Call site: packages/core/src/input/input-actions.ts:409",
+      "summary": "InputActionManager.getBindingButtonDown calls StatefulKeyboard.getKeyDown.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-actions.ts",
+        "start_line": 409,
+        "end_line": 409,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      return context.keyboard.getKeyDown(binding.code);",
+        "excerpt_sha256": "30df6770eb1bbf238d6c06141c947b3f93b549fc62d69e0bed886b8ac987d111"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.destroy->fn:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard.destroy",
+      "title": "Call site: packages/core/src/input/input-manager.ts:99",
+      "summary": "InputManager.destroy calls StatefulKeyboard.destroy.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-manager.ts",
+        "start_line": 99,
+        "end_line": 99,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    this.keyboard.destroy();",
+        "excerpt_sha256": "f31d38c8fdf220d831a37856ca6ef444521a0d3eb13c777a3de383dedc5d4d46"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.getprimaryinputsource->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.getprimaryinputsource",
+      "title": "Call site: packages/core/src/input/input-manager.ts:84",
+      "summary": "InputManager.getPrimaryInputSource calls XRInputManager.getPrimaryInputSource.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-manager.ts",
+        "start_line": 84,
+        "end_line": 84,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    return this.xr.getPrimaryInputSource(...args);",
+        "excerpt_sha256": "b9a31e51e13ea394c49ea9556479bb5894ad96a5e630f50d39fd7eddade8304c"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/input/input-manager.ts#inputmanager.update->fn:packages/core/src/input/input-actions.ts#inputactionmanager.update",
+      "title": "Call site: packages/core/src/input/input-manager.ts:91",
+      "summary": "InputManager.update calls InputActionManager.update.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/input/input-manager.ts",
+        "start_line": 91,
+        "end_line": 95,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    this.actions.update({\n      keyboard: this.keyboard,\n      browserGamepads: this.browserGamepads,\n      xr: this.xr,\n    });",
+        "excerpt_sha256": "c54018511d695656a7a5f733cfea42b5ae28d05b8a6093e493092dafa2f9e66d"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/level/level-component-applier.ts#levelcomponentapplier.applycomponents->fn:packages/core/src/ecs/world.ts#world.registercomponent",
+      "title": "Call site: packages/core/src/level/level-component-applier.ts:63",
+      "summary": "LevelComponentApplier.applyComponents calls World.registerComponent.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-component-applier.ts",
+        "start_line": 63,
+        "end_line": 63,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "          world.registerComponent(component);",
+        "excerpt_sha256": "6f920328c30ffd20983b8d980cc9bba896eca7ecb84302385114125a99f9bf63"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter.createentityforlowerednode->fn:packages/core/src/ecs/world.ts#world.createtransformentity",
+      "title": "Call site: packages/core/src/level/level-scene-json-importer.ts:251",
+      "summary": "SceneJSONImporter.createEntityForLoweredNode calls World.createTransformEntity.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-scene-json-importer.ts",
+        "start_line": 251,
+        "end_line": 251,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    const entity = world.createTransformEntity(lowered.object, parentEntity);",
+        "excerpt_sha256": "7f6a8616241db7580d9dbbf506355e3a1e16c321d7ab952564dfc2595e873252"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/level/level-system.ts#levelsystem.init->fn:packages/core/src/ecs/world.ts#world.createtransformentity",
+      "title": "Call site: packages/core/src/level/level-system.ts:54",
+      "summary": "LevelSystem.init calls World.createTransformEntity.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-system.ts",
+        "start_line": 54,
+        "end_line": 56,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      const root = this.world.createTransformEntity(undefined, {\n        parent: this.world.sceneEntity,\n      });",
+        "excerpt_sha256": "8b472e5b002e5c23fa7706c344488e2baf2b6fa067c542a4e802a8cced1bcc91"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/level/level-system.ts#levelsystem.startlevelchange->fn:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter.load",
+      "title": "Call site: packages/core/src/level/level-system.ts:135",
+      "summary": "LevelSystem.startLevelChange calls SceneJSONImporter.load.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-system.ts",
+        "start_line": 135,
+        "end_line": 135,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "          ? SceneJSONImporter.load(this.world, url, newRoot)",
+        "excerpt_sha256": "2ba059ac648aaf25f9b172f8d87cc90135aa93d13e715f7b6075ded9d16e2c97"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getjumpdown->fn:packages/core/src/input/input-actions.ts#inputactionmanager.getbuttondown",
+      "title": "Call site: packages/core/src/locomotion/locomotion-input-provider.ts:69",
+      "summary": "ActionLocomotionInputProvider.getJumpDown calls InputActionManager.getButtonDown.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion-input-provider.ts",
+        "start_line": 69,
+        "end_line": 69,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    return this.world.input.actions.getButtonDown(InputActions.LocomotionJump);",
+        "excerpt_sha256": "a30545be376aed15cb4ae927f8490110d3a172202a6a96c89426321222807b8b"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getteleportactive->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.isprimary",
+      "title": "Call site: packages/core/src/locomotion/locomotion-input-provider.ts:110",
+      "summary": "ActionLocomotionInputProvider.getTeleportActive calls XRInputManager.isPrimary.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion-input-provider.ts",
+        "start_line": 110,
+        "end_line": 110,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    if (this.world.input.xr.isPrimary('hand', 'right')) {",
+        "excerpt_sha256": "6abc9b9e8286a6d2a634dc4c23e1bbf642a90d89c95338c826fc6e3e0b78188b"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.addenvironmenttoengine->fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment",
+      "title": "Call site: packages/core/src/locomotion/locomotion.ts:246",
+      "summary": "LocomotionSystem.addEnvironmentToEngine calls Locomotor.addEnvironment.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 246,
+        "end_line": 246,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        const envHandle = this.locomotor.addEnvironment(envGroup, envType);",
+        "excerpt_sha256": "d04302dd0f33f339ba3c12a2c404bd2271bffa918743bef1c49d97e171b96bdc"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.init->fn:packages/core/src/ecs/world.ts#world.onauthoredplayerposition",
+      "title": "Call site: packages/core/src/locomotion/locomotion.ts:102",
+      "summary": "LocomotionSystem.init calls World.onAuthoredPlayerPosition.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 102,
+        "end_line": 104,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.world.onAuthoredPlayerPosition((position) => {\n        this.setPlayerPosition(position);\n      }),",
+        "excerpt_sha256": "dbb8b8cdd6bdcceaf6e99386abe61725be23c4a1e5073bd4d9999a859c74ec55"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.init->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.enablebrowsercontrols",
+      "title": "Call site: packages/core/src/locomotion/locomotion.ts:107",
+      "summary": "LocomotionSystem.init calls ActionLocomotionInputProvider.enableBrowserControls.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 107,
+        "end_line": 109,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    this.inputProvider.enableBrowserControls(\n      this.config.browserControls.value as BrowserLocomotionControls,\n    );",
+        "excerpt_sha256": "1de0c03b53c482f3e080a1c8d295c760624c9d334bc27cab83d29862328ff5e7"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/locomotion.ts#locomotionsystem.update->fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.isprimary",
+      "title": "Call site: packages/core/src/locomotion/locomotion.ts:278",
+      "summary": "LocomotionSystem.update calls XRInputManager.isPrimary.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion.ts",
+        "start_line": 278,
+        "end_line": 278,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    if (this.input.xr.isPrimary('hand', 'right')) {",
+        "excerpt_sha256": "48ea3383643feb0a9695dfe714b30c82445b8d791f78d8b8df1581655abd3d0b"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/slide.ts#slidesystem.update->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getjumpdown",
+      "title": "Call site: packages/core/src/locomotion/slide.ts:126",
+      "summary": "SlideSystem.update calls ActionLocomotionInputProvider.getJumpDown.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/slide.ts",
+        "start_line": 126,
+        "end_line": 126,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    if (this.config.enableJumping.value && this.inputProvider.getJumpDown()) {",
+        "excerpt_sha256": "be6150001e94c8833e6f2944ff96b0abf10c75c5b56cb735d6ad6686e3cee9a2"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/slide.ts#slidesystem.update->fn:packages/locomotor/src/core/locomotor.ts#locomotor.jump",
+      "title": "Call site: packages/core/src/locomotion/slide.ts:127",
+      "summary": "SlideSystem.update calls Locomotor.jump.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/slide.ts",
+        "start_line": 127,
+        "end_line": 127,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.locomotor.jump();",
+        "excerpt_sha256": "2caebf1d3c8d749d69c9c7e3e61a6c723e57d0d40978cec1ee82d54f74084d6d"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getteleportactive",
+      "title": "Call site: packages/core/src/locomotion/teleport.ts:120",
+      "summary": "TeleportSystem.update calls ActionLocomotionInputProvider.getTeleportActive.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/teleport.ts",
+        "start_line": 120,
+        "end_line": 123,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    let teleportActive = this.inputProvider.getTeleportActive(\n      pointerBusy,\n      this.config.microGestureControlsEnabled.value,\n    );",
+        "excerpt_sha256": "a0694e5e2e541ed66c85359c5ebbb5b8988edfac269c85f3c7a03a8c56d2709d"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/locomotor/src/core/locomotor.ts#locomotor.requesthittest",
+      "title": "Call site: packages/core/src/locomotion/teleport.ts:160",
+      "summary": "TeleportSystem.update calls Locomotor.requestHitTest.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/teleport.ts",
+        "start_line": 160,
+        "end_line": 160,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.locomotor.requestHitTest(this.rayOrigin, this.rayDirection);",
+        "excerpt_sha256": "382fd1a9adbbfedc3b1c4446441e610dd2ca2152d70acf6eac57c6e1c52c8a45"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/teleport.ts#teleportsystem.update->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.getraybusy",
+      "title": "Call site: packages/core/src/locomotion/teleport.ts:119",
+      "summary": "TeleportSystem.update calls MultiPointer.getRayBusy.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/teleport.ts",
+        "start_line": 119,
+        "end_line": 119,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    const pointerBusy = this.input.xr.multiPointers.right.getRayBusy();",
+        "excerpt_sha256": "5bcfef81e032b7455abf0c29ae92bc4725ece459a4c0b28f4f5b80a684e9df53"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/locomotion/turn.ts#turnsystem.updatesmooth->fn:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider.getturnaxis",
+      "title": "Call site: packages/core/src/locomotion/turn.ts:96",
+      "summary": "TurnSystem.updateSmooth calls ActionLocomotionInputProvider.getTurnAxis.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/turn.ts",
+        "start_line": 96,
+        "end_line": 96,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    const turnAxis = this.inputProvider.getTurnAxis();",
+        "excerpt_sha256": "eeffa5baa613a505e39e10da35bceda0be369c39be30e0e63499773946f1a7a4"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem.init->fn:packages/core/src/ecs/world.ts#world.createtransformentity",
+      "title": "Call site: packages/core/src/scene-understanding/scene-understanding-system.ts:206",
+      "summary": "SceneUnderstandingSystem.init calls World.createTransformEntity.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/scene-understanding/scene-understanding-system.ts",
+        "start_line": 206,
+        "end_line": 212,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    this.anchoredGroupEntity = this.world.createTransformEntity(\n      this.anchoredGroup,\n      {\n        parent: this.world.sceneEntity,\n        persistent: true,\n      },\n    );",
+        "excerpt_sha256": "ffe4046d78d6cbe86f2caae555bf6a8431d58e9763f42f02311f8690a40a2e95"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/core/src/ui/ui.ts#paneluisystem.cleanuppanel->fn:packages/core/src/ui/document.ts#uikitdocument.dispose",
+      "title": "Call site: packages/core/src/ui/ui.ts:138",
+      "summary": "PanelUISystem.cleanupPanel calls UIKitDocument.dispose.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ui/ui.ts",
+        "start_line": 138,
+        "end_line": 138,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        document.dispose();",
+        "excerpt_sha256": "7fc2b000de19d53420f81793b7bfdf063ff0d612e1265aa38cf0b70ec2b8aedb"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/locomotor/src/core/locomotor.ts#locomotor.addenvironment->fn:packages/locomotor/src/core/engine.ts#locomotionengine.addenvironment",
+      "title": "Call site: packages/locomotor/src/core/locomotor.ts:243",
+      "summary": "Locomotor.addEnvironment calls LocomotionEngine.addEnvironment.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/locomotor/src/core/locomotor.ts",
+        "start_line": 243,
+        "end_line": 249,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "      this.engine.addEnvironment(\n        envHandle,\n        positions,\n        indices,\n        type,\n        worldMatrix,\n      );",
+        "excerpt_sha256": "d1295d7e47f66689501027fcee7bde1c8b3e40a9b3892c56fda3f2115bf221d9"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.disablepointers->fn:packages/xr-input/src/pointer/multi-pointer.ts#multipointer.update",
+      "title": "Call site: packages/xr-input/src/xr-input-manager.ts:378",
+      "summary": "XRInputManager.disablePointers calls MultiPointer.update.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 378,
+        "end_line": 378,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        this.multiPointers[handedness].update(false, 0, time);",
+        "excerpt_sha256": "62800b98d314d5faf10267360c7e6af5205d43e96d98a1e9d0a37b22bcdee00a"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.onsessionended->fn:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter.disconnect",
+      "title": "Call site: packages/xr-input/src/xr-input-manager.ts:351",
+      "summary": "XRInputManager.onSessionEnded calls XRControllerVisualAdapter.disconnect.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 351,
+        "end_line": 351,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        ctrl.disconnect();",
+        "excerpt_sha256": "41811f748569fecf2396611b9cda71eb2da3b5989af91c20b06693375a9022b6"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.onsessionended->fn:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter.disconnect",
+      "title": "Call site: packages/xr-input/src/xr-input-manager.ts:354",
+      "summary": "XRInputManager.onSessionEnded calls XRHandVisualAdapter.disconnect.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 354,
+        "end_line": 354,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        hand.disconnect();",
+        "excerpt_sha256": "6dc1b322d37186a4999f18ab2f735abec05bec40f7b12b5db7d8be9934579f8e"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:fn:packages/xr-input/src/xr-input-manager.ts#xrinputmanager.readhandselectstate->fn:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice.getselectend",
+      "title": "Call site: packages/xr-input/src/xr-input-manager.ts:546",
+      "summary": "XRInputManager.readHandSelectState calls StatefulButtonAxesDevice.getSelectEnd.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/xr-input-manager.ts",
+        "start_line": 546,
+        "end_line": 546,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        end: gamepad.getSelectEnd(),",
+        "excerpt_sha256": "48ef49b542791e727f914fc3eab6fb9ce05b7107390b245795e47db8a9fbaba9"
+      }
+    },
+    {
+      "id": "ev:src:edge:calls:long:1b7d3ce4cc8c884d19de7d05",
+      "title": "Call site: packages/core/src/locomotion/locomotion-input-provider.ts:113",
+      "summary": "ActionLocomotionInputProvider.getTeleportActive calls StatefulButtonAxesDevice.getButtonDownByIdx.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/locomotion/locomotion-input-provider.ts",
+        "start_line": 113,
+        "end_line": 113,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        !(this.world.input.xr.gamepads.right?.getButtonDownByIdx(9) ?? false)",
+        "excerpt_sha256": "0487858f01c40f0ef14045c956f1bd6aa6227a8472b95e60216e136c07cff6db"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset",
+      "title": "Source: packages/core/src/asset/loaders/cached-asset-load.ts:46-120",
+      "summary": "Declaration of loadCachedAsset.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/asset/loaders/cached-asset-load.ts",
+        "start_line": 46,
+        "end_line": 57,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function loadCachedAsset<T>({\n  discard,\n  load,\n  replacePending = false,\n  timeoutMs = DEFAULT_ASSET_LOAD_TIMEOUT_MS,\n  url,\n}: CachedAssetLoadOptions<T>): Promise<T> {\n  assertAssetLoadTimeout(timeoutMs);\n\n  if (!replacePending) {\n    const pending = CacheManager.getPromise<T>(url);\n    if (pending != null) {",
+        "excerpt_sha256": "788ab6debaa732fce0f8a61ec25e21a43f84ae75e6b07da42b31cb5dadb8a53d"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/ecs/system.ts#createsystem",
+      "title": "Source: packages/core/src/ecs/system.ts:100-192",
+      "summary": "Declaration of createSystem.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/ecs/system.ts",
+        "start_line": 100,
+        "end_line": 111,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function createSystem<S extends SystemSchema, Q extends SystemQueries>(\n  queries: Q = {} as Q,\n  schema: S = {} as S,\n): SystemConstructor<S, Q, World, System<S, Q>> {\n  if (typeof queries === 'function') {\n    throw new TypeError(\n      'createSystem() received a lifecycle function as its query map. ' +\n        'Pass only named query descriptors in createSystem({...}); define init(), update(), and destroy() in the subclass body.',\n    );\n  }\n  for (const [name, query] of Object.entries(queries)) {\n    if (typeof query === 'function') {",
+        "excerpt_sha256": "643a63521b7c8e8778916257a92edb3727b218da50a993217ffb325912a7fd3c"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/init/session-grant.ts#armsessiongrantcapture",
+      "title": "Source: packages/core/src/init/session-grant.ts:62-70",
+      "summary": "Declaration of armSessionGrantCapture.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/init/session-grant.ts",
+        "start_line": 62,
+        "end_line": 70,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function armSessionGrantCapture(): void {\n  const xr = globalThis.navigator?.xr;\n  if (xr == null || xr === armedXRSystem) {\n    return;\n  }\n  armedXRSystem?.removeEventListener('sessiongranted', handleSessionGranted);\n  armedXRSystem = xr;\n  xr.addEventListener('sessiongranted', handleSessionGranted);\n}",
+        "excerpt_sha256": "cb6bf980f0cbc1f363f19b5d5f650b0e915878e54c821a1470250b3b5d37623a"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions",
+      "title": "Source: packages/core/src/init/session-grant.ts:73-79",
+      "summary": "Declaration of armSessionGrantCaptureForOptions.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/init/session-grant.ts",
+        "start_line": 73,
+        "end_line": 79,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function armSessionGrantCaptureForOptions(\n  xr: false | { launchOnSessionGranted?: boolean } | undefined,\n): void {\n  if (xr !== false && xr?.launchOnSessionGranted === true) {\n    armSessionGrantCapture();\n  }\n}",
+        "excerpt_sha256": "677dca53f427517046279af3df9f7d2328bc8635210ed456b980834d1d3deeae"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/init/xr.ts#adoptxrsession",
+      "title": "Source: packages/core/src/init/xr.ts:326-433",
+      "summary": "Declaration of adoptXRSession.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/init/xr.ts",
+        "start_line": 326,
+        "end_line": 337,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export async function adoptXRSession(\n  world: World,\n  session: XRSession,\n  options: XROptions,\n  onSessionEnded?: SessionEndedCallback,\n): Promise<boolean> {\n  if (world.session != null) {\n    if (world.session !== session) {\n      await safelyEndSession(session);\n    }\n    return world.session === session;\n  }",
+        "excerpt_sha256": "ce60f9718849bd49cee8800a6ab13c66644ae8b088a119aede1a663cc7e03766"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/init/xr.ts#launchxr",
+      "title": "Source: packages/core/src/init/xr.ts:442-484",
+      "summary": "Declaration of launchXR.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/init/xr.ts",
+        "start_line": 442,
+        "end_line": 453,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function launchXR(world: World, options?: Partial<XROptions>) {\n  if (world.xrEnabled === false) {\n    throw new Error(\n      'XR is disabled for this world. Create it with an XR configuration instead of { xr: false } before calling launchXR().',\n    );\n  }\n\n  if (world.session != null) {\n    console.error('XRSession already exists');\n    return;\n  }\n  if (world.sessionRequestPending) {",
+        "excerpt_sha256": "d60d8aff6d597da71dbcc9a62f30d48a8b928ee362f013383835cb29ce66ab16"
+      }
+    },
+    {
+      "id": "ev:src:fn:packages/core/src/level/level-scene-primitive.ts#disposesceneprimitiveobject",
+      "title": "Source: packages/core/src/level/level-scene-primitive.ts:206-225",
+      "summary": "Declaration of disposeScenePrimitiveObject.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/level/level-scene-primitive.ts",
+        "start_line": 206,
+        "end_line": 217,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "export function disposeScenePrimitiveObject(object: Object3D): void {\n  if (object.userData.iwsdkOwnsPrimitiveResources !== true) {\n    return;\n  }\n  const primitiveMesh = object as Mesh;\n  primitiveMesh.geometry?.dispose();\n  const materials: Material[] = Array.isArray(primitiveMesh.material)\n    ? primitiveMesh.material\n    : primitiveMesh.material\n      ? [primitiveMesh.material]\n      : [];\n  if (object.userData.iwsdkOwnsPrimitiveMaterial === true) {",
+        "excerpt_sha256": "f94db78ba1c96f76a94f298887822b24281023b9354ef3b13acb4e67923e7ec2"
+      }
+    },
+    {
+      "id": "ev:src:long:2eb1eb47ae8c4acac39519db",
+      "title": "Call site: packages/core/src/environment-raycast/environment-raycast.ts:278",
+      "summary": "EnvironmentRaycastSystem.resolveXRSpace calls XRInputManager.getPrimaryInputSource.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/core/src/environment-raycast/environment-raycast.ts",
+        "start_line": 278,
+        "end_line": 278,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "        const inputSource = this.input.xr.getPrimaryInputSource(space);",
+        "excerpt_sha256": "118e31db86f3fd7c030eb73e07edd3b5e4267a509ff7ba1a09f2d529c6060665"
+      }
+    },
+    {
+      "id": "ev:src:long:9f693acd57cb918698808f11",
+      "title": "Call site: packages/xr-input/src/visual/adapter/controller-visual-adapter.ts:29",
+      "summary": "XRControllerVisualAdapter calls XRInputVisualAdapter.",
+      "kind": "source_range",
+      "truth_status": "static_verified",
+      "source": {
+        "path": "packages/xr-input/src/visual/adapter/controller-visual-adapter.ts",
+        "start_line": 29,
+        "end_line": 37,
+        "revision": "52f0f502b339f341f35233e52f5524c3cdf78ccc",
+        "excerpt": "    super(\n      playerSpace,\n      handedness,\n      visualsEnabled,\n      visualClass,\n      scene,\n      camera,\n      assetLoader,\n    );",
+        "excerpt_sha256": "52d85e276c31b745b67f52c9f5e85eb8ab18154fa822b718b408d7f98490aa7a"
+      }
+    }
+  ],
+  "layout": {
+    "system_id": "system:iwsdk",
+    "anchor_distance": 0.65,
+    "cone_deg": {
+      "horizontal": 60,
+      "vertical": 50
+    },
+    "placements": {
+      "class:packages/core/src/asset/asset-manager.ts#assetmanager": {
+        "collapsed": [
+          0.0041,
+          0.0207,
+          0
+        ],
+        "exploded": [
+          -0.0771,
+          0.168,
+          0.0409
+        ],
+        "radius": 0.0295
+      },
+      "class:packages/core/src/asset/cache-manager.ts#cachemanager": {
+        "collapsed": [
+          -0.0075,
+          0.0287,
+          0.0068
+        ],
+        "exploded": [
+          -0.1413,
+          0.168,
+          0.0409
+        ],
+        "radius": 0.0307
+      },
+      "class:packages/core/src/asset/loaders/gltf-loader.ts#gltfassetloader": {
+        "collapsed": [
+          0.0013,
+          0.0327,
+          -0.0153
+        ],
+        "exploded": [
+          -0.0254,
+          0.0645,
+          -0.0091
+        ],
+        "radius": 0.0202
+      },
+      "class:packages/core/src/audio/audio-system.ts#audiosystem": {
+        "collapsed": [
+          0.0122,
+          0.0351,
+          0.0159
+        ],
+        "exploded": [
+          -0.0453,
+          -0.0907,
+          -0.018
+        ],
+        "radius": 0.0212
+      },
+      "class:packages/core/src/camera/camera-system.ts#camerasystem": {
+        "collapsed": [
+          -0.0241,
+          0.0365,
+          -0.0043
+        ],
+        "exploded": [
+          -0.0415,
+          -0.1459,
+          -0.018
+        ],
+        "radius": 0.0198
+      },
+      "class:packages/core/src/depth/depth-sensing-system.ts#depthsensingsystem": {
+        "collapsed": [
+          0.0242,
+          0.0372,
+          -0.0154
+        ],
+        "exploded": [
+          0,
+          -0.168,
+          -0.018
+        ],
+        "radius": 0.021
+      },
+      "class:packages/core/src/ecs/world.ts#world": {
+        "collapsed": [
+          -0.0085,
+          0.0375,
+          0.0315
+        ],
+        "exploded": [
+          -0.2087,
+          0.168,
+          0.112
+        ],
+        "radius": 0.0322
+      },
+      "class:packages/core/src/environment-raycast/environment-raycast.ts#environmentraycastsystem": {
+        "collapsed": [
+          -0.0167,
+          0.0374,
+          -0.0322
+        ],
+        "exploded": [
+          0.19,
+          0.0854,
+          0.092
+        ],
+        "radius": 0.0233
+      },
+      "class:packages/core/src/environment/environment-system.ts#environmentsystem": {
+        "collapsed": [
+          0.0375,
+          0.0369,
+          0.0137
+        ],
+        "exploded": [
+          0.0027,
+          -0.0708,
+          0.032
+        ],
+        "radius": 0.0268
+      },
+      "class:packages/core/src/grab/grab-system.ts#grabsystem": {
+        "collapsed": [
+          -0.04,
+          0.0362,
+          0.0165
+        ],
+        "exploded": [
+          0.22,
+          0.168,
+          0.112
+        ],
+        "radius": 0.0264
+      },
+      "class:packages/core/src/grab/handles.ts#distancegrabhandle": {
+        "collapsed": [
+          0.0197,
+          0.0352,
+          -0.0421
+        ],
+        "exploded": [
+          0.272,
+          0.096,
+          0.062
+        ],
+        "radius": 0.0191
+      },
+      "class:packages/core/src/input/input-actions.ts#inputactionmanager": {
+        "collapsed": [
+          0.0148,
+          0.034,
+          0.0473
+        ],
+        "exploded": [
+          0.0871,
+          0.168,
+          0.0409
+        ],
+        "radius": 0.0283
+      },
+      "class:packages/core/src/input/input-manager.ts#inputmanager": {
+        "collapsed": [
+          -0.0454,
+          0.0326,
+          -0.0263
+        ],
+        "exploded": [
+          0.037,
+          0.1062,
+          0.0409
+        ],
+        "radius": 0.0291
+      },
+      "class:packages/core/src/input/input-system.ts#inputsystem": {
+        "collapsed": [
+          0.0539,
+          0.0311,
+          -0.0119
+        ],
+        "exploded": [
+          0.1402,
+          0.168,
+          -0.0091
+        ],
+        "radius": 0.0208
+      },
+      "class:packages/core/src/input/stateful-keyboard.ts#statefulkeyboard": {
+        "collapsed": [
+          -0.0333,
+          0.0294,
+          0.0473
+        ],
+        "exploded": [
+          0.0228,
+          0.0455,
+          0.0409
+        ],
+        "radius": 0.0276
+      },
+      "class:packages/core/src/layers/xr-layer-system.ts#xrlayersystem": {
+        "collapsed": [
+          -0.0078,
+          0.0276,
+          -0.0599
+        ],
+        "exploded": [
+          0.1488,
+          -0.0704,
+          0.0476
+        ],
+        "radius": 0.0247
+      },
+      "class:packages/core/src/level/level-component-applier.ts#levelcomponentapplier": {
+        "collapsed": [
+          0.048,
+          0.0256,
+          0.0404
+        ],
+        "exploded": [
+          -0.126,
+          0.1109,
+          0.0209
+        ],
+        "radius": 0.0237
+      },
+      "class:packages/core/src/level/level-scene-json-importer.ts#scenejsonimporter": {
+        "collapsed": [
+          -0.065,
+          0.0235,
+          0.0027
+        ],
+        "exploded": [
+          -0.0433,
+          0.1069,
+          -0.0091
+        ],
+        "radius": 0.0218
+      },
+      "class:packages/core/src/level/level-system.ts#levelsystem": {
+        "collapsed": [
+          0.0476,
+          0.0213,
+          -0.0473
+        ],
+        "exploded": [
+          -0.1272,
+          0.0533,
+          0.0209
+        ],
+        "radius": 0.0254
+      },
+      "class:packages/core/src/lighting/light-system.ts#lightsystem": {
+        "collapsed": [
+          -0.0032,
+          0.0189,
+          0.069
+        ],
+        "exploded": [
+          0.0418,
+          -0.1479,
+          -0.018
+        ],
+        "radius": 0.0195
+      },
+      "class:packages/core/src/locomotion/locomotion-input-provider.ts#actionlocomotioninputprovider": {
+        "collapsed": [
+          -0.0455,
+          0.0165,
+          -0.0545
+        ],
+        "exploded": [
+          -0.2037,
+          -0.0701,
+          0.0676
+        ],
+        "radius": 0.0281
+      },
+      "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem": {
+        "collapsed": [
+          0.072,
+          0.014,
+          0.0097
+        ],
+        "exploded": [
+          -0.1447,
+          -0.0581,
+          0.0676
+        ],
+        "radius": 0.0281
+      },
+      "class:packages/core/src/locomotion/slide.ts#slidesystem": {
+        "collapsed": [
+          -0.061,
+          0.0113,
+          0.0424
+        ],
+        "exploded": [
+          -0.1388,
+          -0.1622,
+          0.0476
+        ],
+        "radius": 0.0231
+      },
+      "class:packages/core/src/locomotion/teleport.ts#teleportsystem": {
+        "collapsed": [
+          0.0166,
+          0.0086,
+          -0.0739
+        ],
+        "exploded": [
+          -0.0872,
+          -0.1622,
+          0.0476
+        ],
+        "radius": 0.0245
+      },
+      "class:packages/core/src/locomotion/turn.ts#turnsystem": {
+        "collapsed": [
+          0.0383,
+          0.0058,
+          0.0669
+        ],
+        "exploded": [
+          -0.089,
+          -0.1109,
+          0.0476
+        ],
+        "radius": 0.0229
+      },
+      "class:packages/core/src/physics/physics-system.ts#physicssystem": {
+        "collapsed": [
+          -0.0746,
+          0.003,
+          -0.0238
+        ],
+        "exploded": [
+          -0.0883,
+          -0.0597,
+          0.0476
+        ],
+        "radius": 0.0243
+      },
+      "class:packages/core/src/scene-understanding/scene-understanding-system.ts#sceneunderstandingsystem": {
+        "collapsed": [
+          0.0721,
+          0,
+          -0.0333
+        ],
+        "exploded": [
+          0.0514,
+          -0.0955,
+          -0.018
+        ],
+        "radius": 0.0193
+      },
+      "class:packages/core/src/ui/document.ts#uikitdocument": {
+        "collapsed": [
+          -0.031,
+          -0.003,
+          0.0741
+        ],
+        "exploded": [
+          0.1758,
+          -0.1659,
+          0.0176
+        ],
+        "radius": 0.0221
+      },
+      "class:packages/core/src/ui/ui.ts#paneluisystem": {
+        "collapsed": [
+          -0.0274,
+          -0.0061,
+          -0.0763
+        ],
+        "exploded": [
+          0.0983,
+          -0.0796,
+          0.0476
+        ],
+        "radius": 0.0227
+      },
+      "class:packages/locomotor/src/core/engine.ts#locomotionengine": {
+        "collapsed": [
+          0.0723,
+          -0.0093,
+          0.038
+        ],
+        "exploded": [
+          -0.1962,
+          -0.1529,
+          0.0676
+        ],
+        "radius": 0.0311
+      },
+      "class:packages/locomotor/src/core/locomotor.ts#locomotor": {
+        "collapsed": [
+          -0.0795,
+          -0.0126,
+          0.021
+        ],
+        "exploded": [
+          -0.2455,
+          -0.1133,
+          0.0676
+        ],
+        "radius": 0.0281
+      },
+      "class:packages/xr-input/src/gamepad/stateful-button-axes-device.ts#statefulbuttonaxesdevice": {
+        "collapsed": [
+          0.0447,
+          -0.0159,
+          -0.0694
+        ],
+        "exploded": [
+          0.0249,
+          0.168,
+          0.0409
+        ],
+        "radius": 0.0299
+      },
+      "class:packages/xr-input/src/pointer/gaze-pointer.ts#gazepointer": {
+        "collapsed": [
+          0.014,
+          -0.0192,
+          0.0816
+        ],
+        "exploded": [
+          0.0807,
+          0.0625,
+          0.0409
+        ],
+        "radius": 0.0287
+      },
+      "class:packages/xr-input/src/pointer/multi-pointer.ts#multipointer": {
+        "collapsed": [
+          -0.0654,
+          -0.0227,
+          -0.0507
+        ],
+        "exploded": [
+          0.1415,
+          0.046,
+          0.0409
+        ],
+        "radius": 0.0303
+      },
+      "class:packages/xr-input/src/visual/adapter/base-visual-adapter.ts#xrinputvisualadapter": {
+        "collapsed": [
+          0.0823,
+          -0.0262,
+          -0.0068
+        ],
+        "exploded": [
+          0.086,
+          -0.1289,
+          0.0476
+        ],
+        "radius": 0.0241
+      },
+      "class:packages/xr-input/src/visual/adapter/controller-visual-adapter.ts#xrcontrollervisualadapter": {
+        "collapsed": [
+          -0.0559,
+          -0.0297,
+          0.0604
+        ],
+        "exploded": [
+          0.1259,
+          -0.1622,
+          0.0476
+        ],
+        "radius": 0.0239
+      },
+      "class:packages/xr-input/src/visual/adapter/hand-visual-adapter.ts#xrhandvisualadapter": {
+        "collapsed": [
+          0.0004,
+          -0.0333,
+          -0.0818
+        ],
+        "exploded": [
+          0.2085,
+          -0.1312,
+          0.0176
+        ],
+        "radius": 0.0216
+      },
+      "class:packages/xr-input/src/visual/impl/base-impl.ts#basecontrollervisual": {
+        "collapsed": [
+          0.0545,
+          -0.037,
+          0.06
+        ],
+        "exploded": [
+          0.1943,
+          -0.0878,
+          0.0176
+        ],
+        "radius": 0.02
+      },
+      "class:packages/xr-input/src/xr-input-manager.ts#xrinputmanager": {
+        "collapsed": [
+          -0.0798,
+          -0.0407,
+          -0.0074
+        ],
+        "exploded": [
+          0.1374,
+          0.1118,
+          0.0409
+        ],
+        "radius": 0.0315
+      },
+      "concept:assets-levels": {
+        "collapsed": [
+          -0.0568,
+          -0.0723,
+          -0.0269
+        ],
+        "exploded": [
+          -0.0746,
+          0.1205,
+          0.0089
+        ],
+        "radius": 0.0327
+      },
+      "concept:environment-senses": {
+        "collapsed": [
+          0.0562,
+          -0.0764,
+          -0.0173
+        ],
+        "exploded": [
+          0,
+          -0.12,
+          0
+        ],
+        "radius": 0.0327
+      },
+      "concept:grab-interaction": {
+        "collapsed": [
+          -0.0274,
+          -0.0806,
+          0.0467
+        ],
+        "exploded": [
+          0.22,
+          0.12,
+          0.08
+        ],
+        "radius": 0.0327
+      },
+      "concept:input-pointers": {
+        "collapsed": [
+          -0.0102,
+          -0.0848,
+          -0.0475
+        ],
+        "exploded": [
+          0.0762,
+          0.1205,
+          0.0089
+        ],
+        "radius": 0.0327
+      },
+      "concept:movement-physics": {
+        "collapsed": [
+          0.034,
+          -0.0891,
+          0.0242
+        ],
+        "exploded": [
+          -0.1467,
+          -0.12,
+          0.0356
+        ],
+        "radius": 0.0327
+      },
+      "concept:ui-display": {
+        "collapsed": [
+          -0.0326,
+          -0.0934,
+          0.0041
+        ],
+        "exploded": [
+          0.1467,
+          -0.12,
+          0.0356
+        ],
+        "radius": 0.0327
+      },
+      "concept:world-startup": {
+        "collapsed": [
+          0.0125,
+          -0.0978,
+          -0.0147
+        ],
+        "exploded": [
+          -0.22,
+          0.12,
+          0.08
+        ],
+        "radius": 0.0327
+      },
+      "fn:packages/core/src/asset/loaders/cached-asset-load.ts#loadcachedasset": {
+        "collapsed": [
+          0.0629,
+          -0.0445,
+          -0.0478
+        ],
+        "exploded": [
+          -0.0745,
+          0.0668,
+          0.0209
+        ],
+        "radius": 0.025
+      },
+      "fn:packages/core/src/ecs/system.ts#createsystem": {
+        "collapsed": [
+          -0.0139,
+          -0.0483,
+          0.0764
+        ],
+        "exploded": [
+          -0.272,
+          0.1431,
+          0.112
+        ],
+        "radius": 0.0318
+      },
+      "fn:packages/core/src/init/session-grant.ts#armsessiongrantcapture": {
+        "collapsed": [
+          -0.0405,
+          -0.0522,
+          -0.0643
+        ],
+        "exploded": [
+          -0.1716,
+          0.0763,
+          0.062
+        ],
+        "radius": 0.0206
+      },
+      "fn:packages/core/src/init/session-grant.ts#armsessiongrantcaptureforoptions": {
+        "collapsed": [
+          0.0714,
+          -0.0561,
+          0.0196
+        ],
+        "exploded": [
+          -0.272,
+          0.0821,
+          0.092
+        ],
+        "radius": 0.0252
+      },
+      "fn:packages/core/src/init/xr.ts#adoptxrsession": {
+        "collapsed": [
+          -0.0639,
+          -0.0601,
+          0.0328
+        ],
+        "exploded": [
+          -0.1737,
+          0.1223,
+          0.062
+        ],
+        "radius": 0.0214
+      },
+      "fn:packages/core/src/init/xr.ts#launchxr": {
+        "collapsed": [
+          0.0241,
+          -0.0641,
+          -0.0649
+        ],
+        "exploded": [
+          -0.2201,
+          0.0667,
+          0.092
+        ],
+        "radius": 0.0249
+      },
+      "fn:packages/core/src/level/level-scene-primitive.ts#disposesceneprimitiveobject": {
+        "collapsed": [
+          0.025,
+          -0.0681,
+          0.0614
+        ],
+        "exploded": [
+          -0.0263,
+          0.1498,
+          -0.0091
+        ],
+        "radius": 0.0204
+      }
+    }
+  },
+  "lessons": [
+    {
+      "id": "lesson:sdk-tour",
+      "system_id": "system:iwsdk",
+      "title": "Explode a real SDK",
+      "objectives": [
+        "See a large open source codebase through its most relevant parts.",
+        "Tell what an AI chose from what the source proves."
+      ],
+      "repair_candidates": [],
+      "steps": [
+        {
+          "id": "step:sdk-intro",
+          "kind": "intro",
+          "caption": "This is Meta's Immersive Web SDK, the open source framework this app runs on (meta/immersive-web-sdk, MIT). Its source was indexed: 195 files, 1273 declarations.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": []
+        },
+        {
+          "id": "step:sdk-explode",
+          "kind": "explode",
+          "caption": "Nobody can read 1273 parts at once. Press Explode to see the 46 that matter most, in 7 groups.",
+          "expect": {
+            "type": "explode_at_least",
+            "factor": 0.8
+          },
+          "on_enter": [],
+          "hint": "Press Explode. You can also pinch with both hands and pull them apart."
+        },
+        {
+          "id": "step:sdk-groups",
+          "kind": "explain",
+          "caption": "The 7 glowing groups were chosen by an AI model (muse-spark-1.3) from a digest of the index, so each is marked a hypothesis. The parts inside were ranked from the call graph and come straight from the source.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "highlight",
+              "target_ids": [
+                "concept:assets-levels",
+                "concept:environment-senses",
+                "concept:grab-interaction",
+                "concept:input-pointers",
+                "concept:movement-physics",
+                "concept:ui-display",
+                "concept:world-startup"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step:sdk-trace",
+          "kind": "trace",
+          "caption": "Follow one real chain of calls. Press Trace a move.",
+          "expect": {
+            "type": "trace",
+            "path_id": "path:sdk-move"
+          },
+          "on_enter": [
+            {
+              "type": "clear_highlight"
+            },
+            {
+              "type": "focus",
+              "target_id": "class:packages/core/src/locomotion/locomotion.ts#locomotionsystem"
+            }
+          ],
+          "hint": "The Trace button is in the panel next to you."
+        },
+        {
+          "id": "step:sdk-evidence",
+          "kind": "explain",
+          "caption": "Each of the 6 steps is a call found in the source. Select one and open its evidence to see the lines.",
+          "expect": {
+            "type": "open_evidence"
+          },
+          "on_enter": [],
+          "hint": "Select any part, then press Evidence."
+        },
+        {
+          "id": "step:sdk-reflect",
+          "kind": "reflect",
+          "caption": "That is 46 of 508 classes and functions. Nothing here was run, so nothing is marked observed, and no connection can be unplugged. Explore freely.",
+          "expect": {
+            "type": "next"
+          },
+          "on_enter": [
+            {
+              "type": "animate_flow",
+              "path_id": "path:sdk-move"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "assets": null,
+  "content_hash": "27f3005e979c362e823afa8a09e96cd1db4a938d067b6639a65c042733685d00",
+  "generated_at": "2026-11-12T18:15:30.883Z",
+  "generator": "explode-content-tools@0.1.0"
+}
