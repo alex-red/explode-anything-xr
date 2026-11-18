@@ -9,6 +9,7 @@ import iwsdkUrl from './content/iwsdk.bundle.json?url';
 import repoDemoUrl from './content/repo-demo.bundle.json?url';
 import { startApp } from './app/app.ts';
 import { ExplodeClient } from './app/explode-client.ts';
+import { wirePhotoExplode } from './app/photo-explode.ts';
 import { fetchBundle, PROJECTS, savedProject, type Project } from './app/projects.ts';
 import { savedSystems } from './app/saved-systems.ts';
 import { Store } from './app/store.ts';
@@ -134,6 +135,14 @@ async function main(): Promise<void> {
       if (!ok) return;
       explodeForm.hidden = world.visibilityState.peek() !== 'non-immersive';
       world.visibilityState.subscribe((v) => (explodeForm.hidden = v !== 'non-immersive'));
+      // A photo to name a subject, and an illustration of any subject (src/app/photo-explode.ts).
+      // Wired before the submit handler below, which clears the input it reads.
+      if (tutorUrl) {
+        const photo = wirePhotoExplode({ base: tutorUrl, form: explodeForm, input: explodeText });
+        world.visibilityState.subscribe((v) => {
+          if (v !== 'non-immersive') photo.hide();
+        });
+      }
       explodeForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const text = explodeText.value.trim();

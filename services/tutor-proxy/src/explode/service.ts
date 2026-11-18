@@ -8,6 +8,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { neutralize } from '../context.ts';
 import { DEFAULT_MODEL, type Env, type KVLike } from '../env.ts';
+import { handlePhoto } from './photo.ts';
+import { handleIllustration } from './illustration.ts';
 import { checkRateLimit, estimateTokens, rateLimitMax, MAX_BODY_BYTES, parseCap, recordSpend, spentToday } from '../limits.ts';
 import { DEFAULT_META_MODEL } from '../meta.ts';
 import { Refusal, downloadSource, parseRepoQuery, repoNameIn, researchRepository, searchRepository } from './github.ts';
@@ -43,6 +45,8 @@ const MAX_SAMPLES = 20;
 export const DEFAULT_SUBJECT_PROPOSALS_PER_DAY = 12;
 /** Time allowed for each of the two short answers before a subject is proposed, in ms. */
 const PLANNING_TIMEOUT_MS = 30_000;
+/** Meta's recommended general model: slower than the tutor's, used where a build can wait. `EXPLODE_MODEL` overrides it. */
+export const META_BUILD_MODEL = 'muse-spark-1.3';
 const NO_MODEL = 'Drafting a subject needs an AI model, and none is set up on this server.';
 const SUBJECT_DISCLOSURE =
   'Everything in it will be written by an AI model and marked as a hypothesis. Nobody checks it. It is a draft to explore, not a reference: where it matters, check it against a source you trust.';
@@ -155,16 +159,19 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
           basis: `${subjectSeconds.length} earlier draft${subjectSeconds.length === 1 ? '' : 's'} on this server`,
         };
 
-  const modelOf = (env: Env) => {
+  const modelOf = (env: Env, heavy = false) => {
     const provider: 'meta' | 'anthropic' = env.TUTOR_PROVIDER === 'meta' ? 'meta' : 'anthropic';
     const apiKey = provider === 'meta' ? env.META_API_KEY : env.ANTHROPIC_API_KEY;
-    const model = env.EXPLODE_MODEL || (provider === 'meta' ? env.META_MODEL || DEFAULT_META_MODEL : env.TUTOR_MODEL || DEFAULT_MODEL);
+    // The draft and the grouping are asked once per build and are not held to a turn's latency, so on
+    // Meta's API they go to the general model; the short planning answers stay on the fast one.
+    const fast = provider === 'meta' ? env.META_MODEL || DEFAULT_META_MODEL : env.TUTOR_MODEL || DEFAULT_MODEL;
+    const model = env.EXPLODE_MODEL || (provider === 'meta' && heavy ? META_BUILD_MODEL : fast);
     return { provider, apiKey, model };
   };
 
   /** One JSON answer, counted against the daily budget. Null when the model cannot be asked or does not answer. */
   async function ask(env: Env, kv: KVLike, system: string, messages: ModelMessage[], schema: Record<string, unknown>, timeoutMs?: number): Promise<{ text: string; model: string } | 'budget' | null> {
-    const { provider, apiKey, model } = modelOf(env);
+    const { provider, apiKey, model } = modelOf(env, timeoutMs === undefined);
     if (!apiKey) return null;
     const cost = estimateTokens(system + messages.map((m) => m.content).join('')) + 2000;
     if ((await spentToday(kv, now())) + cost > parseCap(env.DAILY_TOKEN_CAP)) return 'budget';
@@ -385,7 +392,7 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
     const source = job.source!;
     const provider = env.TUTOR_PROVIDER === 'meta' ? 'meta' : 'anthropic';
     const apiKey = (provider === 'meta' ? env.META_API_KEY : env.ANTHROPIC_API_KEY)!;
-    const model = env.EXPLODE_MODEL || (provider === 'meta' ? env.META_MODEL || DEFAULT_META_MODEL : env.TUTOR_MODEL || DEFAULT_MODEL);
+    const model = modelOf(env, true).model;
     const dir = mkdtempSync(join(deps.workDir ?? tmpdir(), 'explode-'));
     const started = now();
     job.buildStarted = started;
@@ -528,6 +535,9 @@ export function createExplodeService(deps: ExplodeDeps): ExplodeService {
         track(parsed.data.kind === 'subject' ? researchSubject(job, parsed.data.query, env, kv) : research(job, parsed.data.query, env));
         return json(202, { job: view(job) });
       }
+
+      if (path === '/v1/explode/photo') return handlePhoto(request, env, json, kv, ip, deps.fetchImpl ?? fetch);
+      if (path === '/v1/explode/illustration') return handleIllustration(request, env, json, kv, ip, deps.fetchImpl ?? fetch);
 
       const match = /^\/v1\/explode\/jobs\/([0-9a-f-]{36})(\/confirm|\/bundle)?$/.exec(path);
       if (!match) return json(404, { error: 'not found' });
