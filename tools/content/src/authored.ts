@@ -43,7 +43,7 @@ export interface AuthoredModel {
  */
 export function buildAuthoredBundle(model: AuthoredModel, previous?: ContentBundle | null): ContentBundle {
   const MODEL_EVIDENCE = model.modelEvidenceId;
-  const source = `${relative(REPO_ROOT, resolve(model.dir, 'spec.json')).split('\\').join('/')} (authored for EXPLODE)`;
+  const source = `${relative(REPO_ROOT, resolve(model.dir, 'spec.json')).split('\\').join('/')} (authored for Explode Anything)`;
   const specText = readFileSync(resolve(model.dir, 'spec.json'), 'utf8');
   const lessonText = readFileSync(resolve(model.dir, 'lesson.json'), 'utf8');
   const spec = JSON.parse(specText) as AuthoredSpec;
@@ -65,7 +65,7 @@ export function buildAuthoredBundle(model: AuthoredModel, previous?: ContentBund
       truth_status: 'authored_model',
       title: 'Geometry: procedural primitives',
       summary: 'Every part is generated at runtime from simple shapes described in spec.json. No third-party meshes are used.',
-      license: { name: 'MIT', spdx: 'MIT', attribution: 'Procedural geometry authored for EXPLODE' },
+      license: { name: 'MIT', spdx: 'MIT', attribution: 'Procedural geometry authored for Explode Anything' },
     },
   ];
 

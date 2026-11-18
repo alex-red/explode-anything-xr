@@ -1,4 +1,4 @@
-# EXPLODE docs
+# Explode Anything docs
 
 These docs supersede `../EXPLODE_VR_Project_Handoff_2026.md` (v1.0, kept for history) for scope, architecture and schedule.
 

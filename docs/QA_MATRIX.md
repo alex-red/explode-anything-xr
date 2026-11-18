@@ -1,4 +1,4 @@
-# EXPLODE — QA Matrix
+# Explode Anything — QA Matrix
 
 **Supersedes:** handoff §16, §17 · Run the device checklist (§3) on **every deploy you intend to keep**. Updated 2026-11-09 for link-based submission ([FINAL_PLAN.md](FINAL_PLAN.md)).
 

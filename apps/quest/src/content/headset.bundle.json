@@ -261,7 +261,7 @@
       "license": {
         "name": "MIT",
         "spdx": "MIT",
-        "attribution": "Procedural geometry authored for EXPLODE"
+        "attribution": "Procedural geometry authored for Explode Anything"
       }
     },
     {
@@ -272,7 +272,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The battery powers the processor board.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -283,7 +283,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The processor sends each finished frame to the display.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -294,7 +294,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The processor drives the speakers.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -305,7 +305,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The front cameras send images of the room to the processor. If this link is disconnected, the processor has no view of the room to show.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -316,7 +316,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Light from the display passes through the left lens to the left eye.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -327,7 +327,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Light from the display passes through the right lens to the right eye.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -338,7 +338,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "A simplified, stylized teaching model of a standalone mixed-reality headset like the Meta Quest 3S, authored to show how the room reaches your eyes. It is not the device's actual internals; parts, proportions, positions and connections are illustrative. Not affiliated with or endorsed by Meta.",
-        "model_source": "content/headset/spec.json (authored for EXPLODE)"
+        "model_source": "content/headset/spec.json (authored for Explode Anything)"
       }
     }
   ],
@@ -720,7 +720,7 @@
       }
     }
   },
-  "content_hash": "7301b264c80952612f5b27fd67c0022d15fe7e773898d889d7d920d17ad71ec6",
-  "generated_at": "2026-11-13T04:19:54.654Z",
+  "content_hash": "7cd0dabc60368846be10c859e208b6364f74a3662278dfdbb8d935061d296066",
+  "generated_at": "2026-11-18T17:21:49.489Z",
   "generator": "explode-content-tools@0.1.0"
 }

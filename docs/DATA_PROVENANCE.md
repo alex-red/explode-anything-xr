@@ -1,4 +1,4 @@
-# EXPLODE — Data and Asset Provenance
+# Explode Anything — Data and Asset Provenance
 
 Every asset in a PWA is publicly downloadable, so everything shipped must be ours or licensed for redistribution ([ADR-0019](adr/0019-assets.md)). Update this file whenever content changes.
 

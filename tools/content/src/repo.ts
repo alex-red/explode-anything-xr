@@ -108,7 +108,7 @@ function repoLesson(graph: SystemGraph, recorded: RecordedEvidence): Lesson {
       {
         id: 'step:repo-intro',
         kind: 'intro',
-        caption: 'This is auth-service, a small TypeScript service written as a sample for EXPLODE. Its graph was built from the actual source.',
+        caption: 'This is auth-service, a small TypeScript service written as a sample for Explode Anything. Its graph was built from the actual source.',
         expect: { type: 'next' },
         on_enter: [],
       },

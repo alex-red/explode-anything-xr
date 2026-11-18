@@ -1,4 +1,4 @@
-# EXPLODE — Product Spec (v2)
+# Explode Anything — Product Spec (v2)
 
 **Supersedes:** handoff §0–3, §5, §7, §23 · **Updated:** 2026-10-24 · **Owner:** solo dev
 **Entry:** Meta VR Start Developer Competition 2026 · **New** division · **Productivity** track · deadline **Wed Nov 18, 2026, 12:00 PM PST (1:00 PM MST)**

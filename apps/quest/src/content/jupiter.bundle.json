@@ -289,7 +289,7 @@
       "license": {
         "name": "MIT",
         "spdx": "MIT",
-        "attribution": "Procedural geometry authored for EXPLODE"
+        "attribution": "Procedural geometry authored for Explode Anything"
       }
     },
     {
@@ -300,7 +300,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The magnetic field traps charged particles, speeds them up and steers them into the atmosphere around the magnetic poles, where they make the gas glow. How they are sped up is still being worked out.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -311,7 +311,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Jupiter's fast spin is thought to drive electric currents in the liquid metallic hydrogen, which acts like a dynamo and generates the magnetic field. If the dynamo stopped, the field would have no source.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -322,7 +322,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Heat from below reaches the northern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -333,7 +333,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Heat from below reaches the southern weather layer. Internal heat is why Jupiter's weather systems can last so long. How the jet streams form is still an open question.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -344,7 +344,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The Great Red Spot is a storm in the southern weather layer, about 300 to 500 kilometers deep, turning between jet streams that blow in opposite directions.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -355,7 +355,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Heat rises out of Jupiter's deep interior. Jupiter gives off more heat than it receives from the Sun; the surplus is largely left over from its formation.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -366,7 +366,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Io's volcanoes shed roughly a tonne of material every second. Much of it becomes electrically charged and is trapped by the magnetic field as a ring along Io's orbit.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -377,7 +377,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "Heat from the metallic hydrogen ocean passes up into the molecular hydrogen above it.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -388,7 +388,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "A simplified, stylized teaching model of Jupiter, authored from NASA's public descriptions of the planet and of Juno results. Layer depths are approximate and the real boundaries are gradual; nobody has seen the interior directly. The magnetic field, Io, the aurora and the Great Red Spot's depth are not to scale. The clouds are painted by rule, not imaged. Not affiliated with or endorsed by NASA.",
-        "model_source": "content/jupiter/spec.json (authored for EXPLODE)"
+        "model_source": "content/jupiter/spec.json (authored for Explode Anything)"
       }
     }
   ],
@@ -770,7 +770,7 @@
       }
     }
   },
-  "content_hash": "d9d4afb97cf3f74c5e4d50139e6f92d0c769a485939dd96ec6b612175800015c",
-  "generated_at": "2026-11-13T04:47:30.339Z",
+  "content_hash": "30b4284658e291d060dc36cb1f6f80b6bafe033379836792b81491b31a59eecd",
+  "generated_at": "2026-11-18T17:21:49.490Z",
   "generator": "explode-content-tools@0.1.0"
 }

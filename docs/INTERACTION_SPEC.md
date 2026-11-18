@@ -1,4 +1,4 @@
-# EXPLODE — Interaction Spec (v2)
+# Explode Anything — Interaction Spec (v2)
 
 **Supersedes:** handoff §6, §13 · **Related:** [ADR-0003](adr/0003-session-passthrough.md), [ADR-0012](adr/0012-input.md), [ADR-0021](adr/0021-view-manipulation.md), [ADR-0014](adr/0014-layout-cone.md), [ADR-0015](adr/0015-audio.md)
 
@@ -24,7 +24,7 @@
 | 1:30–1:45 | **Observe**: the motor and everything downstream stop. Badge: ▲ Teaching model | **Next** | `next` |
 | 1:45–2:00 | **Repair**: 3 socket rings. A wrong one is rejected with a hint | Press a ring | `repair` |
 | 2:00–2:10 | **Collapse**, then **Continue: software ▸** loads the codebase | Hands together, or **Collapse** | `collapse_below 0.1` |
-| 2:10–2:20 | Intro: "auth-service, a sample written for EXPLODE; graph built from the actual source" | **Next** | `next` |
+| 2:10–2:20 | Intro: "auth-service, a sample written for Explode Anything; graph built from the actual source" | **Next** | `next` |
 | 2:20–2:40 | **Explode** into 8 subsystem clusters | Pull, or **Explode** | `explode_at_least 0.8` |
 | 2:40–3:10 | **Trace login**: route → rateLimit → parseJsonBody → loginHandler → AuthService.login → findByEmail → verifyPassword → SessionStore.create → signToken | **Trace Login** | `trace path:login-request` |
 | 3:10–3:30 | Open the source **Evidence** (file:lines @ revision, excerpt) | **Evidence** | `open_evidence` |

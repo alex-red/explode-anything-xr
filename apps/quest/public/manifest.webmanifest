@@ -1,6 +1,6 @@
 {
-  "name": "EXPLODE",
-  "short_name": "EXPLODE",
+  "name": "Explode Anything",
+  "short_name": "Explode",
   "description": "Pull complex systems apart with your hands. Trace, break, and repair them to understand why they work.",
   "start_url": "./",
   "scope": "./",

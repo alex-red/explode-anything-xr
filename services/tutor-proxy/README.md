@@ -1,6 +1,6 @@
-# EXPLODE tutor proxy (Node server)
+# Explode Anything tutor proxy (Node server)
 
-The only server in EXPLODE ([ADR-0004](../../docs/adr/0004-backend.md)). It turns one tutor turn into one structured model call and returns a validated plan. The provider is Anthropic (Claude) by default, or Meta's Model API with `TUTOR_PROVIDER = "meta"` (see [Providers](#providers)). **The app never depends on it.** The client defaults to the scripted tutor and falls back to it whenever this proxy is slow, down, capped or killed.
+The only server in Explode Anything ([ADR-0004](../../docs/adr/0004-backend.md)). It turns one tutor turn into one structured model call and returns a validated plan. The provider is Anthropic (Claude) by default, or Meta's Model API with `TUTOR_PROVIDER = "meta"` (see [Providers](#providers)). **The app never depends on it.** The client defaults to the scripted tutor and falls back to it whenever this proxy is slow, down, capped or killed.
 
 ## API
 

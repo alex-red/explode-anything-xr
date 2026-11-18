@@ -1,4 +1,4 @@
-# EXPLODE — Architecture (v2)
+# Explode Anything — Architecture (v2)
 
 **Supersedes:** handoff §8, §9, §10, §12, §14 · **Related ADRs:** [0001](adr/0001-engine.md)–[0020](adr/0020-testing.md)
 

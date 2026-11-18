@@ -706,7 +706,7 @@ describe('scene harness: software hero lesson', () => {
     const h = setup();
     h.press(h.button(/Skip tutorial/));
     expect(h.state().system_id).toBe('system:auth-service');
-    expect(h.caption()).toMatch(/written as a sample for EXPLODE/);
+    expect(h.caption()).toMatch(/written as a sample for Explode Anything/);
 
     h.press(h.button(/^Next/));
     h.press(h.button(/^Explode$/));

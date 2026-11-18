@@ -301,7 +301,7 @@
       "license": {
         "name": "MIT",
         "spdx": "MIT",
-        "attribution": "Procedural geometry authored for EXPLODE"
+        "attribution": "Procedural geometry authored for Explode Anything"
       }
     },
     {
@@ -312,7 +312,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "A simplified, stylized electric-vehicle drivetrain authored for teaching cause and effect. It is not a specific vehicle; parts, proportions, and positions are illustrative.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -323,7 +323,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The battery supplies DC power to the inverter.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -334,7 +334,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The inverter drives the motor with three-phase AC. If this cable is disconnected, the motor gets no power and produces no torque.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -345,7 +345,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The left axle turns the left wheel.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -356,7 +356,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The right axle turns the right wheel.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -367,7 +367,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The differential turns the left axle.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -378,7 +378,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The differential turns the right axle.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -389,7 +389,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The gearbox output turns the differential.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     },
     {
@@ -400,7 +400,7 @@
       "truth_status": "authored_model",
       "rule": {
         "statement": "The motor shaft turns the gearbox input.",
-        "model_source": "content/drivetrain/spec.json (authored for EXPLODE)"
+        "model_source": "content/drivetrain/spec.json (authored for Explode Anything)"
       }
     }
   ],
@@ -789,7 +789,7 @@
       }
     }
   },
-  "content_hash": "70a4347b356333e0f384806166b6b3d3b8518d24eb28ff069cda7a46de400c9d",
-  "generated_at": "2026-11-10T04:12:19.688Z",
+  "content_hash": "be691c12c318903ab890688578126acbd3ed0f3e2c86a8711c286bd1ebea074a",
+  "generated_at": "2026-11-18T17:21:49.486Z",
   "generator": "explode-content-tools@0.1.0"
 }

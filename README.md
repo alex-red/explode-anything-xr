@@ -1,8 +1,10 @@
-# EXPLODE
+<p align="center"><img src="apps/quest/public/icons/icon.svg" alt="Explode Anything logo" width="96" /></p>
+
+# Explode Anything
 
 **Pull apart the headset you are wearing, on your own desk. Then do the same to a codebase.**
 
-EXPLODE is a hands-first, passthrough mixed-reality app for Meta Quest 3/3S, built with Meta's Immersive Web SDK (WebXR). You sit at a desk and use only your hands. The session takes about five minutes and has two parts:
+Explode Anything is a hands-first, passthrough mixed-reality app for Meta Quest 3/3S, built with Meta's Immersive Web SDK (WebXR). You sit at a desk and use only your hands. The session takes about five minutes and has two parts:
 
 1. **About 90 seconds on a model of a headset, standing on your real desk.** The app finds the desk from your headset's room setup, if you allow it, and remembers the spot for next time. You pull the model apart, trace how the room reaches your eyes, and cut the camera link: the model goes dark and the app dims your real room to show what that link carries. Repair it and the room comes back. This teaches the gestures and the trace → break → repair loop.
 2. **The main lesson, on a real TypeScript auth service.** You trace the login request through its actual call graph, back to the source. Then you disconnect a dependency in a sandbox and see a test failure that was recorded at build time. Finally you reconnect it yourself.
@@ -22,7 +24,7 @@ packages/lesson-engine/  pure reducer + propagation + tutor plan validation + sc
 tools/indexer/           ts-morph indexer for the sample repo
 tools/content/           build-time pipeline → apps/quest/src/content/*.bundle.json
 content/                 the sample auth-service fixture, mutations, drivetrain spec
-services/tutor-proxy/    optional Node server for the live AI tutor and Explode Anything (Docker, render.yaml)
+services/tutor-proxy/    optional Node server for the live AI tutor and building systems on request (Docker, render.yaml)
 docs/                    review, specs, plan, ADRs, QA, submission checklist
 ```
 
@@ -100,4 +102,4 @@ bun run release:verify -- <production url>   # compare the deployed files with t
 
 ## Licence
 
-MIT, see [`LICENSE`](LICENSE). `content/iwsdk/source/` is an unmodified copy of parts of Meta's Immersive Web SDK under its own MIT licence (`content/iwsdk/source/LICENSE`). EXPLODE is not affiliated with or endorsed by Meta.
+MIT, see [`LICENSE`](LICENSE). `content/iwsdk/source/` is an unmodified copy of parts of Meta's Immersive Web SDK under its own MIT licence (`content/iwsdk/source/LICENSE`). Explode Anything is not affiliated with or endorsed by Meta.

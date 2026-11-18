@@ -4832,7 +4832,7 @@
         {
           "id": "step:repo-intro",
           "kind": "intro",
-          "caption": "This is auth-service, a small TypeScript service written as a sample for EXPLODE. Its graph was built from the actual source.",
+          "caption": "This is auth-service, a small TypeScript service written as a sample for Explode Anything. Its graph was built from the actual source.",
           "expect": {
             "type": "next"
           },
@@ -5057,7 +5057,7 @@
     }
   ],
   "assets": null,
-  "content_hash": "c446b84bf7463b09ce84b3af0e40893c868828f8ce5915fe22bc22d4b1cf3969",
-  "generated_at": "2026-11-11T21:32:04.090Z",
+  "content_hash": "2f66f7e8b40587a8940c52ca395f3b905ae9e177517c1579f34fda7afba86ce8",
+  "generated_at": "2026-11-18T17:21:52.022Z",
   "generator": "explode-content-tools@0.1.0"
 }
