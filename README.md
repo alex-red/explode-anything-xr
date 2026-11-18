@@ -22,7 +22,7 @@ packages/lesson-engine/  pure reducer + propagation + tutor plan validation + sc
 tools/indexer/           ts-morph indexer for the sample repo
 tools/content/           build-time pipeline → apps/quest/src/content/*.bundle.json
 content/                 the sample auth-service fixture, mutations, drivetrain spec
-services/tutor-proxy/    optional Cloudflare Worker for the live AI tutor
+services/tutor-proxy/    optional Node server for the live AI tutor and Explode Anything (Docker, render.yaml)
 docs/                    review, specs, plan, ADRs, QA, submission checklist
 ```
 
@@ -97,3 +97,7 @@ bun run release:pages                    # publish the local build to GitHub Pag
 bun run release:manifest                 # after building: hash the build into release/manifest.json
 bun run release:verify -- <production url>   # compare the deployed files with that manifest
 ```
+
+## Licence
+
+MIT, see [`LICENSE`](LICENSE). `content/iwsdk/source/` is an unmodified copy of parts of Meta's Immersive Web SDK under its own MIT licence (`content/iwsdk/source/LICENSE`). EXPLODE is not affiliated with or endorsed by Meta.
